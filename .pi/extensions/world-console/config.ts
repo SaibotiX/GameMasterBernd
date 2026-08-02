@@ -1,0 +1,128 @@
+/**
+ * Read-only loader for the World Console config tree in app/config:
+ * constitution.md, worlds/<id>.md, moods/*.md, sites.json.
+ *
+ * Same markdown-with-frontmatter format as app/src/config.ts so both
+ * runtimes share one config. This loader never writes files (the app owns
+ * sites.json creation) and returns plain data — hot reload is "call again".
+ */
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+export interface World {
+	id: string;
+	title: string;
+	voice: string;
+	register: string;
+	defaultMood: string;
+	body: string;
+}
+
+export interface Mood {
+	id: string;
+	tone: string;
+	severity: number;
+	body: string;
+}
+
+export interface SiteEntry {
+	host: string;
+}
+
+export interface WorldConfig {
+	constitution: string;
+	world: World;
+	moods: Map<string, Mood>;
+	textSites: SiteEntry[];
+	pictureSites: SiteEntry[];
+}
+
+/** Mirrors app/src/util.ts parseFrontmatter — the formats must stay identical. */
+export function parseFrontmatter(raw: string): { meta: Record<string, string>; body: string } {
+	const meta: Record<string, string> = {};
+	if (!raw.startsWith("---")) return { meta, body: raw.trim() };
+	const end = raw.indexOf("\n---", 3);
+	if (end === -1) return { meta, body: raw.trim() };
+	for (const line of raw.slice(3, end).split("\n")) {
+		const colon = line.indexOf(":");
+		if (colon === -1) continue;
+		const key = line.slice(0, colon).trim();
+		let value = line.slice(colon + 1).trim();
+		const quoted =
+			value.length >= 2 &&
+			((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")));
+		if (quoted) value = value.slice(1, -1);
+		if (key) meta[key] = value;
+	}
+	return { meta, body: raw.slice(end + 4).trim() };
+}
+
+function loadWorld(dir: string, id: string): World {
+	const file = join(dir, `${id}.md`);
+	if (!existsSync(file)) {
+		const available = readdirSync(dir)
+			.filter((f) => f.endsWith(".md"))
+			.map((f) => f.replace(/\.md$/, ""))
+			.join(", ");
+		throw new Error(`unknown world "${id}" — available: ${available}`);
+	}
+	const { meta, body } = parseFrontmatter(readFileSync(file, "utf8"));
+	return {
+		id,
+		title: meta.title ?? id,
+		voice: meta.voice ?? "the Keeper",
+		register: meta.register ?? "neutral",
+		defaultMood: meta.default_mood ?? "neutral",
+		body,
+	};
+}
+
+function loadMoods(dir: string): Map<string, Mood> {
+	const moods = new Map<string, Mood>();
+	for (const file of readdirSync(dir)) {
+		if (!file.endsWith(".md")) continue;
+		const { meta, body } = parseFrontmatter(readFileSync(join(dir, file), "utf8"));
+		const id = file.replace(/\.md$/, "");
+		moods.set(id, {
+			id,
+			tone: meta.tone ?? id,
+			severity: Number(meta.severity ?? 1),
+			body,
+		});
+	}
+	if (moods.size === 0) throw new Error(`no mood files in ${dir}`);
+	return moods;
+}
+
+export function loadConfig(appDir: string, worldId: string): WorldConfig {
+	const configDir = join(appDir, "config");
+	if (!existsSync(configDir)) {
+		throw new Error(`World Console config directory not found: ${configDir}`);
+	}
+
+	let textSites: SiteEntry[] = [{ host: "en.wikipedia.org" }];
+	let pictureSites: SiteEntry[] = [{ host: "commons.wikimedia.org" }];
+	const sitesFile = join(configDir, "sites.json");
+	if (existsSync(sitesFile)) {
+		const sites = JSON.parse(readFileSync(sitesFile, "utf8")) as { text?: SiteEntry[]; picture?: SiteEntry[] };
+		const valid = (list?: SiteEntry[]) =>
+			(list ?? []).filter((s) => typeof s?.host === "string" && s.host.length > 0);
+		textSites = valid(sites.text);
+		if (textSites.length === 0) textSites = [{ host: "en.wikipedia.org" }];
+		pictureSites = valid(sites.picture);
+		if (pictureSites.length === 0) pictureSites = [{ host: "commons.wikimedia.org" }];
+	}
+
+	return {
+		constitution: readFileSync(join(configDir, "constitution.md"), "utf8").trim(),
+		world: loadWorld(join(configDir, "worlds"), worldId),
+		moods: loadMoods(join(configDir, "moods")),
+		textSites,
+		pictureSites,
+	};
+}
+
+/** Mood ids ordered mildest → angriest, for prompts and tool schemas. */
+export function moodIdsBySeverity(config: WorldConfig): string[] {
+	return [...config.moods.values()].sort((a, b) => a.severity - b.severity).map((m) => m.id);
+}

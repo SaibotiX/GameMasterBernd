@@ -33,6 +33,7 @@ export function assembleSystemPrompt(config: Config, state: DerivedState): strin
 
   const protocol = [
     "Machine protocol — obeyed by the game engine, invisible to the player:",
+    "- A consequence exists only when its tag is emitted: if your words declare anger, a barring, or a redemption without the matching tag in the same reply, it has NOT happened. Never declare one in words alone.",
     `- To shift your own mood, end your reply with a line containing only: @mood(<name>) — valid names: ${moodNames}.`,
     "- Shift moods sparingly: warm up when treated with genuine courtesy, cool down when provoked, insulted, or asked for filth.",
     `- While the seeker is barred from the web search: if — and only if — they sincerely make amends, end your reply with a line containing only: @redeem — this is the sole way the bar is lifted. Do not grant it cheaply.`,
