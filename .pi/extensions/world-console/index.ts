@@ -24,7 +24,9 @@ import { FooterComponent, type ExtensionAPI, type ExtensionContext } from "@eare
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
+import { gmAsk, gmJudgeAmendment, gmJudgeTruth, type GmTurn } from "./gmchat.ts";
 import {
 	asGameEvent,
 	derive,
@@ -162,8 +164,88 @@ export default function (pi: ExtensionAPI) {
 		return false;
 	}
 
+	// ---- the GM table (/gm, /dm) ------------------------------------------
+	// Out-of-character talk with the engine. Lives in RAM only: nothing here
+	// touches the session, the game context, or the ledger — except a bound
+	// truth, which is appended as a regular ledger event.
+	let gmThread: GmTurn[] = [];
+
+	function clip(text: string, max: number): string {
+		const flat = text.replace(/\s+/g, " ").trim();
+		return flat.length > max ? flat.slice(0, max) + "…" : flat;
+	}
+
+	/**
+	 * The whole branch as numbered lines — play messages AND ledger events.
+	 * uN = the entry's 1-based position in the append-only session file, so
+	 * the numbers are stable across branches and never renumber.
+	 */
+	function archiveLinesOf(ctx: ExtensionContext): ArchiveLine[] {
+		const uidByEntryId = new Map<string, number>();
+		ctx.sessionManager.getEntries().forEach((entry, index) => {
+			uidByEntryId.set((entry as { id: string }).id, index + 1);
+		});
+		const lines: ArchiveLine[] = [];
+		for (const entry of ctx.sessionManager.getBranch()) {
+			const uid = uidByEntryId.get((entry as { id: string }).id) ?? 0;
+			const event = asGameEvent(entry);
+			if (event) {
+				lines.push({ uid, who: "ledger", text: describeEvent(event) });
+				continue;
+			}
+			if (entry.type !== "message") continue;
+			const message = (entry as { message?: { role?: string; content?: unknown } }).message;
+			if (!message) continue;
+			let text = "";
+			if (typeof message.content === "string") text = message.content;
+			else if (Array.isArray(message.content)) {
+				text = (message.content as { type?: string; text?: string }[])
+					.filter((block) => block.type === "text")
+					.map((block) => block.text ?? "")
+					.join(" ");
+			}
+			if (!text.trim()) continue;
+			const who = message.role === "user" ? "seeker" : message.role === "assistant" ? "game" : null;
+			if (!who) continue;
+			// Long speeches become several lines sharing one uid, so a fact deep
+			// inside them is still searchable and shows in excerpts.
+			for (const chunk of chunkText(text)) lines.push({ uid, who, text: chunk });
+		}
+		return lines;
+	}
+
+	function branchPlayLines(ctx: ExtensionContext, limit = 16): string[] {
+		const lines = archiveLinesOf(ctx)
+			.filter((line) => line.who !== "ledger")
+			.map(formatArchiveLine);
+		return withTail(lines, limit);
+	}
+
+	function branchLedgerLines(ctx: ExtensionContext, limit = 40): string[] {
+		const lines = archiveLinesOf(ctx)
+			.filter((line) => line.who === "ledger")
+			.map(formatArchiveLine);
+		return withTail(lines, limit);
+	}
+
+	function withTail(lines: string[], limit: number): string[] {
+		if (lines.length <= limit) return lines;
+		return [`…(${lines.length - limit} earlier lines omitted)`, ...lines.slice(-limit)];
+	}
+
+	/** The full record a proposed truth is checked against (code-collected). */
+	function truthEvidence(ctx: ExtensionContext) {
+		return {
+			truths: st.truths,
+			ledgerLines: branchLedgerLines(ctx, 80),
+			playLines: branchPlayLines(ctx, 80),
+		};
+	}
+
 	pi.on("session_start", async (event, ctx) => {
 		installFooter(ctx);
+		gmThread = []; // the GM table is per sitting
+
 		const flagWorld = pi.getFlag("world");
 		const requested =
 			(typeof flagWorld === "string" && flagWorld) || process.env.WORLD_CONSOLE_WORLD || DEFAULT_WORLD;
@@ -291,10 +373,16 @@ export default function (pi: ExtensionAPI) {
 		description: "World Console: show this sitting's ledger (optional: number of events)",
 		handler: async (args, ctx) => {
 			const n = Math.min(Math.max(Number.parseInt(args ?? "", 10) || 12, 1), 200);
+			const uidByEntryId = new Map<string, number>();
+			ctx.sessionManager.getEntries().forEach((entry, index) => {
+				uidByEntryId.set((entry as { id: string }).id, index + 1);
+			});
 			const lines: string[] = [];
 			for (const entry of ctx.sessionManager.getBranch()) {
 				const event = asGameEvent(entry);
-				if (event) lines.push(`${(entry.timestamp ?? "").slice(11, 19)}  ${describeEvent(event)}`);
+				if (!event) continue;
+				const uid = uidByEntryId.get((entry as { id: string }).id) ?? 0;
+				lines.push(`*u${uid}* ${(entry.timestamp ?? "").slice(11, 19)}  ${describeEvent(event)}`);
 			}
 			const barred = st.banned ? " · glass BARRED" : "";
 			const head =
@@ -302,6 +390,199 @@ export default function (pi: ExtensionAPI) {
 				`${st.chats} messages · ${st.searches} searches granted · ${st.refusals} refused`;
 			ctx.ui.notify(`${head}\n${lines.slice(-n).join("\n") || "(no events yet)"}`, "info");
 		},
+	});
+
+	// /gm (alias /dm) — the GM table. Table-talk stays out of the session and
+	// the ledger entirely; only a bound truth is ever recorded (conviction via
+	// the meta-GM's structured reply, decree via "/gm truth <fact>" after the
+	// guardian's constitution check).
+	const GM_USAGE =
+		"The GM table — out of character:\n" +
+		"/gm <question or argument> · talk with the engine about the game (nothing here enters the story)\n" +
+		"/gm truth <fact> · bind a fact as canon after the guardian's check (also: /dm truth <fact>)\n" +
+		"/gm amend_truth <fact> *uN* · correct canon with proof — record entry N must state the fact (numbers shown in /ledger and archive citations)";
+
+	const gmCompletions = (prefix: string) => {
+		if (prefix.includes(" ")) return null;
+		const bare = prefix.toLowerCase();
+		const subcommands = [
+			{ value: "truth ", label: "truth — bind a fact as canon" },
+			{ value: "amend_truth ", label: "amend_truth — evidence-backed correction (*uN*)" },
+		].filter((sub) => sub.value.startsWith(bare));
+		return subcommands.length > 0 ? subcommands : null;
+	};
+
+	async function gmHandler(args: string, ctx: ExtensionContext): Promise<void> {
+		const trimmed = (args ?? "").trim();
+		if (!trimmed || /^(truth|amend_truth)$/i.test(trimmed)) {
+			ctx.ui.notify(GM_USAGE, "info");
+			return;
+		}
+		if (!ctx.model) {
+			ctx.ui.notify("The GM table needs a model — pick one with /model first.", "error");
+			return;
+		}
+		const model = { provider: ctx.model.provider, id: ctx.model.id };
+
+		// Amendment: the record itself is the proof that an evaluation erred.
+		const amendMatch = trimmed.match(/^amend_truth\s+(.+)$/is);
+		if (amendMatch) {
+			const rawText = amendMatch[1].trim();
+			const refMatch = rawText.match(/\*u(\d+)\*/i);
+			if (!refMatch) {
+				ctx.ui.notify(
+					"An amendment must cite the record: /gm amend_truth <fact> *uN* — find N in /ledger or in the table's archive citations.",
+					"warning",
+				);
+				return;
+			}
+			const uref = Number(refMatch[1]);
+			// An entry may span several archive chunks — the judge sees all of it.
+			const referencedText = archiveLinesOf(ctx)
+				.filter((line) => line.uid === uref)
+				.map((line) => line.text)
+				.join(" ");
+			if (!referencedText) {
+				ctx.ui.notify(`No record entry *u${uref}* exists on this branch.`, "warning");
+				return;
+			}
+			const text = clip(rawText.replace(/\*u\d+\*/gi, " "), 300);
+			if (!text) {
+				ctx.ui.notify(GM_USAGE, "info");
+				return;
+			}
+			if (st.truths.some((truth) => truth.toLowerCase() === text.toLowerCase())) {
+				ctx.ui.notify(`⟡ already canon: "${text}"`, "info");
+				return;
+			}
+			let verdict;
+			try {
+				verdict = await gmJudgeAmendment(
+					{ config, model, truths: st.truths, referenced: { uid: uref, text: clip(referencedText, 1500) } },
+					text,
+				);
+			} catch (error) {
+				ctx.ui.notify(
+					`The guardian could not be reached — nothing was amended. (${(error as Error).message})`,
+					"error",
+				);
+				return;
+			}
+			if (!verdict.allow) {
+				ctx.ui.notify(`The engine denies the amendment: ${verdict.reason}`, "warning");
+				return;
+			}
+			const events: GameEvent[] = [];
+			const superseded = verdict.supersedes
+				? st.truths.find((truth) => truth.toLowerCase() === verdict.supersedes!.toLowerCase())
+				: undefined;
+			if (superseded) events.push({ ev: "truth_retracted", text: superseded });
+			events.push({ ev: "truth", text, source: "amendment", ref: uref });
+			appendEvents(ctx, events);
+			ctx.ui.notify(
+				`⟡ truth amended from *u${uref}*: "${text}"` + (superseded ? `\n⟡ retracted: "${superseded}"` : ""),
+				"info",
+			);
+			return;
+		}
+
+		const truthMatch = trimmed.match(/^truth\s+(.+)$/is);
+		if (truthMatch) {
+			const text = clip(truthMatch[1], 300);
+			// Deterministic fast path — an exact re-bind needs no judge.
+			if (st.truths.some((truth) => truth.toLowerCase() === text.toLowerCase())) {
+				ctx.ui.notify(`⟡ already canon: "${text}"`, "info");
+				return;
+			}
+			let verdict;
+			try {
+				verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx) }, text);
+			} catch (error) {
+				ctx.ui.notify(
+					`The guardian could not be reached — nothing was bound. (${(error as Error).message})`,
+					"error",
+				);
+				return;
+			}
+			if (!verdict.allow) {
+				const record = ctx.sessionManager.getSessionFile() ?? "(unsaved session)";
+				ctx.ui.notify(
+					verdict.conflict
+						? `The engine denies this truth — the record speaks against it: ${verdict.conflict} (${verdict.reason})\n` +
+							`The full record: ${record}\n` +
+							`If the record itself states your fact at some entry, amend with proof: /gm amend_truth <fact> *uN* (numbers shown in /ledger and archive citations).`
+						: `The engine refuses to bind this truth: ${verdict.reason}`,
+					"warning",
+				);
+				return;
+			}
+			appendEvents(ctx, [{ ev: "truth", text, source: "decree" }]);
+			ctx.ui.notify(`⟡ truth bound by decree: "${text}"`, "info");
+			return;
+		}
+
+		let answer;
+		try {
+			answer = await gmAsk(
+				{
+					config,
+					state: st,
+					gamePrompt: assembleSystemPrompt(config, {
+						state: st,
+						resumedFrom,
+						justArrived: !branchHasAssistantReply(ctx),
+					}),
+					recentPlay: branchPlayLines(ctx),
+					ledgerLines: branchLedgerLines(ctx),
+					excerpts: searchArchive(archiveLinesOf(ctx), extractKeywords(trimmed)).map(formatArchiveLine),
+					model,
+				},
+				gmThread,
+				trimmed,
+			);
+		} catch (error) {
+			ctx.ui.notify(`The GM table is unreachable: ${(error as Error).message}`, "error");
+			return;
+		}
+		let out = `⟡ game master, out of character:\n${answer.say}`;
+		if (answer.bind) {
+			// Conviction binds pass the same code-enforced record check as decrees.
+			const text = clip(answer.bind, 300);
+			if (st.truths.some((truth) => truth.toLowerCase() === text.toLowerCase())) {
+				out += `\n\n⟡ already canon: "${text}"`;
+			} else {
+				let verdict = null;
+				try {
+					verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx) }, text);
+				} catch (error) {
+					out += `\n\nThe engine could not check the record — nothing was bound. (${(error as Error).message})`;
+				}
+				if (verdict?.allow) {
+					appendEvents(ctx, [{ ev: "truth", text, source: "conviction" }]);
+					out += `\n\n⟡ truth bound by conviction: "${text}"`;
+				} else if (verdict) {
+					out +=
+						`\n\nThe engine checked the record and denies the bind` +
+						`${verdict.conflict ? ` — it contradicts: ${verdict.conflict}` : ""} (${verdict.reason}).`;
+				}
+			}
+		} else if (answer.invite) {
+			out += `\n\nThe table stands divided. To bind your version as canon: /gm truth <the fact as you hold it>`;
+		}
+		gmThread.push({ who: "player", text: trimmed }, { who: "gm", text: answer.say });
+		if (gmThread.length > 24) gmThread = gmThread.slice(-24);
+		ctx.ui.notify(out, "info");
+	}
+
+	pi.registerCommand("gm", {
+		description: "World Console: the GM table — /gm <question|argument>, /gm truth <fact>",
+		getArgumentCompletions: gmCompletions,
+		handler: gmHandler,
+	});
+	pi.registerCommand("dm", {
+		description: "World Console: alias of /gm — /dm truth <fact> binds a fact as canon",
+		getArgumentCompletions: gmCompletions,
+		handler: gmHandler,
 	});
 
 	pi.registerTool({
@@ -429,6 +710,14 @@ export default function (pi: ExtensionAPI) {
 			appendEvents(ctx, [
 				{ ev: "search_performed", query, source: "youtube.com", ref: result.url, title: result.title, kind: "video" },
 			]);
+			// The player must know each time their browser cookies were borrowed
+			// (their standing choice: cookies only as the last resort, never silent).
+			if (result.cookieSource && result.cookieSource !== "file" && ctx.hasUI) {
+				ctx.ui.notify(
+					`YouTube demanded proof of humanity — cookies were borrowed from ${result.cookieSource} for this scrying.`,
+					"info",
+				);
+			}
 			return {
 				content: [
 					{

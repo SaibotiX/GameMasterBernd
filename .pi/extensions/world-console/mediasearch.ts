@@ -8,6 +8,26 @@
  * Video: yt-dlp as an arm's-length subprocess from the vendored source tree;
  * with ffmpeg (bundled under app/tools/ffmpeg/ or on PATH) a ~10 s clip,
  * otherwise the shortest matching full video ≤ 90 s.
+ *
+ * YouTube sometimes answers with an IP-level bot check ("Sign in to confirm
+ * you're not a bot") that hits every player client; per yt-dlp only cookies
+ * (or a PO-token provider plugin) cure it. Escalation ladder, least invasive
+ * first, per the player's 2026-08-02 choice:
+ *   1. the player's own Netscape export at app/config/youtube-cookies.txt,
+ *      if present — they control exactly which cookies it holds;
+ *   2. otherwise a bare attempt; the identity-free bgutil-ytdlp-pot-provider
+ *      plugin, when installed, upgrades every attempt transparently;
+ *   3. only when YouTube still bot-checks: cookies borrowed live from an
+ *      installed browser (WORLD_CONSOLE_YT_BROWSER names one, else the first
+ *      detected), sticky for the rest of the run. Every search that borrowed
+ *      them reports it via cookieSource so the UI can tell the player.
+ * yt-dlp reads the whole browser cookie store locally but only sends the
+ * youtube/google-scoped cookies with requests.
+ *
+ * Verified 2026-08-02: cookies alone are not enough — yt-dlp also needs its
+ * EJS challenge solver script (--remote-components ejs:github, always passed
+ * below) or YouTube's signature challenges fail and only storyboard images
+ * survive format extraction.
  */
 import { execFile } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync } from "node:fs";
@@ -139,35 +159,158 @@ export interface VideoResult {
 	durationSeconds: number;
 	path: string;
 	clipped: boolean;
+	/** Cookies the run ended up using: a browser name, "file", or null. */
+	cookieSource: string | null;
 }
 
 export interface VideoTooling {
 	ytDlpSource: string; // path to the vendored yt-dlp checkout
 	ffmpegDir: string | null; // directory containing a bundled ffmpeg, if any
 	hasSystemFfmpeg: boolean;
+	/** Netscape cookies file (app/config/youtube-cookies.txt), if present. */
+	cookiesFile: string | null;
+	/** Browser named by WORLD_CONSOLE_YT_BROWSER, if set. */
+	cookiesFromBrowser: string | null;
+	/** Installed browser to borrow cookies from when YouTube bot-checks. */
+	browserFallback: string | null;
+}
+
+/** First installed browser yt-dlp knows how to borrow cookies from. */
+function detectBrowser(): string | null {
+	const home = process.env.HOME ?? "";
+	if (!home) return null;
+	if (
+		existsSync(join(home, ".mozilla", "firefox")) ||
+		existsSync(join(home, "snap", "firefox", "common", ".mozilla", "firefox"))
+	) {
+		return "firefox";
+	}
+	if (existsSync(join(home, ".config", "chromium"))) return "chromium";
+	if (existsSync(join(home, ".config", "google-chrome"))) return "chrome";
+	if (existsSync(join(home, ".config", "BraveSoftware"))) return "brave";
+	return null;
 }
 
 export function detectTooling(appRoot: string): VideoTooling {
 	const ytDlpSource = join(appRoot, "..", "yt-dlp");
 	const bundled = join(appRoot, "tools", "ffmpeg");
+	const cookiesFile = join(appRoot, "config", "youtube-cookies.txt");
 	return {
 		ytDlpSource,
 		ffmpegDir: existsSync(join(bundled, "ffmpeg")) ? bundled : null,
 		hasSystemFfmpeg: (process.env.PATH ?? "")
 			.split(":")
 			.some((dir) => dir && existsSync(join(dir, "ffmpeg"))),
+		cookiesFile: existsSync(cookiesFile) ? cookiesFile : null,
+		cookiesFromBrowser: process.env.WORLD_CONSOLE_YT_BROWSER || null,
+		browserFallback: detectBrowser(),
 	};
 }
 
-function ytDlp(tooling: VideoTooling, args: string[], timeout: number, signal?: AbortSignal) {
-	const fullArgs = ["-m", "yt_dlp", "--no-warnings", "--no-playlist", "--js-runtimes", "node", ...args];
+function ytDlp(
+	tooling: VideoTooling,
+	args: string[],
+	timeout: number,
+	signal: AbortSignal | undefined,
+	browser: string | null,
+) {
+	// --remote-components ejs:github lets yt-dlp fetch its official challenge
+	// solver script (cached after the first download); without it YouTube's
+	// signature challenges fail and every real format is dropped.
+	const fullArgs = [
+		"-m", "yt_dlp", "--no-warnings", "--no-playlist",
+		"--js-runtimes", "node", "--remote-components", "ejs:github",
+		...args,
+	];
 	if (tooling.ffmpegDir) fullArgs.push("--ffmpeg-location", tooling.ffmpegDir);
+	if (browser) fullArgs.push("--cookies-from-browser", browser);
+	else if (tooling.cookiesFile) fullArgs.push("--cookies", tooling.cookiesFile);
 	return run("python3", fullArgs, {
 		timeout,
 		signal,
 		maxBuffer: 8 * 1024 * 1024,
 		env: { ...process.env, PYTHONPATH: tooling.ytDlpSource },
 	});
+}
+
+const BOT_CHECK = /Sign in to confirm|not a bot/i;
+
+function isBotCheck(error: unknown): boolean {
+	return BOT_CHECK.test(
+		[(error as { stderr?: string })?.stderr, (error as Error)?.message].filter(Boolean).join("\n"),
+	);
+}
+
+/**
+ * yt-dlp failures surface as execFile errors whose message embeds the whole
+ * command line plus stderr. Reduce that to the yt-dlp ERROR line — and turn
+ * YouTube's bot check into the instruction that actually fixes it — so the
+ * model and the ledger get a short reason instead of a wall of text.
+ */
+function ytDlpError(error: unknown, triedBrowser?: string): Error {
+	const raw = [(error as { stderr?: string })?.stderr, (error as Error)?.message].filter(Boolean).join("\n");
+	const firstError = raw
+		.split("\n")
+		.find((line) => line.trimStart().startsWith("ERROR:"))
+		?.trim();
+	if (firstError && BOT_CHECK.test(firstError)) {
+		return new Error(
+			triedBrowser
+				? `YouTube's bot check refused even cookies borrowed from ${triedBrowser}. ` +
+					`Open youtube.com in ${triedBrowser} once (signing in helps most), then try again — ` +
+					`or save a signed-in Netscape export to app/config/youtube-cookies.txt.`
+				: "YouTube refused the request (bot check) and no browser was found to borrow cookies from. " +
+					"Set WORLD_CONSOLE_YT_BROWSER=<firefox|chrome|...>, save a Netscape cookie export to " +
+					"app/config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
+		);
+	}
+	if (firstError) return new Error(firstError);
+	const brief = raw.replace(/\s+/g, " ").trim();
+	return new Error(brief.length > 300 ? `${brief.slice(0, 300)}…` : brief || "yt-dlp failed");
+}
+
+/** Browser that already rescued a bot-checked call — reused for the rest of the run. */
+let cookieRescue: string | null = null;
+
+/** Records which cookies a search ended up using (browser name, "file", or null). */
+interface CookieTrace {
+	used: string | null;
+}
+
+/**
+ * Run yt-dlp; when YouTube answers with its bot check, retry once with
+ * cookies borrowed live from an installed browser and keep using them for
+ * later calls. Browser cookies are the LAST resort: the first attempt runs
+ * bare — or with the player's own cookie file — and WORLD_CONSOLE_YT_BROWSER
+ * only names which browser the rescue may borrow from. The browser store is
+ * re-read on every invocation, so no export file, reload, or rerun is needed.
+ */
+async function ytDlpRescued(
+	tooling: VideoTooling,
+	args: string[],
+	timeout: number,
+	signal: AbortSignal | undefined,
+	trace?: CookieTrace,
+) {
+	const standing = cookieRescue;
+	try {
+		const result = await ytDlp(tooling, args, timeout, signal, standing);
+		if (trace) trace.used = standing ?? (tooling.cookiesFile ? "file" : null);
+		return result;
+	} catch (error) {
+		throwIfAborted(signal);
+		const rescue = tooling.cookiesFromBrowser ?? tooling.browserFallback;
+		if (!isBotCheck(error) || standing || !rescue) throw ytDlpError(error, standing ?? undefined);
+		try {
+			const result = await ytDlp(tooling, args, timeout, signal, rescue);
+			cookieRescue = rescue;
+			if (trace) trace.used = rescue;
+			return result;
+		} catch (retryError) {
+			throwIfAborted(signal);
+			throw ytDlpError(retryError, rescue);
+		}
+	}
 }
 
 interface Candidate {
@@ -181,12 +324,14 @@ async function probe(
 	searchKey: string,
 	signal: AbortSignal | undefined,
 	count = 6,
+	trace?: CookieTrace,
 ): Promise<Candidate[]> {
-	const { stdout } = await ytDlp(
+	const { stdout } = await ytDlpRescued(
 		tooling,
 		["--skip-download", "--flat-playlist", "--print", "%(id)s\t%(duration)s\t%(title)s", `ytsearch${count}:${searchKey}`],
 		PROBE_TIMEOUT,
 		signal,
+		trace,
 	);
 	const candidates: Candidate[] = [];
 	for (const line of stdout.split("\n")) {
@@ -205,7 +350,8 @@ export async function searchVideo(
 	downloadDir: string,
 	signal?: AbortSignal,
 ): Promise<VideoResult | null> {
-	const candidates = await probe(tooling, searchKey, signal);
+	const trace: CookieTrace = { used: null };
+	const candidates = await probe(tooling, searchKey, signal, 6, trace);
 	if (candidates.length === 0) return null;
 	throwIfAborted(signal);
 
@@ -218,26 +364,29 @@ export async function searchVideo(
 	} else {
 		const shortest = (list: Candidate[]) =>
 			[...list].sort((a, b) => a.durationSeconds - b.durationSeconds).find((c) => c.durationSeconds <= 90);
-		pick = shortest(candidates) ?? shortest(await probe(tooling, `${searchKey} shorts`, signal, 10));
+		pick = shortest(candidates) ?? shortest(await probe(tooling, `${searchKey} shorts`, signal, 10, trace));
 		if (!pick) return null; // nothing short enough to hand over whole
 	}
 
 	mkdirSync(downloadDir, { recursive: true });
 	const output = join(downloadDir, `clip-${slug(searchKey)}-${Date.now()}.%(ext)s`);
 	const url = `https://www.youtube.com/watch?v=${pick.id}`;
+	// YouTube increasingly serves only split video+audio streams (no premuxed
+	// file): with ffmpeg pick the best mp4 pair and merge; without ffmpeg only
+	// a premuxed single file can be handed over.
 	const args = [
 		url,
-		"-f", "mp4/best",
+		"-f", canClip ? "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b" : "b[ext=mp4]/b",
 		"-o", output,
 		"--print", "after_move:filepath",
 		"--no-simulate",
 		"--quiet",
 	];
 	if (canClip) {
-		args.push("--download-sections", `*0-${CLIP_SECONDS}`, "--force-keyframes-at-cuts");
+		args.push("--merge-output-format", "mp4", "--download-sections", `*0-${CLIP_SECONDS}`, "--force-keyframes-at-cuts");
 	}
 
-	const { stdout } = await ytDlp(tooling, args, DOWNLOAD_TIMEOUT, signal);
+	const { stdout } = await ytDlpRescued(tooling, args, DOWNLOAD_TIMEOUT, signal, trace);
 	const path = stdout.trim().split("\n").at(-1);
 	if (!path || !existsSync(path)) return null;
 	return {
@@ -246,5 +395,6 @@ export async function searchVideo(
 		durationSeconds: canClip ? CLIP_SECONDS : pick.durationSeconds,
 		path,
 		clipped: canClip,
+		cookieSource: trace.used,
 	};
 }

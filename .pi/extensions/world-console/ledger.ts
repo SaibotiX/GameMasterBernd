@@ -29,7 +29,11 @@ export type GameEvent =
 	| { ev: "search_requested"; query: string; kind?: string }
 	| { ev: "search_performed"; query: string; source: string; ref: string; title: string; kind?: string }
 	| { ev: "search_refused"; category: string; kind?: string }
-	| { ev: "search_failed"; reason: string; kind?: string };
+	| { ev: "search_failed"; reason: string; kind?: string }
+	/** A fact settled at the GM table: engine's conviction, player's decree, or an evidence-backed amendment (ref = the *uN* record entry that proves it). */
+	| { ev: "truth"; text: string; source: "conviction" | "decree" | "amendment"; ref?: number }
+	/** Canon withdrawn because an amendment superseded it. */
+	| { ev: "truth_retracted"; text: string };
 
 export interface DerivedState {
 	world?: string;
@@ -39,6 +43,8 @@ export interface DerivedState {
 	chats: number;
 	searches: number;
 	refusals: number;
+	/** Facts bound at the GM table, in binding order, deduplicated. */
+	truths: string[];
 	/** ISO timestamp of the newest entry on the branch, if any. */
 	lastEntryAt?: string;
 }
@@ -73,6 +79,7 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 		chats: 0,
 		searches: 0,
 		refusals: 0,
+		truths: [],
 	};
 	for (const entry of entries) {
 		if (entry.timestamp) state.lastEntryAt = entry.timestamp;
@@ -103,6 +110,12 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				break;
 			case "search_refused":
 				state.refusals++;
+				break;
+			case "truth":
+				if (!state.truths.includes(event.text)) state.truths.push(event.text);
+				break;
+			case "truth_retracted":
+				state.truths = state.truths.filter((truth) => truth !== event.text);
 				break;
 			default:
 				break; // search_requested / search_failed carry no derived state
@@ -160,5 +173,9 @@ export function describeEvent(event: GameEvent): string {
 			return `${event.kind ?? "text"} search refused (${event.category})`;
 		case "search_failed":
 			return `${event.kind ?? "text"} search failed (${event.reason})`;
+		case "truth":
+			return `truth bound (${event.source}): "${event.text}"${event.ref ? ` ← *u${event.ref}*` : ""}`;
+		case "truth_retracted":
+			return `truth retracted: "${event.text}"`;
 	}
 }

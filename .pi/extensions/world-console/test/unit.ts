@@ -13,9 +13,8 @@ import { fileURLToPath } from "node:url";
 const EXT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = join(EXT, "..", "..", "..");
 
-const { derive, planSetMood, planRedemption, asGameEvent, LEDGER_TYPE, LEGACY_MOOD_TYPE } = await import(
-	join(EXT, "ledger.ts")
-);
+const { derive, describeEvent, planSetMood, planRedemption, asGameEvent, LEDGER_TYPE, LEGACY_MOOD_TYPE } =
+	await import(join(EXT, "ledger.ts"));
 const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
@@ -43,7 +42,7 @@ function assistantMsg(t = "2026-08-02T12:00:02.000Z") {
 // ---- 1. derive ------------------------------------------------------------
 ok("derive: empty branch → defaults", () => {
 	const st = derive([], "neutral");
-	assert.deepEqual(st, { mood: "neutral", banned: false, chats: 0, searches: 0, refusals: 0 });
+	assert.deepEqual(st, { mood: "neutral", banned: false, chats: 0, searches: 0, refusals: 0, truths: [] });
 });
 
 ok("derive: mood chain, last wins", () => {
@@ -83,6 +82,36 @@ ok("derive: world stamp and player name", () => {
 	const st = derive([ev({ ev: "world", world: "star-frontier" }), ev({ ev: "player_named", name: "Bbaba" })], "neutral");
 	assert.equal(st.world, "star-frontier");
 	assert.equal(st.playerName, "Bbaba");
+});
+
+ok("derive: truths accumulate, dedupe, and describe", () => {
+	const st = derive(
+		[
+			ev({ ev: "truth", text: "The moon is a lantern.", source: "decree" }),
+			ev({ ev: "truth", text: "The moon is a lantern.", source: "conviction" }),
+			ev({ ev: "truth", text: "Bernd owes the seeker a favor.", source: "conviction" }),
+		],
+		"neutral",
+	);
+	assert.deepEqual(st.truths, ["The moon is a lantern.", "Bernd owes the seeker a favor."]);
+	assert.match(describeEvent({ ev: "truth", text: "X", source: "decree" }), /truth bound \(decree\): "X"/);
+});
+
+ok("derive: an amendment retracts the superseded truth and binds the corrected one", () => {
+	const st = derive(
+		[
+			ev({ ev: "truth", text: "The dragon is twenty meters tall.", source: "decree" }),
+			ev({ ev: "truth_retracted", text: "The dragon is twenty meters tall." }),
+			ev({ ev: "truth", text: "The dragon is nineteen and three-quarter meters tall.", source: "amendment", ref: 7 }),
+		],
+		"neutral",
+	);
+	assert.deepEqual(st.truths, ["The dragon is nineteen and three-quarter meters tall."]);
+	assert.match(
+		describeEvent({ ev: "truth", text: "X", source: "amendment", ref: 7 }),
+		/truth bound \(amendment\): "X" ← \*u7\*/,
+	);
+	assert.match(describeEvent({ ev: "truth_retracted", text: "Y" }), /truth retracted: "Y"/);
 });
 
 ok("derive: legacy milestone mood entries honored", () => {
@@ -225,12 +254,72 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /it has NOT happened/);
 		assert.match(p, /set_mood\("angry"\)/);
 		assert.match(p, /\[engine\]/);
+		assert.match(p, /story's author/);
+		assert.match(p, /invent the tale at once/);
 	});
 	const fresh = assembleSystemPrompt(config, { state: derive([], "neutral"), justArrived: true });
 	ok("prompt: fresh sitting shows arrival note, no resume line", () => {
 		assert.match(fresh, /just arrived/);
 		assert.doesNotMatch(fresh, /last spoke/);
 		assert.match(fresh, /an unnamed stranger/);
+	});
+	ok("prompt: established truths appear as a binding layer only when present", () => {
+		const withTruths = assembleSystemPrompt(config, {
+			state: { ...derive([], "neutral"), truths: ["The moon is a lantern."] },
+			justArrived: false,
+		});
+		assert.match(withTruths, /3½ · established truths/);
+		assert.match(withTruths, /- The moon is a lantern\./);
+		assert.doesNotMatch(fresh, /established truths/);
+		assert.doesNotMatch(p, /established truths/);
+	});
+}
+
+// ---- 5½. GM table pure parts ----------------------------------------------
+{
+	const gm = await import(join(EXT, "gmchat.ts"));
+	ok("gmchat: extractJson finds the balanced object and rejects noise", () => {
+		assert.deepEqual(gm.extractJson('chatter {"a": {"b": 2}, "c": "x}"} tail'), { a: { b: 2 }, c: "x}" });
+		assert.equal(gm.extractJson("no json here"), null);
+	});
+
+	const archive = await import(join(EXT, "archive.ts"));
+	ok("archive: keywords keep the main words, drop scaffolding, stem broadly", () => {
+		const keywords = archive.extractKeywords("What dragons were named in this chat?");
+		assert.ok(keywords.includes("dragon"), `dragon in ${keywords}`);
+		for (const noise of ["what", "were", "the", "this", "chat"]) assert.ok(!keywords.includes(noise), noise);
+		assert.ok(archive.extractKeywords("How was the king called?").includes("king"));
+		assert.deepEqual(archive.extractKeywords("was it the??"), []);
+	});
+	ok("archive: long text chunks on sentence bounds, nothing lost, hard-splits monsters", () => {
+		const short = archive.chunkText("One sentence only.");
+		assert.deepEqual(short, ["One sentence only."]);
+		const long = archive.chunkText(
+			"The keeper spoke at length of the vale. ".repeat(20) + "Lord Ashelin ruled Villerian before its burning.",
+			120,
+		);
+		assert.ok(long.length > 3, `expected several chunks, got ${long.length}`);
+		assert.ok(long.every((chunk: string) => chunk.length <= 120));
+		assert.ok(long.at(-1)!.includes("Lord Ashelin"), "the deep fact must survive chunking");
+		const monster = archive.chunkText("x".repeat(950), 400);
+		assert.equal(monster.length, 3);
+	});
+
+	ok("archive: hits return with neighbours, windows merge, no keywords → empty", () => {
+		const lines = [
+			{ uid: 1, who: "seeker", text: "Tell me of the sky." },
+			{ uid: 2, who: "game", text: "The moon is always full." },
+			{ uid: 3, who: "seeker", text: "And the mountains?" },
+			{ uid: 4, who: "game", text: "Vorthaxes the dragon nests there." },
+			{ uid: 5, who: "seeker", text: "I see." },
+			{ uid: 6, who: "game", text: "Indeed." },
+		];
+		const hits = archive.searchArchive(lines, ["dragon"]);
+		assert.deepEqual(hits.map((line: { uid: number }) => line.uid), [3, 4, 5]);
+		const merged = archive.searchArchive(lines, ["moon", "mountain"]);
+		assert.deepEqual(merged.map((line: { uid: number }) => line.uid), [1, 2, 3, 4]);
+		assert.deepEqual(archive.searchArchive(lines, []), []);
+		assert.equal(archive.formatArchiveLine(lines[3]), "*u4* game: Vorthaxes the dragon nests there.");
 	});
 }
 
@@ -243,7 +332,7 @@ ok("asGameEvent: non-custom entries → null", () => {
 // ---- 7. media search (picture live, video tooling) ------------------------
 {
 	const media = await import(join(EXT, "mediasearch.ts"));
-	const { existsSync, rmSync, statSync } = await import("node:fs");
+	const { existsSync, mkdirSync, rmSync, statSync, writeFileSync } = await import("node:fs");
 	const downloadDir = "/tmp/wc-test/downloads-unit";
 	rmSync(downloadDir, { recursive: true, force: true });
 
@@ -271,6 +360,29 @@ ok("asGameEvent: non-custom entries → null", () => {
 		assert.equal(existsSync(join(tooling.ytDlpSource, "yt_dlp")), true, "vendored yt-dlp missing");
 		const bundled = join(REPO, "app", "tools", "ffmpeg", "ffmpeg");
 		assert.equal(tooling.ffmpegDir !== null, existsSync(bundled));
+		const cookies = join(REPO, "app", "config", "youtube-cookies.txt");
+		assert.equal(tooling.cookiesFile, existsSync(cookies) ? cookies : null);
+	});
+
+	ok("video: cookie opt-ins picked up from config file and env", () => {
+		const fakeRoot = "/tmp/wc-test/fake-app";
+		rmSync(fakeRoot, { recursive: true, force: true });
+		mkdirSync(join(fakeRoot, "config"), { recursive: true });
+		writeFileSync(join(fakeRoot, "config", "youtube-cookies.txt"), "# Netscape HTTP Cookie File\n");
+		assert.equal(media.detectTooling(fakeRoot).cookiesFile, join(fakeRoot, "config", "youtube-cookies.txt"));
+		const prev = process.env.WORLD_CONSOLE_YT_BROWSER;
+		process.env.WORLD_CONSOLE_YT_BROWSER = "firefox";
+		try {
+			assert.equal(media.detectTooling(fakeRoot).cookiesFromBrowser, "firefox");
+		} finally {
+			if (prev === undefined) delete process.env.WORLD_CONSOLE_YT_BROWSER;
+			else process.env.WORLD_CONSOLE_YT_BROWSER = prev;
+		}
+		const home = process.env.HOME ?? "";
+		const firefoxProfiles =
+			existsSync(join(home, ".mozilla", "firefox")) ||
+			existsSync(join(home, "snap", "firefox", "common", ".mozilla", "firefox"));
+		if (firefoxProfiles) assert.equal(media.detectTooling(fakeRoot).browserFallback, "firefox");
 	});
 }
 
