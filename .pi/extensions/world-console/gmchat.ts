@@ -182,12 +182,47 @@ export interface GmTurn {
 	text: string;
 }
 
+/**
+ * A corrective engine action the meta-GM may propose when the record shows
+ * the recorded state is wrong. The engine validates and executes; the table
+ * itself has no hands — words alone change nothing.
+ */
+export type GmFix =
+	| { kind: "place"; name: string; description?: string }
+	| { kind: "place_note"; place: string; note: string }
+	| { kind: "persona_record"; name: string; role: string; dealings: string; place: string }
+	| { kind: "persona_move"; name: string; to_place: string; reason: string }
+	| { kind: "quest_status"; title: string; status: "done" | "rewarded"; note: string }
+	| { kind: "item"; item: string; origin: string };
+
+const FIX_KINDS = new Set(["place", "place_note", "persona_record", "persona_move", "quest_status", "item"]);
+
 export interface GmAnswer {
 	say: string;
 	/** A settled fact to bind as canon (the conviction path), or null. */
 	bind: string | null;
 	/** True when the dispute stayed unresolved — offer the decree command. */
 	invite: boolean;
+	/** Record-backed repairs for the engine to execute (validated in code). */
+	fixes: GmFix[];
+}
+
+/** Parse the table's structured reply; unreadable replies degrade to plain say. */
+export function parseGmAnswer(raw: string): GmAnswer {
+	const parsed = extractJson(raw);
+	if (!parsed || typeof parsed.say !== "string") {
+		return { say: raw, bind: null, invite: false, fixes: [] };
+	}
+	const bind = typeof parsed.bind === "string" && parsed.bind.trim() ? parsed.bind.trim() : null;
+	const fixes: GmFix[] = [];
+	if (Array.isArray(parsed.fixes)) {
+		for (const fix of parsed.fixes) {
+			if (fix && typeof fix === "object" && FIX_KINDS.has((fix as { kind?: string }).kind ?? "")) {
+				fixes.push(fix as GmFix);
+			}
+		}
+	}
+	return { say: parsed.say.trim(), bind, invite: parsed.invite === true, fixes: fixes.slice(0, 4) };
 }
 
 export interface GmDeps {
@@ -253,10 +288,21 @@ function tableSystemPrompt(deps: GmDeps): string {
 		deps.gamePrompt,
 		`</the in-character instructions currently governing the game — reference for transparency questions>`,
 		``,
+		`Repairs — righting a wrongly recorded state:`,
+		`- When the seeker points at engine state the record shows is wrong (the party's place and footer, a page written in error, a soul's whereabouts, a quest's standing, a missing item), verify it against the sections above. If the record plainly supports the correction, put engine actions in "fixes" (at most 4) and cite the *uN* evidence in "say". If it does not, propose none and say so.`,
+		`- Actions the engine accepts in "fixes":`,
+		`    {"kind":"place","name":"...","description":"only when founding a never-chronicled place"} — set the party's true place; the footer follows`,
+		`    {"kind":"place_note","place":"...","note":"..."} — append a correction note to a place's page (pages never shrink)`,
+		`    {"kind":"persona_record","name":"...","role":"...","dealings":"...","place":"..."} — chronicle a soul the record shows was met`,
+		`    {"kind":"persona_move","name":"...","to_place":"...","reason":"..."} — correct a soul's whereabouts, reason recorded`,
+		`    {"kind":"quest_status","title":"...","status":"done"|"rewarded","note":"..."} — forward only; rewarded also grants the recorded reward`,
+		`    {"kind":"item","item":"...","origin":"..."} — record a gain the story granted but the engine missed`,
+		`- Repairs happen ONLY through "fixes": never claim in words that something is now marked, moved or recorded — the engine executes and announces every repair itself, and it validates each one (unknown pages, backward quest moves and reasonless relocations are refused).`,
+		``,
 		`Settling disputes and binding truths:`,
 		`- Weigh the seeker's argument honestly against the ledger, the world text and your own prior statements. Concede when they are right; hold your ground when they are not.`,
 		`Respond with ONLY a JSON object, no prose around it:`,
-		`{"say": "...", "bind": null, "invite": false}`,
+		`{"say": "...", "bind": null, "invite": false, "fixes": []}`,
 		`- "say": your table-talk to the seeker.`,
 		`- "bind": normally null. Set it to ONE plainly-stated sentence ONLY when the table has genuinely settled a fact worth making canon — you were convinced you were wrong, or you both agreed on something new. The engine records it in the ledger and it will bind the in-character game from then on. Never bind mid-argument.`,
 		`- "invite": set true ONLY when a real disagreement stays unresolved after honest argument; the engine will then show the seeker how to bind their version by decree.`,
@@ -287,13 +333,7 @@ export async function gmAsk(deps: GmDeps, thread: GmTurn[], playerText: string):
 	messages.push({ role: "user", content: playerText, timestamp: Date.now() });
 
 	const raw = await complete(deps.model, tableSystemPrompt(deps), messages);
-	const parsed = extractJson(raw);
-	if (!parsed || typeof parsed.say !== "string") {
-		// An unreadable reply still holds the GM's words — show them, bind nothing.
-		return { say: raw, bind: null, invite: false };
-	}
-	const bind = typeof parsed.bind === "string" && parsed.bind.trim() ? parsed.bind.trim() : null;
-	return { say: parsed.say.trim(), bind, invite: parsed.invite === true };
+	return parseGmAnswer(raw);
 }
 
 /** The record a truth is checked against: code collects it, the judge reads it. */

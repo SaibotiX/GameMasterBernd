@@ -1,0 +1,265 @@
+/**
+ * The open world on disk: places, personas, quests and items live as plain
+ * markdown under app/data/world/<world-id>/ — the persistent chronicle that
+ * outlives sittings. Unlike the session ledger, world files are never
+ * rewound by /tree and never deleted; they only grow.
+ *
+ * All writes go through the engine (this module); the model supplies content
+ * through tool parameters. Code owns the invariants:
+ *   - place and persona identity is the slug of the name — the same name is
+ *     the same page, so returning somewhere loads its whole history;
+ *   - a persona dwells where last recorded ("now at:") and moves only with a
+ *     recorded reason;
+ *   - quests advance open → done → rewarded, never backwards, and the reward
+ *     is collectable only where the giver dwells (checked by the caller via
+ *     personaLocation).
+ */
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+export interface WorldFiles {
+	/** app/data/world/<worldId> (or the test override). */
+	root: string;
+}
+
+export function slugify(text: string, max = 48): string {
+	return (
+		text
+			.toLowerCase()
+			.replace(/[^a-z0-9äöüß]+/g, "-")
+			.replace(/^-+|-+$/g, "")
+			.slice(0, max) || "unnamed"
+	);
+}
+
+const stamp = () => new Date().toISOString().slice(0, 16).replace("T", " ");
+
+function ensureDir(dir: string): void {
+	mkdirSync(dir, { recursive: true });
+}
+
+function read(file: string): string {
+	return existsSync(file) ? readFileSync(file, "utf8") : "";
+}
+
+// ---- places ---------------------------------------------------------------
+
+const placeFile = (world: WorldFiles, slug: string) => join(world.root, "places", `${slug}.md`);
+
+export function placeExists(world: WorldFiles, name: string): boolean {
+	return existsSync(placeFile(world, slugify(name)));
+}
+
+export interface PlaceVisit {
+	created: boolean;
+	slug: string;
+	title: string;
+	/** The full page after the visit was recorded. */
+	content: string;
+}
+
+/**
+ * Arrive at a place: founds the page on first visit (description required by
+ * the caller then), appends an arrival line on every return.
+ */
+export function visitPlace(world: WorldFiles, name: string, description: string): PlaceVisit {
+	const slug = slugify(name);
+	const file = placeFile(world, slug);
+	ensureDir(join(world.root, "places"));
+	if (!existsSync(file)) {
+		writeFileSync(
+			file,
+			`# ${name.trim()}\n` +
+				`- first recorded: ${stamp()}\n\n` +
+				`## The place\n${description.trim()}\n\n` +
+				`## Chronicle of visits\n### ${stamp()} — first arrival\n`,
+			"utf8",
+		);
+		return { created: true, slug, title: name.trim(), content: read(file) };
+	}
+	appendFileSync(file, `### ${stamp()} — the party returns\n`, "utf8");
+	const content = read(file);
+	const title = content.match(/^# (.+)$/m)?.[1]?.trim() ?? name.trim();
+	return { created: false, slug, title, content };
+}
+
+/** Extend the page of an existing place with new details (never deletes). */
+export function extendPlace(world: WorldFiles, name: string, details: string): boolean {
+	const file = placeFile(world, slugify(name));
+	if (!existsSync(file)) return false;
+	appendFileSync(file, `### ${stamp()}\n${details.trim()}\n`, "utf8");
+	return true;
+}
+
+// ---- personas -------------------------------------------------------------
+
+const personaFile = (world: WorldFiles, slug: string) => join(world.root, "personas", `${slug}.md`);
+
+export function personaExists(world: WorldFiles, name: string): boolean {
+	return existsSync(personaFile(world, slugify(name)));
+}
+
+/** Where a persona currently dwells (a place slug), or null if unknown. */
+export function personaLocation(world: WorldFiles, name: string): string | null {
+	const content = read(personaFile(world, slugify(name)));
+	return content.match(/^- now at: (.+)$/m)?.[1]?.trim() ?? null;
+}
+
+/**
+ * Record a notable soul at a place — founds the page on first meeting,
+ * appends the new dealings on every later one. Never changes "now at" for an
+ * existing persona (that is movePersona's job, with a reason).
+ */
+export function recordPersona(
+	world: WorldFiles,
+	name: string,
+	role: string,
+	dealings: string,
+	placeSlug: string,
+): { created: boolean; slug: string } {
+	const slug = slugify(name);
+	const file = personaFile(world, slug);
+	ensureDir(join(world.root, "personas"));
+	if (!existsSync(file)) {
+		writeFileSync(
+			file,
+			`# ${name.trim()}\n` +
+				`- met at: ${placeSlug} (${stamp()})\n` +
+				`- now at: ${placeSlug}\n\n` +
+				`## Who they are\n${role.trim()}\n\n` +
+				`## Dealings with the seeker\n### ${stamp()} — at ${placeSlug}\n${dealings.trim()}\n`,
+			"utf8",
+		);
+		return { created: true, slug };
+	}
+	appendFileSync(file, `### ${stamp()} — at ${placeSlug}\n${dealings.trim()}\n`, "utf8");
+	return { created: false, slug };
+}
+
+/**
+ * Move a persona to another (existing) place — the reason is recorded on
+ * their page, so a convenient relocation is always auditable.
+ */
+export function movePersona(world: WorldFiles, name: string, toPlaceSlug: string, reason: string): boolean {
+	const file = personaFile(world, slugify(name));
+	const content = read(file);
+	if (!content) return false;
+	const updated = content.replace(/^- now at: .+$/m, `- now at: ${toPlaceSlug}`);
+	writeFileSync(file, updated, "utf8");
+	appendFileSync(file, `### ${stamp()} — moved to ${toPlaceSlug}\nReason: ${reason.trim()}\n`, "utf8");
+	return true;
+}
+
+/** Names of all personas whose "now at" is the given place. */
+export function personasAt(world: WorldFiles, placeSlug: string): string[] {
+	const dir = join(world.root, "personas");
+	if (!existsSync(dir)) return [];
+	const names: string[] = [];
+	for (const entry of readdirSync(dir)) {
+		if (!entry.endsWith(".md")) continue;
+		const content = read(join(dir, entry));
+		if (content.match(/^- now at: (.+)$/m)?.[1]?.trim() === placeSlug) {
+			names.push(content.match(/^# (.+)$/m)?.[1]?.trim() ?? entry.replace(/\.md$/, ""));
+		}
+	}
+	return names;
+}
+
+// ---- quests ---------------------------------------------------------------
+
+const questsFile = (world: WorldFiles) => join(world.root, "quests.md");
+
+export interface Quest {
+	slug: string;
+	title: string;
+	status: "open" | "done" | "rewarded";
+	giver: string;
+	giverSlug: string;
+	reward: string;
+}
+
+export function grantQuest(
+	world: WorldFiles,
+	quest: { title: string; giver: string; task: string; reward: string; placeSlug: string },
+): { slug: string } {
+	const slug = slugify(quest.title);
+	if (questBySlug(world, slug)) throw new Error(`a quest named "${quest.title}" already exists in the chronicle`);
+	ensureDir(world.root);
+	const file = questsFile(world);
+	if (!existsSync(file)) writeFileSync(file, `# Quests\n`, "utf8");
+	appendFileSync(
+		file,
+		`\n## [open] ${quest.title.trim()} (id: ${slug})\n` +
+			`- giver: ${quest.giver.trim()} (persona: ${slugify(quest.giver)})\n` +
+			`- granted at: ${quest.placeSlug}, ${stamp()}\n` +
+			`- task: ${quest.task.trim()}\n` +
+			`- reward: ${quest.reward.trim()}\n` +
+			`### progress\n`,
+		"utf8",
+	);
+	return { slug };
+}
+
+export function questBySlug(world: WorldFiles, slug: string): Quest | null {
+	const content = read(questsFile(world));
+	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded)\\] (.+) \\(id: ${slug}\\)$`, "m"));
+	if (!heading) return null;
+	const section = content.slice(content.indexOf(heading[0]));
+	const body = section.slice(0, section.indexOf("\n## ", 1) === -1 ? undefined : section.indexOf("\n## ", 1));
+	const giverLine = body.match(/^- giver: (.+) \(persona: (.+)\)$/m);
+	return {
+		slug,
+		title: heading[2].trim(),
+		status: heading[1] as Quest["status"],
+		giver: giverLine?.[1]?.trim() ?? "unknown",
+		giverSlug: giverLine?.[2]?.trim() ?? "unknown",
+		reward: body.match(/^- reward: (.+)$/m)?.[1]?.trim() ?? "nothing",
+	};
+}
+
+/** Advance a quest (open → done → rewarded); progress notes always append. */
+export function setQuestStatus(
+	world: WorldFiles,
+	slug: string,
+	status: "done" | "rewarded" | null,
+	note: string,
+): boolean {
+	const quest = questBySlug(world, slug);
+	if (!quest) return false;
+	const file = questsFile(world);
+	let content = read(file);
+	if (status) {
+		content = content.replace(
+			new RegExp(`^## \\[(open|done|rewarded)\\] (.+) \\(id: ${slug}\\)$`, "m"),
+			`## [${status}] $2 (id: ${slug})`,
+		);
+	}
+	// Progress lines live under the quest's "### progress" heading.
+	const marker = `(id: ${slug})`;
+	const sectionStart = content.indexOf(marker);
+	const progressAt = content.indexOf("### progress", sectionStart);
+	const insertAt = content.indexOf("\n", progressAt) + 1;
+	const line = `- ${stamp()}${status ? ` [${status}]` : ""} — ${note.trim()}\n`;
+	content = content.slice(0, insertAt) + line + content.slice(insertAt);
+	writeFileSync(file, content, "utf8");
+	return true;
+}
+
+/** Headings of every quest not yet rewarded — the standing "open matters". */
+export function openQuestLines(world: WorldFiles): string[] {
+	return read(questsFile(world))
+		.split("\n")
+		.filter((line) => /^## \[(open|done)\] /.test(line))
+		.map((line) => line.replace(/^## /, ""));
+}
+
+// ---- items ----------------------------------------------------------------
+
+const itemsFile = (world: WorldFiles) => join(world.root, "items.md");
+
+export function addItem(world: WorldFiles, text: string): void {
+	ensureDir(world.root);
+	const file = itemsFile(world);
+	if (!existsSync(file)) writeFileSync(file, `# Items of the seeker\n`, "utf8");
+	appendFileSync(file, `- ${stamp()} · ${text.trim()}\n`, "utf8");
+}

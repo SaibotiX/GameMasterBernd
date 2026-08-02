@@ -33,7 +33,17 @@ export type GameEvent =
 	/** A fact settled at the GM table: engine's conviction, player's decree, or an evidence-backed amendment (ref = the *uN* record entry that proves it). */
 	| { ev: "truth"; text: string; source: "conviction" | "decree" | "amendment"; ref?: number }
 	/** Canon withdrawn because an amendment superseded it. */
-	| { ev: "truth_retracted"; text: string };
+	| { ev: "truth_retracted"; text: string }
+	/** Which world-file chronicle this story writes to ("" = the legacy shared folder). Stamped once; /fork copies it, /new starts a fresh one. */
+	| { ev: "chronicle"; key: string }
+	/** The party moved to a place (world files hold the place's page). */
+	| { ev: "place"; slug: string; title: string }
+	/** A notable soul recorded or moved in the world files. */
+	| { ev: "persona"; name: string; place: string; note?: string }
+	/** Quest lifecycle mirror of quests.md. */
+	| { ev: "quest"; action: "granted" | "done" | "rewarded"; title: string }
+	/** Loot, pay or gifts mirrored from items.md. */
+	| { ev: "item"; text: string };
 
 export interface DerivedState {
 	world?: string;
@@ -45,6 +55,10 @@ export interface DerivedState {
 	refusals: number;
 	/** Facts bound at the GM table, in binding order, deduplicated. */
 	truths: string[];
+	/** Where the party stands, per the newest place event on the branch. */
+	place?: { slug: string; title: string };
+	/** World-file chronicle key ("" = legacy shared folder); undefined until stamped. */
+	chronicle?: string;
 	/** ISO timestamp of the newest entry on the branch, if any. */
 	lastEntryAt?: string;
 }
@@ -117,6 +131,12 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 			case "truth_retracted":
 				state.truths = state.truths.filter((truth) => truth !== event.text);
 				break;
+			case "place":
+				state.place = { slug: event.slug, title: event.title };
+				break;
+			case "chronicle":
+				state.chronicle = event.key;
+				break;
 			default:
 				break; // search_requested / search_failed carry no derived state
 		}
@@ -177,5 +197,15 @@ export function describeEvent(event: GameEvent): string {
 			return `truth bound (${event.source}): "${event.text}"${event.ref ? ` ← *u${event.ref}*` : ""}`;
 		case "truth_retracted":
 			return `truth retracted: "${event.text}"`;
+		case "chronicle":
+			return `chronicle bound: ${event.key || "the shared legacy chronicle"}`;
+		case "place":
+			return `journeyed to: ${event.title}`;
+		case "persona":
+			return `soul recorded: ${event.name} at ${event.place}${event.note ? ` (${event.note})` : ""}`;
+		case "quest":
+			return `quest ${event.action}: "${event.title}"`;
+		case "item":
+			return `item gained: ${event.text}`;
 	}
 }

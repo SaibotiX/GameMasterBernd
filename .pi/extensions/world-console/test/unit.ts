@@ -114,6 +114,13 @@ ok("derive: an amendment retracts the superseded truth and binds the corrected o
 	assert.match(describeEvent({ ev: "truth_retracted", text: "Y" }), /truth retracted: "Y"/);
 });
 
+ok("derive: chronicle key stamps the story's world-file folder (\"\" = legacy)", () => {
+	assert.equal(derive([ev({ ev: "chronicle", key: "" })], "neutral").chronicle, "");
+	assert.equal(derive([ev({ ev: "chronicle", key: "019fc419-abc" })], "neutral").chronicle, "019fc419-abc");
+	assert.equal(derive([], "neutral").chronicle, undefined);
+	assert.match(describeEvent({ ev: "chronicle", key: "" }), /legacy chronicle/);
+});
+
 ok("derive: legacy milestone mood entries honored", () => {
 	const legacy = { type: "custom", id: "x", timestamp: "t", customType: LEGACY_MOOD_TYPE, data: { mood: "gracious" } };
 	assert.equal(derive([legacy], "neutral").mood, "gracious");
@@ -263,6 +270,17 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.doesNotMatch(fresh, /last spoke/);
 		assert.match(fresh, /an unnamed stranger/);
 	});
+	ok("prompt: archive recall appears as its own hidden layer only when present", () => {
+		const withRecall = assembleSystemPrompt(config, {
+			state: derive([], "neutral"),
+			justArrived: false,
+			recall: ['*u9* game: Lord Ashelin ruled Villerian before its burning.'],
+		});
+		assert.match(withRecall, /3¾ · archive recall/);
+		assert.match(withRecall, /Lord Ashelin ruled Villerian/);
+		assert.match(withRecall, /never mention the record/);
+		assert.doesNotMatch(fresh, /archive recall/);
+	});
 	ok("prompt: established truths appear as a binding layer only when present", () => {
 		const withTruths = assembleSystemPrompt(config, {
 			state: { ...derive([], "neutral"), truths: ["The moon is a lantern."] },
@@ -281,6 +299,20 @@ ok("config: angriest mood is last in severity order", () => {
 	ok("gmchat: extractJson finds the balanced object and rejects noise", () => {
 		assert.deepEqual(gm.extractJson('chatter {"a": {"b": 2}, "c": "x}"} tail'), { a: { b: 2 }, c: "x}" });
 		assert.equal(gm.extractJson("no json here"), null);
+	});
+
+	ok("gmchat: parseGmAnswer keeps valid fixes, drops junk, degrades gracefully", () => {
+		const answer = gm.parseGmAnswer(
+			'{"say": "The record backs you.", "bind": null, "invite": false, "fixes": [' +
+				'{"kind": "place", "name": "The Sunken Vault"},' +
+				'{"kind": "nonsense", "name": "x"},' +
+				'{"kind": "item", "item": "a rusty key", "origin": "found in the cellar"}]}',
+		);
+		assert.equal(answer.say, "The record backs you.");
+		assert.deepEqual(answer.fixes.map((fix: { kind: string }) => fix.kind), ["place", "item"]);
+		const plain = gm.parseGmAnswer("no json at all");
+		assert.equal(plain.say, "no json at all");
+		assert.deepEqual(plain.fixes, []);
 	});
 
 	const archive = await import(join(EXT, "archive.ts"));
@@ -320,6 +352,67 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.deepEqual(merged.map((line: { uid: number }) => line.uid), [1, 2, 3, 4]);
 		assert.deepEqual(archive.searchArchive(lines, []), []);
 		assert.equal(archive.formatArchiveLine(lines[3]), "*u4* game: Vorthaxes the dragon nests there.");
+	});
+}
+
+// ---- 5¾. the open world on disk -------------------------------------------
+{
+	const world = await import(join(EXT, "world.ts"));
+	const { rmSync: rm, readFileSync: readFile, existsSync: exists } = await import("node:fs");
+	const root = "/tmp/wc-test/world-unit";
+	rm(root, { recursive: true, force: true });
+	const files = { root };
+
+	ok("world: a place is founded once, revisits append, pages never shrink", () => {
+		const first = world.visitPlace(files, "Millbrook Farm", "A carrot farm in the lower vale, smelling of wet earth.");
+		assert.equal(first.created, true);
+		assert.equal(first.slug, "millbrook-farm");
+		assert.match(first.content, /## The place/);
+		const sizeBefore = first.content.length;
+		const again = world.visitPlace(files, "Millbrook Farm", "");
+		assert.equal(again.created, false);
+		assert.equal(again.title, "Millbrook Farm");
+		assert.ok(again.content.length > sizeBefore, "revisit must append, never shrink");
+		assert.match(again.content, /the party returns/);
+		assert.equal(world.extendPlace(files, "Millbrook Farm", "A scarecrow wears a knight's helm."), true);
+		assert.match(readFile(`${root}/places/millbrook-farm.md`, "utf8"), /scarecrow/);
+		assert.equal(world.extendPlace(files, "Nowhere", "x"), false);
+	});
+
+	ok("world: personas dwell where recorded and move only with a recorded reason", () => {
+		const created = world.recordPersona(files, "Farmer Aldwin", "An old carrot farmer.", "He begged for help with the harvest.", "millbrook-farm");
+		assert.equal(created.created, true);
+		assert.equal(world.personaLocation(files, "Farmer Aldwin"), "millbrook-farm");
+		assert.deepEqual(world.personasAt(files, "millbrook-farm"), ["Farmer Aldwin"]);
+		world.visitPlace(files, "Village Square", "The cobbled heart of the village.");
+		assert.equal(world.movePersona(files, "Farmer Aldwin", "village-square", "Recovered, he walks to market day."), true);
+		assert.equal(world.personaLocation(files, "Farmer Aldwin"), "village-square");
+		assert.match(readFile(`${root}/personas/farmer-aldwin.md`, "utf8"), /Reason: Recovered/);
+		assert.deepEqual(world.personasAt(files, "millbrook-farm"), []);
+	});
+
+	ok("world: quests advance open → done → rewarded and feed the items file", () => {
+		world.grantQuest(files, {
+			title: "Carrots for Millbrook",
+			giver: "Farmer Aldwin",
+			task: "Pluck the carrot field before the frost.",
+			reward: "three copper pennies",
+			placeSlug: "millbrook-farm",
+		});
+		assert.throws(() => world.grantQuest(files, { title: "Carrots for Millbrook", giver: "x", task: "y", reward: "z", placeSlug: "p" }));
+		const quest = world.questBySlug(files, "carrots-for-millbrook");
+		assert.ok(quest);
+		assert.equal(quest!.status, "open");
+		assert.equal(quest!.giverSlug, "farmer-aldwin");
+		assert.equal(quest!.reward, "three copper pennies");
+		assert.deepEqual(world.openQuestLines(files), ["[open] Carrots for Millbrook (id: carrots-for-millbrook)"]);
+		assert.equal(world.setQuestStatus(files, "carrots-for-millbrook", "done", "the field is cleared"), true);
+		assert.equal(world.questBySlug(files, "carrots-for-millbrook")!.status, "done");
+		assert.equal(world.setQuestStatus(files, "carrots-for-millbrook", "rewarded", "collected"), true);
+		assert.deepEqual(world.openQuestLines(files), []);
+		world.addItem(files, "three copper pennies — reward");
+		assert.match(readFile(`${root}/items.md`, "utf8"), /three copper pennies/);
+		assert.equal(exists(`${root}/quests.md`), true);
 	});
 }
 

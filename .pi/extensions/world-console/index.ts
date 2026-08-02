@@ -18,6 +18,7 @@
  *  - while barred, every find_* tool is blocked in code (tool_call handler),
  *    not by trusting the prompt
  */
+import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FooterComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -26,7 +27,7 @@ import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
-import { gmAsk, gmJudgeAmendment, gmJudgeTruth, type GmTurn } from "./gmchat.ts";
+import { gmAsk, gmJudgeAmendment, gmJudgeTruth, type GmFix, type GmTurn } from "./gmchat.ts";
 import {
 	asGameEvent,
 	derive,
@@ -40,11 +41,35 @@ import {
 import { detectTooling, searchPicture, searchVideo } from "./mediasearch.ts";
 import { assembleSystemPrompt } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
+import {
+	addItem,
+	extendPlace,
+	grantQuest,
+	movePersona,
+	openQuestLines,
+	personaExists,
+	personaLocation,
+	personasAt,
+	placeExists,
+	questBySlug,
+	recordPersona,
+	setQuestStatus,
+	slugify,
+	visitPlace,
+	type WorldFiles,
+} from "./world.ts";
 
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "app");
 const DOWNLOAD_DIR = join(APP_DIR, "data", "downloads");
+/** Persistent world chronicle (places/personas/quests/items); overridable for tests. */
+const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(APP_DIR, "data", "world");
 const DEFAULT_WORLD = "dragon-realm";
-const GAME_TOOLS = ["find_text", "find_picture", "find_video", "set_mood", "grant_redemption", "record_name"];
+const GAME_TOOLS = [
+	"find_text", "find_picture", "find_video",
+	"set_mood", "grant_redemption", "record_name",
+	"set_place", "update_place", "record_persona", "move_persona",
+	"grant_quest", "update_quest", "redeem_quest", "add_item",
+];
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
 	find_text: "text",
@@ -72,6 +97,21 @@ export default function (pi: ExtensionAPI) {
 		return ids[ids.length - 1];
 	}
 
+	// Each STORY gets its own world-file folder, keyed by the chronicle stamp
+	// in its ledger: /new founds a fresh chronicle, /fork inherits the parent's
+	// (entries copy), and pre-stamp sessions that already used world files are
+	// adopted onto the legacy shared folder ("" key).
+	const worldFiles = (): WorldFiles => ({ root: join(DATA_ROOT, worldId, st.chronicle ?? "") });
+
+	/** Quest headings for the standing layer; unreadable files never break a turn. */
+	function questStandings(): string[] {
+		try {
+			return openQuestLines(worldFiles());
+		} catch {
+			return [];
+		}
+	}
+
 	/** Reload config for `id`; on failure keep the last good config. */
 	function reloadFor(id: string): boolean {
 		try {
@@ -96,7 +136,8 @@ export default function (pi: ExtensionAPI) {
 
 	function gameFooterLine(): string {
 		const barred = st.banned ? " · glass BARRED" : "";
-		return `${config.world.voice} · mood: ${st.mood}${barred} · ${config.world.title}`;
+		const place = st.place ? ` · ${st.place.title}` : "";
+		return `${config.world.voice} · mood: ${st.mood}${barred} · ${config.world.title}${place}`;
 	}
 
 	function installFooter(ctx: ExtensionContext): void {
@@ -242,6 +283,87 @@ export default function (pi: ExtensionAPI) {
 		};
 	}
 
+	/**
+	 * Execute one table-proposed repair. The meta-GM judged it record-backed;
+	 * this is where code enforces the hard invariants regardless: unknown
+	 * pages refuse, quests only move forward, souls move only with a reason.
+	 * Returns the announcement line; throws to have the repair skipped.
+	 */
+	function applyGmFix(ctx: ExtensionContext, fix: GmFix): string {
+		const files = worldFiles();
+		switch (fix.kind) {
+			case "place": {
+				const name = String(fix.name ?? "").trim();
+				if (!name) throw new Error("a place fix needs the place's name");
+				const description = String(fix.description ?? "").trim();
+				if (!placeExists(files, name) && !description) {
+					throw new Error(`"${name}" is not chronicled and no description was given`);
+				}
+				const visit = visitPlace(files, name, description);
+				appendEvents(ctx, [{ ev: "place", slug: visit.slug, title: visit.title }]);
+				return `the party now stands at ${visit.title} — footer and standing follow`;
+			}
+			case "place_note": {
+				const place = String(fix.place ?? "").trim();
+				const note = String(fix.note ?? "").trim();
+				if (!place || !note) throw new Error("a page note needs the place and the note");
+				if (!extendPlace(files, place, `Correction (GM table): ${note}`)) {
+					throw new Error(`no page exists for "${place}"`);
+				}
+				return `a correction is noted on the page of ${place}`;
+			}
+			case "persona_record": {
+				const name = String(fix.name ?? "").trim();
+				const place = String(fix.place ?? "").trim();
+				if (!name || !place) throw new Error("recording a soul needs their name and place");
+				if (!placeExists(files, place)) throw new Error(`no page exists for the place "${place}"`);
+				recordPersona(files, name, String(fix.role ?? "").trim() || "(role unrecorded)", String(fix.dealings ?? "").trim() || "(dealings unrecorded)", slugify(place));
+				appendEvents(ctx, [{ ev: "persona", name, place: slugify(place), note: "GM-table repair" }]);
+				return `the soul ${name} is chronicled at ${place}`;
+			}
+			case "persona_move": {
+				const name = String(fix.name ?? "").trim();
+				const toPlace = String(fix.to_place ?? "").trim();
+				const reason = String(fix.reason ?? "").trim();
+				if (!personaExists(files, name)) throw new Error(`no page exists for ${name}`);
+				if (!placeExists(files, toPlace)) throw new Error(`no page exists for the place "${toPlace}"`);
+				if (reason.length < 10) throw new Error("a move needs a real reason, plainly stated");
+				movePersona(files, name, slugify(toPlace), `${reason} (GM-table repair)`);
+				appendEvents(ctx, [{ ev: "persona", name, place: slugify(toPlace), note: reason }]);
+				return `${name} now dwells at ${toPlace} (reason recorded)`;
+			}
+			case "quest_status": {
+				const slug = slugify(String(fix.title ?? ""));
+				const quest = questBySlug(files, slug);
+				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
+				const order = { open: 0, done: 1, rewarded: 2 } as const;
+				const target = fix.status === "rewarded" ? "rewarded" : "done";
+				if (order[target] <= order[quest.status]) {
+					throw new Error(`"${quest.title}" already stands at [${quest.status}]`);
+				}
+				const note = String(fix.note ?? "").trim() || "corrected at the GM table";
+				if (target === "rewarded" && quest.status === "open") setQuestStatus(files, slug, "done", note);
+				setQuestStatus(files, slug, target, note);
+				const events: GameEvent[] = [{ ev: "quest", action: target, title: quest.title }];
+				if (target === "rewarded") {
+					addItem(files, `${quest.reward} — reward of "${quest.title}" (GM-table repair)`);
+					events.push({ ev: "item", text: quest.reward });
+				}
+				appendEvents(ctx, events);
+				return `"${quest.title}" now stands at [${target}]${target === "rewarded" ? `; ${quest.reward} chronicled in the items` : ""}`;
+			}
+			case "item": {
+				const item = String(fix.item ?? "").trim();
+				if (!item) throw new Error("an item fix needs the item");
+				addItem(files, `${item} — ${String(fix.origin ?? "").trim() || "GM-table repair"}`);
+				appendEvents(ctx, [{ ev: "item", text: item }]);
+				return `the seeker's items now hold: ${item}`;
+			}
+			default:
+				throw new Error(`unknown repair kind "${(fix as { kind?: string }).kind}"`);
+		}
+	}
+
 	pi.on("session_start", async (event, ctx) => {
 		installFooter(ctx);
 		gmThread = []; // the GM table is per sitting
@@ -269,6 +391,19 @@ export default function (pi: ExtensionAPI) {
 		replay(ctx);
 		resumedFrom = st.lastEntryAt; // undefined on a fresh session
 		if (!st.world) appendEvents(ctx, [{ ev: "world", world: worldId }]);
+		if (st.chronicle === undefined) {
+			// A story that already wrote world files before chronicles existed
+			// keeps the legacy shared folder; every new story gets its own.
+			const usedWorldFiles = ctx.sessionManager.getBranch().some((entry) => {
+				const event = asGameEvent(entry);
+				return (
+					!!event &&
+					(event.ev === "place" || event.ev === "persona" || event.ev === "quest" || event.ev === "item")
+				);
+			});
+			const key = usedWorldFiles ? "" : ctx.sessionManager.getSessionId() || randomUUID();
+			appendEvents(ctx, [{ ev: "chronicle", key }]);
+		}
 
 		pi.setActiveTools(GAME_TOOLS);
 		updateFooter(ctx);
@@ -284,14 +419,23 @@ export default function (pi: ExtensionAPI) {
 		updateFooter(ctx);
 	});
 
-	pi.on("before_agent_start", async (_event, ctx) => {
+	pi.on("before_agent_start", async (event, ctx) => {
 		reloadFor(worldId); // hot reload: config edits apply on the next turn
 		replay(ctx);
+		// In-game archive recall: search the sitting's FULL record (compaction
+		// notwithstanding — getBranch keeps every entry) for this turn's words
+		// and hand the hits to the keeper through a prompt layer. Pure code,
+		// refreshed every turn, nothing written back.
+		const recall = searchArchive(archiveLinesOf(ctx), extractKeywords(event.prompt ?? ""), 1, 20).map(
+			formatArchiveLine,
+		);
 		return {
 			systemPrompt: assembleSystemPrompt(config, {
 				state: st,
 				resumedFrom,
 				justArrived: !branchHasAssistantReply(ctx),
+				openQuests: questStandings(),
+				recall,
 			}),
 		};
 	});
@@ -386,7 +530,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			const barred = st.banned ? " · glass BARRED" : "";
 			const head =
-				`world: ${st.world ?? worldId} · seeker: ${st.playerName ?? "unnamed"} · mood: ${st.mood}${barred}\n` +
+				`world: ${st.world ?? worldId} · seeker: ${st.playerName ?? "unnamed"} · mood: ${st.mood}${barred} · at: ${st.place?.title ?? "nowhere"}\n` +
 				`${st.chats} messages · ${st.searches} searches granted · ${st.refusals} refused`;
 			ctx.ui.notify(`${head}\n${lines.slice(-n).join("\n") || "(no events yet)"}`, "info");
 		},
@@ -531,6 +675,7 @@ export default function (pi: ExtensionAPI) {
 						state: st,
 						resumedFrom,
 						justArrived: !branchHasAssistantReply(ctx),
+						openQuests: questStandings(),
 					}),
 					recentPlay: branchPlayLines(ctx),
 					ledgerLines: branchLedgerLines(ctx),
@@ -568,6 +713,17 @@ export default function (pi: ExtensionAPI) {
 			}
 		} else if (answer.invite) {
 			out += `\n\nThe table stands divided. To bind your version as canon: /gm truth <the fact as you hold it>`;
+		}
+		if (answer.fixes.length > 0) {
+			const repairs: string[] = [];
+			for (const fix of answer.fixes) {
+				try {
+					repairs.push(applyGmFix(ctx, fix));
+				} catch (error) {
+					repairs.push(`skipped [${fix.kind}]: ${(error as Error).message}`);
+				}
+			}
+			out += `\n\n⟡ engine repairs:\n${repairs.map((line) => `- ${line}`).join("\n")}`;
 		}
 		gmThread.push({ who: "player", text: trimmed }, { who: "gm", text: answer.say });
 		if (gmThread.length > 24) gmThread = gmThread.slice(-24);
@@ -803,6 +959,254 @@ export default function (pi: ExtensionAPI) {
 			return {
 				content: [{ type: "text", text: `The ledger records the seeker's name: ${name}.` }],
 				details: { name },
+			};
+		},
+	});
+
+	// ---- the open world: places, souls, quests, items ---------------------
+	// World files are the permanent chronicle (app/data/world/<world>/) —
+	// never rewound by /tree, never deleted, only extended. The engine writes
+	// them; the model supplies content through these tools.
+
+	pi.registerTool({
+		name: "set_place",
+		label: "Journey",
+		description:
+			"Move the party to a named place. A chronicled name loads that place's whole page (history, souls last seen there, open matters); a new name founds a page — then `description` is required. Call this whenever the story moves somewhere — RETURNING to a known place is also set_place, never update_place. The same name always means the same place.",
+		parameters: Type.Object({
+			name: Type.String({ description: "The place's name, e.g. 'Millbrook Farm'" }),
+			description: Type.Optional(
+				Type.String({
+					description: "For a NEW place: where it lies, its look and feeling, notable details. Ignored for known places.",
+				}),
+			),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const name = params.name.trim();
+			if (!name) throw new Error("Empty place name.");
+			const files = worldFiles();
+			const description = params.description?.trim() ?? "";
+			if (!placeExists(files, name) && !description) {
+				throw new Error("A new place needs its description — where it lies, its look and feeling, notable details.");
+			}
+			const visit = visitPlace(files, name, description);
+			appendEvents(ctx, [{ ev: "place", slug: visit.slug, title: visit.title }]);
+			const souls = personasAt(files, visit.slug);
+			const matters = questStandings();
+			const text =
+				`The party now stands at ${visit.title}${visit.created ? " — a new page in the chronicle" : ""}.\n\n` +
+				`${visit.content.trim()}\n\n` +
+				`Souls last recorded here: ${souls.join(", ") || "(none)"}\n` +
+				`Open matters in the chronicle:\n${matters.map((matter) => `  ${matter}`).join("\n") || "  (none)"}`;
+			return { content: [{ type: "text", text }], details: { slug: visit.slug, title: visit.title, created: visit.created, souls } };
+		},
+	});
+
+	pi.registerTool({
+		name: "update_place",
+		label: "Chronicle the place",
+		description:
+			"Add newly-revealed details to the CURRENT place's page (pages only grow). Use when the story uncovers something worth remembering about where the party stands. NEVER for movement — when the party goes somewhere, even back to a known place, that is set_place.",
+		parameters: Type.Object({
+			details: Type.String({ description: "The new details, a few plain sentences" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			if (!extendPlace(worldFiles(), st.place.slug, params.details)) {
+				throw new Error(`No page exists for ${st.place.title} — set_place founds it.`);
+			}
+			return {
+				content: [{ type: "text", text: `The page of ${st.place.title} grows.` }],
+				details: { place: st.place.slug },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "record_persona",
+		label: "Record a soul",
+		description:
+			"Record a MAIN person the seeker deals with, at the party's current place. First call founds their page (who they are); every later call appends the new dealings (what was said, promised, traded). Passersby need no page.",
+		parameters: Type.Object({
+			name: Type.String({ description: "The person's name — the same name always means the same soul" }),
+			role: Type.String({ description: "Who they are, one or two sentences" }),
+			dealings: Type.String({ description: "Summary of the conversation or dealings just had" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			const name = params.name.trim();
+			if (!name) throw new Error("Empty name.");
+			const result = recordPersona(worldFiles(), name, params.role, params.dealings, st.place.slug);
+			appendEvents(ctx, [{ ev: "persona", name, place: st.place.slug }]);
+			return {
+				content: [
+					{ type: "text", text: `${result.created ? "A new page opens for" : "The chronicle adds to"} ${name}.` },
+				],
+				details: result,
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "move_persona",
+		label: "A soul moves",
+		description:
+			"Move a recorded soul to another chronicled place — ONLY with a sound in-world reason, which is recorded on their page. Souls otherwise stay where last seen; rewards cannot simply follow the seeker around.",
+		parameters: Type.Object({
+			name: Type.String({ description: "The soul's name" }),
+			to_place: Type.String({ description: "The chronicled place they move to" }),
+			reason: Type.String({ description: "The sound in-world reason for the move (it is recorded)" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const files = worldFiles();
+			const name = params.name.trim();
+			if (!personaExists(files, name)) throw new Error(`No page exists for ${name} — record_persona first.`);
+			if (!placeExists(files, params.to_place)) {
+				throw new Error(`No page exists for the place "${params.to_place}" — souls move only between chronicled places.`);
+			}
+			if (params.reason.trim().length < 10) throw new Error("A move needs a real reason, plainly stated.");
+			movePersona(files, name, slugify(params.to_place), params.reason);
+			appendEvents(ctx, [{ ev: "persona", name, place: slugify(params.to_place), note: params.reason.trim() }]);
+			return {
+				content: [{ type: "text", text: `${name} now dwells at ${params.to_place.trim()} (reason recorded).` }],
+				details: { name, place: slugify(params.to_place) },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "grant_quest",
+		label: "Grant a quest",
+		description:
+			"Grant work to the seeker — heroic deeds and humble chores alike. The giver must be a recorded soul AT the party's current place; the engine writes the quest into the chronicle as [open].",
+		parameters: Type.Object({
+			title: Type.String({ description: "Short unique quest title, e.g. 'Carrots for Millbrook'" }),
+			giver: Type.String({ description: "The recorded soul granting the work" }),
+			task: Type.String({ description: "What must be done, plainly" }),
+			reward: Type.String({ description: "What the seeker earns on completion" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			const files = worldFiles();
+			const giver = params.giver.trim();
+			if (!personaExists(files, giver)) throw new Error(`No page exists for ${giver} — record_persona first.`);
+			const location = personaLocation(files, giver);
+			if (location !== st.place.slug) {
+				throw new Error(`${giver} is not here — the chronicle places them at ${location ?? "nowhere"}.`);
+			}
+			const { slug } = grantQuest(files, {
+				title: params.title,
+				giver,
+				task: params.task,
+				reward: params.reward,
+				placeSlug: st.place.slug,
+			});
+			appendEvents(ctx, [{ ev: "quest", action: "granted", title: params.title.trim() }]);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Quest granted and chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`,
+					},
+				],
+				details: { slug },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "update_quest",
+		label: "Quest progress",
+		description:
+			"Record progress on a granted quest. Set done=true the moment the deed itself is accomplished — the reward still waits at the giver (redeem_quest).",
+		parameters: Type.Object({
+			title: Type.String({ description: "The quest's title" }),
+			note: Type.String({ description: "What happened, one line" }),
+			done: Type.Boolean({ description: "True when the deed is fully done" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const files = worldFiles();
+			const slug = slugify(params.title);
+			const quest = questBySlug(files, slug);
+			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
+			if (quest.status === "rewarded") throw new Error(`"${quest.title}" is already rewarded and closed.`);
+			const advance = params.done && quest.status === "open";
+			setQuestStatus(files, slug, advance ? "done" : null, params.note);
+			if (advance) appendEvents(ctx, [{ ev: "quest", action: "done", title: quest.title }]);
+			return {
+				content: [
+					{
+						type: "text",
+						text: params.done
+							? `The deed of "${quest.title}" is done — the reward waits with ${quest.giver}.`
+							: `Progress chronicled for "${quest.title}".`,
+					},
+				],
+				details: { slug, status: advance ? "done" : quest.status },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "redeem_quest",
+		label: "Collect the reward",
+		description:
+			"Collect a done quest's reward — ONLY at the giver. The engine refuses unless the deed is marked done and the giver's soul is at the party's current place; the reward then passes into the seeker's items.",
+		parameters: Type.Object({
+			title: Type.String({ description: "The quest's title" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			const files = worldFiles();
+			const slug = slugify(params.title);
+			const quest = questBySlug(files, slug);
+			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
+			if (quest.status === "rewarded") throw new Error(`"${quest.title}" was already rewarded.`);
+			if (quest.status !== "done") {
+				throw new Error(`The deed of "${quest.title}" is not yet recorded done — update_quest first.`);
+			}
+			const location = personaLocation(files, quest.giverSlug);
+			if (location !== st.place.slug) {
+				throw new Error(
+					`${quest.giver} is not at ${st.place.title} — the chronicle places them at ${location ?? "nowhere"}. ` +
+						`Only move_persona with a sound reason changes that.`,
+				);
+			}
+			setQuestStatus(files, slug, "rewarded", `collected at ${st.place.slug}`);
+			addItem(files, `${quest.reward} — reward of "${quest.title}" from ${quest.giver} at ${st.place.title}`);
+			appendEvents(ctx, [
+				{ ev: "quest", action: "rewarded", title: quest.title },
+				{ ev: "item", text: quest.reward },
+			]);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `"${quest.title}" is rewarded: ${quest.reward} passes to the seeker (chronicled in their items).`,
+					},
+				],
+				details: { slug },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "add_item",
+		label: "Item gained",
+		description:
+			"Record something the seeker gains — loot found, pay, gifts. The engine keeps the items file; what is not recorded is not owned.",
+		parameters: Type.Object({
+			item: Type.String({ description: "The item, plainly named" }),
+			origin: Type.String({ description: "Where or how it was gained, one line" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const item = params.item.trim();
+			if (!item) throw new Error("Empty item.");
+			addItem(worldFiles(), `${item} — ${params.origin.trim() || "origin unrecorded"}`);
+			appendEvents(ctx, [{ ev: "item", text: item }]);
+			return {
+				content: [{ type: "text", text: `The seeker's items now hold: ${item}.` }],
+				details: { item },
 			};
 		},
 	});
