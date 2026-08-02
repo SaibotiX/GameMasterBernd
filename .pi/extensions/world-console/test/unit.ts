@@ -306,10 +306,15 @@ ok("config: angriest mood is last in severity order", () => {
 			'{"say": "The record backs you.", "bind": null, "invite": false, "fixes": [' +
 				'{"kind": "place", "name": "The Sunken Vault"},' +
 				'{"kind": "nonsense", "name": "x"},' +
+				'{"kind": "chronicle_place", "name": "Tor\'s House", "description": "a stout house"},' +
+				'{"kind": "quest_grant", "title": "Return the treasure", "task": "bring it back", "reward": "peace"},' +
 				'{"kind": "item", "item": "a rusty key", "origin": "found in the cellar"}]}',
 		);
 		assert.equal(answer.say, "The record backs you.");
-		assert.deepEqual(answer.fixes.map((fix: { kind: string }) => fix.kind), ["place", "item"]);
+		assert.deepEqual(
+			answer.fixes.map((fix: { kind: string }) => fix.kind),
+			["place", "chronicle_place", "quest_grant", "item"],
+		);
 		const plain = gm.parseGmAnswer("no json at all");
 		assert.equal(plain.say, "no json at all");
 		assert.deepEqual(plain.fixes, []);
@@ -391,6 +396,17 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.deepEqual(world.personasAt(files, "millbrook-farm"), []);
 	});
 
+	ok("world: places chronicled from afar found pages without any arrival", () => {
+		const found = world.foundPlace(files, "Tor's House", "A stout timber house on the lane past the well.");
+		assert.equal(found.created, true);
+		assert.equal(found.slug, "tor-s-house");
+		const page = readFile(`${root}/places/tor-s-house.md`, "utf8");
+		assert.match(page, /chronicled from afar/);
+		assert.doesNotMatch(page, /arrival|returns/);
+		assert.equal(world.foundPlace(files, "Tor's House", "ignored").created, false);
+		assert.equal(world.placeExists(files, "Tor's House"), true);
+	});
+
 	ok("world: quests advance open → done → rewarded and feed the items file", () => {
 		world.grantQuest(files, {
 			title: "Carrots for Millbrook",
@@ -413,6 +429,21 @@ ok("config: angriest mood is last in severity order", () => {
 		world.addItem(files, "three copper pennies — reward");
 		assert.match(readFile(`${root}/items.md`, "utf8"), /three copper pennies/);
 		assert.equal(exists(`${root}/quests.md`), true);
+	});
+
+	ok("world: a giver-less quest is self-set (persona sentinel \"self\")", () => {
+		world.grantQuest(files, {
+			title: "Return the treasure",
+			task: "Bring the found coin back to its rightful owner.",
+			reward: "a clear conscience",
+			placeSlug: "millbrook-farm",
+		});
+		const quest = world.questBySlug(files, "return-the-treasure");
+		assert.ok(quest);
+		assert.equal(quest!.giver, "the seeker");
+		assert.equal(quest!.giverSlug, "self");
+		assert.equal(quest!.status, "open");
+		assert.deepEqual(world.openQuestLines(files), ["[open] Return the treasure (id: return-the-treasure)"]);
 	});
 }
 

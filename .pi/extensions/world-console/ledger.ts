@@ -38,6 +38,8 @@ export type GameEvent =
 	| { ev: "chronicle"; key: string }
 	/** The party moved to a place (world files hold the place's page). */
 	| { ev: "place"; slug: string; title: string }
+	/** A place written into the chronicle from afar — the party did not move. */
+	| { ev: "place_chronicled"; slug: string; title: string }
 	/** A notable soul recorded or moved in the world files. */
 	| { ev: "persona"; name: string; place: string; note?: string }
 	/** Quest lifecycle mirror of quests.md. */
@@ -201,6 +203,8 @@ export function describeEvent(event: GameEvent): string {
 			return `chronicle bound: ${event.key || "the shared legacy chronicle"}`;
 		case "place":
 			return `journeyed to: ${event.title}`;
+		case "place_chronicled":
+			return `place chronicled from afar: ${event.title}`;
 		case "persona":
 			return `soul recorded: ${event.name} at ${event.place}${event.note ? ` (${event.note})` : ""}`;
 		case "quest":

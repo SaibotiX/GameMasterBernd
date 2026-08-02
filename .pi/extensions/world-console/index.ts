@@ -44,6 +44,7 @@ import { searchText } from "./textsearch.ts";
 import {
 	addItem,
 	extendPlace,
+	foundPlace,
 	grantQuest,
 	movePersona,
 	openQuestLines,
@@ -67,7 +68,7 @@ const DEFAULT_WORLD = "dragon-realm";
 const GAME_TOOLS = [
 	"find_text", "find_picture", "find_video",
 	"set_mood", "grant_redemption", "record_name",
-	"set_place", "update_place", "record_persona", "move_persona",
+	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "update_quest", "redeem_quest", "add_item",
 ];
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
@@ -312,11 +313,37 @@ export default function (pi: ExtensionAPI) {
 				}
 				return `a correction is noted on the page of ${place}`;
 			}
+			case "chronicle_place": {
+				const name = String(fix.name ?? "").trim();
+				const description = String(fix.description ?? "").trim();
+				if (!name || !description) throw new Error("chronicling a place needs its name and description");
+				const found = foundPlace(files, name, description);
+				appendEvents(ctx, [{ ev: "place_chronicled", slug: found.slug, title: found.title }]);
+				return found.created
+					? `the place ${found.title} is chronicled from afar (the party has not moved)`
+					: `${found.title} was already chronicled`;
+			}
+			case "quest_grant": {
+				if (!st.place) throw new Error("the party stands nowhere — a task needs a place of granting");
+				const title = String(fix.title ?? "").trim();
+				const task = String(fix.task ?? "").trim();
+				if (!title || !task) throw new Error("a task needs a title and what must be done");
+				const reward = String(fix.reward ?? "").trim() || "what the story yields";
+				const giver = String(fix.giver ?? "").trim() || undefined;
+				if (giver && !personaExists(files, giver)) {
+					throw new Error(`no page exists for ${giver} — chain a persona_record fix before this one`);
+				}
+				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug });
+				appendEvents(ctx, [{ ev: "quest", action: "granted", title }]);
+				return `the task "${title}" is chronicled [open]${giver ? ` — giver ${giver}` : " — set by the seeker"} (id: ${slug})`;
+			}
 			case "persona_record": {
 				const name = String(fix.name ?? "").trim();
 				const place = String(fix.place ?? "").trim();
 				if (!name || !place) throw new Error("recording a soul needs their name and place");
-				if (!placeExists(files, place)) throw new Error(`no page exists for the place "${place}"`);
+				if (!placeExists(files, place)) {
+					throw new Error(`no page exists for the place "${place}" — chain a chronicle_place fix before this one`);
+				}
 				recordPersona(files, name, String(fix.role ?? "").trim() || "(role unrecorded)", String(fix.dealings ?? "").trim() || "(dealings unrecorded)", slugify(place));
 				appendEvents(ctx, [{ ev: "persona", name, place: slugify(place), note: "GM-table repair" }]);
 				return `the soul ${name} is chronicled at ${place}`;
@@ -1003,6 +1030,35 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
+		name: "chronicle_place",
+		label: "Chronicle from afar",
+		description:
+			"Write a place into the chronicle WITHOUT the party traveling there — somewhere only spoken of: a neighbor's house, a quest's destination. Founds the page (description required); the party does not move and the footer stays. Travel there later with set_place.",
+		parameters: Type.Object({
+			name: Type.String({ description: "The place's name" }),
+			description: Type.String({ description: "Where it lies, its look and feeling, notable details" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const name = params.name.trim();
+			if (!name) throw new Error("Empty place name.");
+			if (!params.description.trim()) throw new Error("A place chronicled from afar needs its description.");
+			const found = foundPlace(worldFiles(), name, params.description);
+			appendEvents(ctx, [{ ev: "place_chronicled", slug: found.slug, title: found.title }]);
+			return {
+				content: [
+					{
+						type: "text",
+						text: found.created
+							? `${found.title} is chronicled from afar — the party has not moved.`
+							: `${found.title} was already chronicled.`,
+					},
+				],
+				details: found,
+			};
+		},
+	});
+
+	pi.registerTool({
 		name: "update_place",
 		label: "Chronicle the place",
 		description:
@@ -1026,18 +1082,32 @@ export default function (pi: ExtensionAPI) {
 		name: "record_persona",
 		label: "Record a soul",
 		description:
-			"Record a MAIN person the seeker deals with, at the party's current place. First call founds their page (who they are); every later call appends the new dealings (what was said, promised, traded). Passersby need no page.",
+			"Record a MAIN person the seeker deals with. First call founds their page (who they are); every later call appends the new dealings (what was said, promised, traded). They are recorded at the party's current place unless `place` names another chronicled place (their home, say). Passersby need no page.",
 		parameters: Type.Object({
 			name: Type.String({ description: "The person's name — the same name always means the same soul" }),
 			role: Type.String({ description: "Who they are, one or two sentences" }),
 			dealings: Type.String({ description: "Summary of the conversation or dealings just had" }),
+			place: Type.Optional(
+				Type.String({ description: "A chronicled place where this soul dwells; defaults to the party's current place" }),
+			),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
 			const name = params.name.trim();
 			if (!name) throw new Error("Empty name.");
-			const result = recordPersona(worldFiles(), name, params.role, params.dealings, st.place.slug);
-			appendEvents(ctx, [{ ev: "persona", name, place: st.place.slug }]);
+			const files = worldFiles();
+			const placeName = params.place?.trim();
+			let placeSlug: string;
+			if (placeName) {
+				if (!placeExists(files, placeName)) {
+					throw new Error(`No page exists for the place "${placeName}" — chronicle_place it first (or travel there).`);
+				}
+				placeSlug = slugify(placeName);
+			} else {
+				if (!st.place) throw new Error("The party stands nowhere yet — set_place first, or name a chronicled place.");
+				placeSlug = st.place.slug;
+			}
+			const result = recordPersona(files, name, params.role, params.dealings, placeSlug);
+			appendEvents(ctx, [{ ev: "persona", name, place: placeSlug }]);
 			return {
 				content: [
 					{ type: "text", text: `${result.created ? "A new page opens for" : "The chronicle adds to"} ${name}.` },
@@ -1078,21 +1148,25 @@ export default function (pi: ExtensionAPI) {
 		name: "grant_quest",
 		label: "Grant a quest",
 		description:
-			"Grant work to the seeker — heroic deeds and humble chores alike. The giver must be a recorded soul AT the party's current place; the engine writes the quest into the chronicle as [open].",
+			"Grant work to the seeker — heroic deeds and humble chores alike. With a giver: they must be a recorded soul AT the party's current place. WITHOUT a giver: a task the seeker sets for THEMSELVES (their own proclaimed goal) — redeemable wherever they stand once done. The engine writes the quest into the chronicle as [open].",
 		parameters: Type.Object({
 			title: Type.String({ description: "Short unique quest title, e.g. 'Carrots for Millbrook'" }),
-			giver: Type.String({ description: "The recorded soul granting the work" }),
+			giver: Type.Optional(
+				Type.String({ description: "The recorded soul granting the work; OMIT for a task the seeker sets themselves" }),
+			),
 			task: Type.String({ description: "What must be done, plainly" }),
 			reward: Type.String({ description: "What the seeker earns on completion" }),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
 			const files = worldFiles();
-			const giver = params.giver.trim();
-			if (!personaExists(files, giver)) throw new Error(`No page exists for ${giver} — record_persona first.`);
-			const location = personaLocation(files, giver);
-			if (location !== st.place.slug) {
-				throw new Error(`${giver} is not here — the chronicle places them at ${location ?? "nowhere"}.`);
+			const giver = params.giver?.trim() || undefined;
+			if (giver) {
+				if (!personaExists(files, giver)) throw new Error(`No page exists for ${giver} — record_persona first.`);
+				const location = personaLocation(files, giver);
+				if (location !== st.place.slug) {
+					throw new Error(`${giver} is not here — the chronicle places them at ${location ?? "nowhere"}.`);
+				}
 			}
 			const { slug } = grantQuest(files, {
 				title: params.title,
@@ -1106,10 +1180,12 @@ export default function (pi: ExtensionAPI) {
 				content: [
 					{
 						type: "text",
-						text: `Quest granted and chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`,
+						text: giver
+							? `Quest granted and chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`
+							: `Self-set task chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`,
 					},
 				],
-				details: { slug },
+				details: { slug, selfSet: !giver },
 			};
 		},
 	});
@@ -1165,15 +1241,24 @@ export default function (pi: ExtensionAPI) {
 			if (quest.status !== "done") {
 				throw new Error(`The deed of "${quest.title}" is not yet recorded done — update_quest first.`);
 			}
-			const location = personaLocation(files, quest.giverSlug);
-			if (location !== st.place.slug) {
-				throw new Error(
-					`${quest.giver} is not at ${st.place.title} — the chronicle places them at ${location ?? "nowhere"}. ` +
-						`Only move_persona with a sound reason changes that.`,
-				);
+			// A self-set task has nobody to collect from — it closes wherever
+			// the seeker stands; a given quest still requires the giver present.
+			if (quest.giverSlug !== "self") {
+				const location = personaLocation(files, quest.giverSlug);
+				if (location !== st.place.slug) {
+					throw new Error(
+						`${quest.giver} is not at ${st.place.title} — the chronicle places them at ${location ?? "nowhere"}. ` +
+							`Only move_persona with a sound reason changes that.`,
+					);
+				}
 			}
 			setQuestStatus(files, slug, "rewarded", `collected at ${st.place.slug}`);
-			addItem(files, `${quest.reward} — reward of "${quest.title}" from ${quest.giver} at ${st.place.title}`);
+			addItem(
+				files,
+				`${quest.reward} — reward of "${quest.title}" ${
+					quest.giverSlug === "self" ? "(a task the seeker set themselves)" : `from ${quest.giver} at ${st.place.title}`
+				}`,
+			);
 			appendEvents(ctx, [
 				{ ev: "quest", action: "rewarded", title: quest.title },
 				{ ev: "item", text: quest.reward },

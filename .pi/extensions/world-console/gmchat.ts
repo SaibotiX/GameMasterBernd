@@ -189,13 +189,19 @@ export interface GmTurn {
  */
 export type GmFix =
 	| { kind: "place"; name: string; description?: string }
+	| { kind: "chronicle_place"; name: string; description: string }
 	| { kind: "place_note"; place: string; note: string }
 	| { kind: "persona_record"; name: string; role: string; dealings: string; place: string }
 	| { kind: "persona_move"; name: string; to_place: string; reason: string }
+	| { kind: "quest_grant"; title: string; giver?: string; task: string; reward: string }
 	| { kind: "quest_status"; title: string; status: "done" | "rewarded"; note: string }
 	| { kind: "item"; item: string; origin: string };
 
-const FIX_KINDS = new Set(["place", "place_note", "persona_record", "persona_move", "quest_status", "item"]);
+const FIX_KINDS = new Set([
+	"place", "chronicle_place", "place_note",
+	"persona_record", "persona_move",
+	"quest_grant", "quest_status", "item",
+]);
 
 export interface GmAnswer {
 	say: string;
@@ -292,11 +298,14 @@ function tableSystemPrompt(deps: GmDeps): string {
 		`- When the seeker points at engine state the record shows is wrong (the party's place and footer, a page written in error, a soul's whereabouts, a quest's standing, a missing item), verify it against the sections above. If the record plainly supports the correction, put engine actions in "fixes" (at most 4) and cite the *uN* evidence in "say". If it does not, propose none and say so.`,
 		`- Actions the engine accepts in "fixes":`,
 		`    {"kind":"place","name":"...","description":"only when founding a never-chronicled place"} — set the party's true place; the footer follows`,
+		`    {"kind":"chronicle_place","name":"...","description":"..."} — found a page for a place only spoken of (a neighbor's house, a destination); the party does NOT move`,
 		`    {"kind":"place_note","place":"...","note":"..."} — append a correction note to a place's page (pages never shrink)`,
-		`    {"kind":"persona_record","name":"...","role":"...","dealings":"...","place":"..."} — chronicle a soul the record shows was met`,
+		`    {"kind":"persona_record","name":"...","role":"...","dealings":"...","place":"..."} — chronicle a soul the record shows was met; the place must be chronicled`,
 		`    {"kind":"persona_move","name":"...","to_place":"...","reason":"..."} — correct a soul's whereabouts, reason recorded`,
+		`    {"kind":"quest_grant","title":"...","giver":"a recorded soul — OMIT for a task the seeker set themselves","task":"...","reward":"..."} — chronicle a task the record shows was agreed or self-proclaimed`,
 		`    {"kind":"quest_status","title":"...","status":"done"|"rewarded","note":"..."} — forward only; rewarded also grants the recorded reward`,
 		`    {"kind":"item","item":"...","origin":"..."} — record a gain the story granted but the engine missed`,
+		`- Fixes execute IN THE ORDER GIVEN — chain prerequisites first: chronicle_place before persona_record at that place, persona_record before quest_grant naming that giver.`,
 		`- Repairs happen ONLY through "fixes": never claim in words that something is now marked, moved or recorded — the engine executes and announces every repair itself, and it validates each one (unknown pages, backward quest moves and reasonless relocations are refused).`,
 		``,
 		`Settling disputes and binding truths:`,

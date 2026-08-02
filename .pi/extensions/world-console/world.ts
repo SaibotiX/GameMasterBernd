@@ -83,6 +83,34 @@ export function visitPlace(world: WorldFiles, name: string, description: string)
 	return { created: false, slug, title, content };
 }
 
+/**
+ * Chronicle a place WITHOUT the party traveling there — somewhere merely
+ * spoken of (a neighbor's house, a quest's destination). Founds the page if
+ * missing; never appends an arrival and never moves anyone.
+ */
+export function foundPlace(
+	world: WorldFiles,
+	name: string,
+	description: string,
+): { created: boolean; slug: string; title: string } {
+	const slug = slugify(name);
+	const file = placeFile(world, slug);
+	if (existsSync(file)) {
+		const title = read(file).match(/^# (.+)$/m)?.[1]?.trim() ?? name.trim();
+		return { created: false, slug, title };
+	}
+	ensureDir(join(world.root, "places"));
+	writeFileSync(
+		file,
+		`# ${name.trim()}\n` +
+			`- first recorded: ${stamp()} (chronicled from afar)\n\n` +
+			`## The place\n${description.trim()}\n\n` +
+			`## Chronicle of visits\n`,
+		"utf8",
+	);
+	return { created: true, slug, title: name.trim() };
+}
+
 /** Extend the page of an existing place with new details (never deletes). */
 export function extendPlace(world: WorldFiles, name: string, details: string): boolean {
 	const file = placeFile(world, slugify(name));
@@ -180,17 +208,22 @@ export interface Quest {
 
 export function grantQuest(
 	world: WorldFiles,
-	quest: { title: string; giver: string; task: string; reward: string; placeSlug: string },
+	quest: { title: string; giver?: string; task: string; reward: string; placeSlug: string },
 ): { slug: string } {
 	const slug = slugify(quest.title);
 	if (questBySlug(world, slug)) throw new Error(`a quest named "${quest.title}" already exists in the chronicle`);
 	ensureDir(world.root);
 	const file = questsFile(world);
 	if (!existsSync(file)) writeFileSync(file, `# Quests\n`, "utf8");
+	// No giver = a task the seeker set for themselves (persona sentinel "self":
+	// redeeming skips the at-the-giver check, there is nobody to collect from).
+	const giverLine = quest.giver?.trim()
+		? `${quest.giver.trim()} (persona: ${slugify(quest.giver)})`
+		: "the seeker (persona: self)";
 	appendFileSync(
 		file,
 		`\n## [open] ${quest.title.trim()} (id: ${slug})\n` +
-			`- giver: ${quest.giver.trim()} (persona: ${slugify(quest.giver)})\n` +
+			`- giver: ${giverLine}\n` +
 			`- granted at: ${quest.placeSlug}, ${stamp()}\n` +
 			`- task: ${quest.task.trim()}\n` +
 			`- reward: ${quest.reward.trim()}\n` +

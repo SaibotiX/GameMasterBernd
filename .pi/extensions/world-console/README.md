@@ -32,9 +32,9 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
   | `set_mood` | mood shifts; setting the angriest mood makes the engine bar the glass (code-owned invariant) |
   | `grant_redemption` | lifts the bar after sincere amends; no-op unless barred (code-owned invariant) |
   | `record_name` | stores the seeker's name for the standing layer |
-  | `set_place` / `update_place` | journey to a place (loads or founds its page) / extend the current page |
-  | `record_persona` / `move_persona` | chronicle a MAIN soul and their dealings / move them, reason recorded |
-  | `grant_quest` / `update_quest` / `redeem_quest` | grant work, record progress and `done`, collect the reward at the giver |
+  | `set_place` / `chronicle_place` / `update_place` | journey to a place / found a page for a place only spoken of (no travel) / extend the current page |
+  | `record_persona` / `move_persona` | chronicle a MAIN soul (at the party's place or any chronicled one) / move them, reason recorded |
+  | `grant_quest` / `update_quest` / `redeem_quest` | grant work (giver optional: omitted = the seeker's own self-set task), record progress and `done`, collect the reward at the giver (self-set tasks close anywhere) |
   | `add_item` | record loot, pay and gifts in the seeker's items file |
   The old `@mood(...)`/`@redeem` text tags are gone — the app's ledger showed models forget magic text lines exactly when they get theatrical; they do not forget tool calls.
 - **The ledger lives in the session** — every game event (`world`, `player_named`, `mood_set`, `websearch_ban`, `redemption`, `search_requested/performed/refused/failed`) is a custom entry (`world-console.ledger`) in pi's session file. All state is derived by folding the **current branch** (`sessionManager.getBranch()`), so:
