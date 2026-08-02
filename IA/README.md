@@ -1,12 +1,25 @@
-# World Console — pi extension (full port)
+# IA — World Console
 
-The game running inside the stock [pi coding agent](https://github.com/earendil-works/pi): pi contributes the terminal UI, model switching (`/model`), sessions (`/new`, `/resume`, `/fork`, `/tree`, `/compact`, `/export`), and auth (`/login`); this extension turns it into the game.
+The game running inside the stock [pi coding agent](https://github.com/earendil-works/pi): pi contributes the terminal UI, model switching (`/model`), sessions (`/new`, `/resume`, `/fork`, `/tree`, `/compact`, `/export`), and auth (`/login`); this folder turns it into the game — and it is standalone: copy `IA/` anywhere and run pi inside it.
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `.pi/extensions/` | pi's loader shims — how pi finds the game when run inside `IA/` |
+| `extension/` | the whole engine: prompt takeover, tools, ledger, GM table, world files |
+| `config/` | constitution, worlds, moods, web sources — plain markdown, hot-reloaded |
+| `data/world/<world>/<chronicle>/` | one folder per STORY: places, personas, quests, items — and `ledger.md`, the readable game log |
+| `data/downloads/` | pictures and video clips the scrying glass fetched |
+| `tools/ffmpeg/` | optional static ffmpeg for ~10 s clips (or install system ffmpeg) |
+
+The authoritative ledger is not a database: it lives as custom entries inside pi's session file (append-only JSONL under `~/.pi/agent/sessions/…`). Every game event is mirrored line-by-line into the story's `data/world/<world>/<chronicle>/ledger.md` (with its `*uN*` number), so players can read the log — and argue from it at the GM table.
 
 ## Run
 
 ```bash
-cd <repo root>
-pi                          # trust the project once when asked
+cd IA                       # or the repo root — both carry loader shims
+pi                          # trust the directory once when asked
 pi --world star-frontier    # pick a world (default: dragon-realm)
 ```
 
@@ -14,7 +27,7 @@ pi --world star-frontier    # pick a world (default: dragon-realm)
 
 ```
 /web text basalt              # knowledge from the chronicle sites
-/web picture aurora borealis  # image downloaded to app/data/downloads/
+/web picture aurora borealis  # image downloaded to data/downloads/
 /web video komodo dragon      # ~10 s clip via yt-dlp (slow)
 ```
 
@@ -22,12 +35,12 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
 
 ## How it works
 
-- **Prompt takeover** — `before_agent_start` replaces pi's coding prompt each turn with the layered game-master prompt (constitution → world → mood → standing → control protocol) assembled fresh from `app/config/` (hot reload; broken edits keep the last good config).
+- **Prompt takeover** — `before_agent_start` replaces pi's coding prompt each turn with the layered game-master prompt (constitution → world → mood → standing → control protocol) assembled fresh from `config/` (hot reload; broken edits keep the last good config).
 - **Tools instead of tags** — the built-in coding tools are stripped; the model gets exactly:
   | tool | purpose |
   |---|---|
-  | `find_text` | MediaWiki text search over `app/config/sites.json` text hosts |
-  | `find_picture` | MediaWiki file search (Commons by default); best match downloaded to `app/data/downloads/` |
+  | `find_text` | MediaWiki text search over `config/sites.json` text hosts |
+  | `find_picture` | MediaWiki file search (Commons by default); best match downloaded to `data/downloads/` |
   | `find_video` | yt-dlp (vendored source) via YouTube search; ~10 s ffmpeg clip, or shortest video without ffmpeg |
   | `set_mood` | mood shifts; setting the angriest mood makes the engine bar the glass (code-owned invariant) |
   | `grant_redemption` | lifts the bar after sincere amends; no-op unless barred (code-owned invariant) |
@@ -46,16 +59,16 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
 - **Recall & the archive** — table answers are short and plain (a referee's note, not the keeper's voice). For recall questions ("how was the king called?", "what did you say about that dungeon?") the engine runs a code-side search of the **full record** first: it extracts the main words of the question (stemmed, very broad), finds every matching line across all messages and ledger events, and hands the table AI each hit with the line above and below it. Every record line shown anywhere carries its stable `*uN*` number (its position in the append-only session file — also shown by `/ledger`), and the table cites those marks instead of trusting memory.
 - **Repairs** — when the game mis-records state (the classic: calling `update_place` instead of `set_place` on a return journey, leaving the footer stale), tell the table: `/gm the footer says X but the story stands at Y — fix it`. The meta-GM verifies the claim against the record and proposes engine actions in its structured reply — set the true place (footer follows), append a correction note to a page, record or relocate a soul, advance a quest (forward only; `rewarded` also grants the recorded reward), or add a missed item. Code validates and executes each one and announces `⟡ engine repairs:` itself — the table can never claim a change in words alone.
 - **Amendments** — when a truth is denied for contradiction, the notice includes the session file path and the amend syntax. If the record itself states your fact somewhere — say the keeper once declared the dragon "nineteen and three-quarter meters" at `*u7*` — then `/gm amend_truth <fact> *u7*` (or `/dm amend_truth …`) hands the guardian exactly that entry as proof: it allows the amendment only if the entry genuinely states the fact (meaning an earlier evaluation erred), names any superseded truth, and the engine then records `truth_retracted` + the corrected `truth` (`← *u7*`) in the ledger. This is the **only** way canon can change. Narrated barring without the tool call changes nothing, and the standing layer shows the true state every turn.
-- **One chronicle per story** — the first `session_start` stamps a chronicle key into the ledger, and all world files live under `app/data/world/<world>/<key>/`. So `/new` founds a fresh, empty world-file folder (a new story never inherits another story's quests or items), `/fork` **inherits** its parent's chronicle (the stamp copies with the entries), and stories from before this stamp existed are adopted onto the legacy shared folder. Resuming a sitting resumes its chronicle.
+- **One chronicle per story** — the first `session_start` stamps a chronicle key into the ledger, and all world files live under `data/world/<world>/<key>/`. So `/new` founds a fresh, empty world-file folder (a new story never inherits another story's quests or items), `/fork` **inherits** its parent's chronicle (the stamp copies with the entries), and stories from before this stamp existed are adopted onto the legacy shared folder. Resuming a sitting resumes its chronicle.
 - **In-game archive recall** — every turn, code searches the sitting's full record (the session file keeps everything, even what auto-compaction folded out of the LLM's context) for the player's words and hands the hits to the keeper through a hidden `3¾ · archive recall` prompt layer — trusted over memory, never spoken of aloud. Ask "what was the lord's name?" fifty turns and one compaction later, and the keeper still knows. (The `/gm` table has had the same search since it learned recall.)
-- **The open world** — the game master is an unbound presence: ask it what to do and it offers real choices, from heroic errands to plucking a sick farmer's carrots. The world's permanent chronicle lives as plain markdown under `app/data/world/<world>/<chronicle>/` (`WORLD_CONSOLE_DATA_DIR` overrides for tests): one page per **place** (`places/<slug>.md` — where it lies, look & feeling, a growing visit chronicle) and per **main soul** (`personas/<slug>.md` — who they are, every dealing, where they now dwell), plus `quests.md` and `items.md`. Pages are never deleted, only extended; the same name is always the same page, so returning anywhere reloads its whole history (and the footer follows: `… · <world title> · <place>`). Code owns the anti-exploit rules: a soul dwells where last recorded and moves only via `move_persona` with a reason written to their page; quests advance `[open] → [done] → [rewarded]`, and `redeem_quest` is refused unless the deed is done **and** the giver's soul is at the party's place — the reward then flows into `items.md` automatically. Every world action also lands in the session ledger (`journeyed to…`, `quest granted…`), so `/ledger` and the GM table's archive search see them. One deliberate trade-off: world files are the permanent chronicle — `/tree` rewinds the sitting, not the world.
+- **The open world** — the game master is an unbound presence: ask it what to do and it offers real choices, from heroic errands to plucking a sick farmer's carrots. The world's permanent chronicle lives as plain markdown under `data/world/<world>/<chronicle>/` (`WORLD_CONSOLE_DATA_DIR` overrides for tests): one page per **place** (`places/<slug>.md` — where it lies, look & feeling, a growing visit chronicle) and per **main soul** (`personas/<slug>.md` — who they are, every dealing, where they now dwell), plus `quests.md` and `items.md`. Pages are never deleted, only extended; the same name is always the same page, so returning anywhere reloads its whole history (and the footer follows: `… · <world title> · <place>`). Code owns the anti-exploit rules: a soul dwells where last recorded and moves only via `move_persona` with a reason written to their page; quests advance `[open] → [done] → [rewarded]`, and `redeem_quest` is refused unless the deed is done **and** the giver's soul is at the party's place — the reward then flows into `items.md` automatically. Every world action also lands in the session ledger (`journeyed to…`, `quest granted…`), so `/ledger` and the GM table's archive search see them. One deliberate trade-off: world files are the permanent chronicle — `/tree` rewinds the sitting, not the world.
 - **Footer** — pi's stock stats line (cost, `(sub)`, context %, model • thinking; rendered by the real `FooterComponent`, so formatting matches stock exactly) with the game line below it (`<voice> · mood: <mood>[ · glass BARRED] · <world title>[ · <place>]`) and no directory line.
 
 ## Tests
 
 ```bash
-node .pi/extensions/world-console/test/unit.ts          # pure logic, no pi, no LLM (network: Wikipedia)
-node .pi/extensions/world-console/test/integration.ts   # real pi over RPC; Part A costs no LLM tokens
+node IA/extension/test/unit.ts          # pure logic, no pi, no LLM (network: Wikipedia)
+node IA/extension/test/integration.ts   # real pi over RPC; Part A costs no LLM tokens
 ```
 
 - **unit.ts** — ledger derivation, the ban/redemption invariants, branch isolation, config-loader equivalence with `app/src/config.ts`, prompt layers, search adapter (incl. abort).
@@ -67,7 +80,8 @@ Known soft spot: whether the *model* ever attempts `find_text` while barred is m
 
 ## Notes
 
-- Mood is per session (branch-aware), not global like `app/data/ledger.jsonl` — a punishment ends with `/new`. If cross-session grudges are ever wanted, add a small global profile file.
+- Mood is per session (branch-aware), not global like `data/ledger.jsonl` — a punishment ends with `/new`. If cross-session grudges are ever wanted, add a small global profile file.
 - Adding a mood file mid-session updates prompts on the next turn, but the `set_mood` enum refreshes only on restart or `/reload`.
-- YouTube sometimes meets `find_video` with a "Sign in to confirm you're not a bot" wall (IP-level — it hits every yt-dlp player client). The engine escalates least-invasive first: **1.** your own Netscape export at `app/config/youtube-cookies.txt`, if present — you decide exactly which cookies it contains; **2.** otherwise a bare attempt — installing the identity-free [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin (a yt-dlp plugin plus its token server/script; more setup) makes this rung pass without any cookies at all; **3.** only if YouTube still refuses: cookies borrowed **live** from an installed browser (auto-detected; `WORLD_CONSOLE_YT_BROWSER=<browser>` names one), kept for the rest of the run — and every scrying that borrowed them says so in a notification. yt-dlp reads the whole browser cookie store locally but sends only the youtube/google-scoped cookies. If even browser cookies are refused, open youtube.com in that browser once (signing in helps most) and try again.
-- `../usage-limits.ts` is a separate small extension: `/limits` shows which Anthropic usage bucket your requests draw from (plan-limit windows vs. the extra-usage overage lane), read from the `anthropic-ratelimit-*` response headers.
+- YouTube sometimes meets `find_video` with a "Sign in to confirm you're not a bot" wall (IP-level — it hits every yt-dlp player client). The engine escalates least-invasive first: **1.** your own Netscape export at `config/youtube-cookies.txt`, if present — you decide exactly which cookies it contains; **2.** otherwise a bare attempt — installing the identity-free [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin (a yt-dlp plugin plus its token server/script; more setup) makes this rung pass without any cookies at all; **3.** only if YouTube still refuses: cookies borrowed **live** from an installed browser (auto-detected; `WORLD_CONSOLE_YT_BROWSER=<browser>` names one), kept for the rest of the run — and every scrying that borrowed them says so in a notification. yt-dlp reads the whole browser cookie store locally but sends only the youtube/google-scoped cookies. If even browser cookies are refused, open youtube.com in that browser once (signing in helps most) and try again.
+- `.pi/extensions/usage-limits.ts` is a separate small extension: `/limits` shows which Anthropic usage bucket your requests draw from (plan-limit windows vs. the extra-usage overage lane), read from the `anthropic-ratelimit-*` response headers.
+- pi lists resumable sessions per working directory — sessions started from the repo root stay under the root's list, ones started inside `IA/` under its own. Any session file opens directly with `pi --session <path>`.

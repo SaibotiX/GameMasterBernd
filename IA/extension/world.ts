@@ -286,6 +286,34 @@ export function openQuestLines(world: WorldFiles): string[] {
 		.map((line) => line.replace(/^## /, ""));
 }
 
+// ---- the readable ledger log ----------------------------------------------
+
+/**
+ * Append one human-readable line to the story's ledger.md — the player-facing
+ * mirror of the session's game events (the real ledger lives as custom
+ * entries inside pi's session JSONL). Append-only across ALL branches: /tree
+ * rewinds the session, never this log. Must never break a turn.
+ */
+export function logEvent(world: WorldFiles, line: string): void {
+	try {
+		ensureDir(world.root);
+		const file = join(world.root, "ledger.md");
+		if (!existsSync(file)) {
+			writeFileSync(
+				file,
+				`# Ledger log\n` +
+					`Readable mirror of this story's game events. The authoritative ledger lives inside pi's\n` +
+					`session file (custom entries); this log is append-only across all branches — /tree\n` +
+					`rewinds the session, never this file. *uN* = the entry's number in the session record.\n\n`,
+				"utf8",
+			);
+		}
+		appendFileSync(file, `${line}\n`, "utf8");
+	} catch {
+		// the log must never break a turn
+	}
+}
+
 // ---- items ----------------------------------------------------------------
 
 const itemsFile = (world: WorldFiles) => join(world.root, "items.md");

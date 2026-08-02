@@ -1,10 +1,10 @@
 /**
- * Read-only loader for the World Console config tree in app/config:
+ * Read-only loader for the World Console config tree (IA/config):
  * constitution.md, worlds/<id>.md, moods/*.md, sites.json.
  *
- * Same markdown-with-frontmatter format as app/src/config.ts so both
- * runtimes share one config. This loader never writes files (the app owns
- * sites.json creation) and returns plain data — hot reload is "call again".
+ * Markdown-with-frontmatter, inherited from the retired app's format. This
+ * loader never writes files and returns plain data — hot reload is "call
+ * again".
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";

@@ -11,14 +11,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const EXT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const REPO = join(EXT, "..", "..", "..");
+const BASE = join(EXT, ".."); // the IA folder: config/, data/, tools/ live here
 
 const { derive, describeEvent, planSetMood, planRedemption, asGameEvent, LEDGER_TYPE, LEGACY_MOOD_TYPE } =
 	await import(join(EXT, "ledger.ts"));
 const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
-const appConfig = await import(join(REPO, "app", "src", "config.ts"));
 
 let passed = 0;
 function ok(name: string, fn: () => void) {
@@ -204,30 +203,28 @@ ok("branches: rewind before the ban derives the pre-ban state", () => {
 	assert.equal(derive(trunk, "neutral").mood, "gracious");
 });
 
-// ---- 4. config equivalence with the app loader ---------------------------
+// ---- 4. the config tree ---------------------------------------------------
 for (const worldId of ["dragon-realm", "star-frontier"]) {
-	const a = appConfig.loadConfig(join(REPO, "app"), worldId);
-	const e = loadConfig(join(REPO, "app"), worldId);
-	ok(`config[${worldId}]: constitution/world/moods/sites match the app loader`, () => {
-		assert.equal(e.constitution, a.constitution);
-		for (const key of ["id", "title", "voice", "register", "defaultMood", "body"]) {
-			assert.equal((e.world as Record<string, unknown>)[key], (a.world as Record<string, unknown>)[key], key);
-		}
-		assert.deepEqual([...e.moods.keys()].sort(), [...a.moods.keys()].sort());
-		assert.deepEqual(e.textSites.map((s: { host: string }) => s.host), a.sites.text.map((s: { host: string }) => s.host));
-		assert.deepEqual(e.pictureSites.map((s: { host: string }) => s.host), a.sites.picture.map((s: { host: string }) => s.host));
+	const cfg = loadConfig(BASE, worldId);
+	ok(`config[${worldId}]: constitution, world, moods and sites load`, () => {
+		assert.ok(cfg.constitution.length > 100, "constitution missing or empty");
+		assert.equal(cfg.world.id, worldId);
+		assert.ok(cfg.world.title.length > 0 && cfg.world.voice.length > 0);
+		assert.ok(cfg.world.body.length > 100, "world body suspiciously short");
+		assert.ok(cfg.moods.size >= 3, "too few moods");
+		assert.ok(cfg.textSites.length > 0 && cfg.pictureSites.length > 0);
 	});
 }
 
 ok("config: angriest mood is last in severity order", () => {
-	const e = loadConfig(join(REPO, "app"), "dragon-realm");
+	const e = loadConfig(BASE, "dragon-realm");
 	const ids = moodIdsBySeverity(e);
 	assert.deepEqual(ids, ["gracious", "neutral", "irritated", "angry"]);
 });
 
 // ---- 5. prompt assembly ---------------------------------------------------
 {
-	const config = loadConfig(join(REPO, "app"), "dragon-realm");
+	const config = loadConfig(BASE, "dragon-realm");
 	const banned = derive(
 		[
 			ev({ ev: "player_named", name: "Bbaba" }),
@@ -479,12 +476,12 @@ ok("asGameEvent: non-custom entries → null", () => {
 	console.log("ok  picture: abort propagates the abort reason");
 	passed++;
 
-	const tooling = media.detectTooling(join(REPO, "app"));
+	const tooling = media.detectTooling(BASE);
 	ok("video: tooling detection matches the filesystem", () => {
-		assert.equal(existsSync(join(tooling.ytDlpSource, "yt_dlp")), true, "vendored yt-dlp missing");
-		const bundled = join(REPO, "app", "tools", "ffmpeg", "ffmpeg");
+		assert.ok(tooling.ytDlpSource && existsSync(join(tooling.ytDlpSource, "yt_dlp")), "vendored yt-dlp missing");
+		const bundled = join(BASE, "tools", "ffmpeg", "ffmpeg");
 		assert.equal(tooling.ffmpegDir !== null, existsSync(bundled));
-		const cookies = join(REPO, "app", "config", "youtube-cookies.txt");
+		const cookies = join(BASE, "config", "youtube-cookies.txt");
 		assert.equal(tooling.cookiesFile, existsSync(cookies) ? cookies : null);
 	});
 

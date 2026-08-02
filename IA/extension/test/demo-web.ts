@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 
 const EXT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const APP_DOWNLOADS = join(EXT, "..", "..", "..", "app", "data", "downloads");
+const APP_DOWNLOADS = join(EXT, "..", "data", "downloads");
 const WORK = "/tmp/wc-demo";
 rmSync(WORK, { recursive: true, force: true });
 mkdirSync(join(WORK, "sessions"), { recursive: true });

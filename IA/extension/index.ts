@@ -46,6 +46,7 @@ import {
 	extendPlace,
 	foundPlace,
 	grantQuest,
+	logEvent,
 	movePersona,
 	openQuestLines,
 	personaExists,
@@ -60,10 +61,11 @@ import {
 	type WorldFiles,
 } from "./world.ts";
 
-const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "app");
-const DOWNLOAD_DIR = join(APP_DIR, "data", "downloads");
+/** The IA folder: extension code, config, data and tools all live inside it. */
+const BASE_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
+const DOWNLOAD_DIR = join(BASE_DIR, "data", "downloads");
 /** Persistent world chronicle (places/personas/quests/items); overridable for tests. */
-const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(APP_DIR, "data", "world");
+const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(BASE_DIR, "data", "world");
 const DEFAULT_WORLD = "dragon-realm";
 const GAME_TOOLS = [
 	"find_text", "find_picture", "find_video",
@@ -83,10 +85,10 @@ export default function (pi: ExtensionAPI) {
 	// the extension error and stays a plain coding agent, which is clearer
 	// than a half-loaded game.
 	let worldId = process.env.WORLD_CONSOLE_WORLD || DEFAULT_WORLD;
-	let config: WorldConfig = loadConfig(APP_DIR, worldId);
+	let config: WorldConfig = loadConfig(BASE_DIR, worldId);
 	let st: DerivedState = derive([], config.world.defaultMood);
 	let resumedFrom: string | undefined;
-	const tooling = detectTooling(APP_DIR); // vendored yt-dlp + bundled/system ffmpeg
+	const tooling = detectTooling(BASE_DIR); // vendored yt-dlp + bundled/system ffmpeg
 
 	pi.registerFlag("world", {
 		description: `World Console: world id from app/config/worlds (default: ${DEFAULT_WORLD})`,
@@ -116,7 +118,7 @@ export default function (pi: ExtensionAPI) {
 	/** Reload config for `id`; on failure keep the last good config. */
 	function reloadFor(id: string): boolean {
 		try {
-			config = loadConfig(APP_DIR, id);
+			config = loadConfig(BASE_DIR, id);
 			return true;
 		} catch {
 			return false;
@@ -190,10 +192,21 @@ export default function (pi: ExtensionAPI) {
 		requestFooterRender?.();
 	}
 
-	/** Append ledger events, then re-derive state from the branch (single source of truth). */
+	/**
+	 * Append ledger events, then re-derive state from the branch (single
+	 * source of truth). Each event is also mirrored, human-readably, into the
+	 * story's data/world/<world>/<chronicle>/ledger.md so players can read
+	 * the log without opening pi's session JSONL.
+	 */
 	function appendEvents(ctx: ExtensionContext, events: GameEvent[]): void {
 		for (const event of events) pi.appendEntry(LEDGER_TYPE, event);
-		replay(ctx);
+		replay(ctx); // before logging: a chronicle stamp in this batch decides the log's folder
+		const total = ctx.sessionManager.getEntries().length;
+		const files = worldFiles();
+		const time = new Date().toISOString().slice(0, 16).replace("T", " ");
+		events.forEach((event, index) => {
+			logEvent(files, `*u${total - events.length + index + 1}* ${time}  ${describeEvent(event)}`);
+		});
 		updateFooter(ctx);
 	}
 

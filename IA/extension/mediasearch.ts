@@ -164,7 +164,7 @@ export interface VideoResult {
 }
 
 export interface VideoTooling {
-	ytDlpSource: string; // path to the vendored yt-dlp checkout
+	ytDlpSource: string | null; // vendored yt-dlp checkout; null → rely on a system-installed yt_dlp module
 	ffmpegDir: string | null; // directory containing a bundled ffmpeg, if any
 	hasSystemFfmpeg: boolean;
 	/** Netscape cookies file (app/config/youtube-cookies.txt), if present. */
@@ -196,7 +196,7 @@ export function detectTooling(appRoot: string): VideoTooling {
 	const bundled = join(appRoot, "tools", "ffmpeg");
 	const cookiesFile = join(appRoot, "config", "youtube-cookies.txt");
 	return {
-		ytDlpSource,
+		ytDlpSource: existsSync(join(ytDlpSource, "yt_dlp")) ? ytDlpSource : null,
 		ffmpegDir: existsSync(join(bundled, "ffmpeg")) ? bundled : null,
 		hasSystemFfmpeg: (process.env.PATH ?? "")
 			.split(":")
@@ -229,7 +229,7 @@ function ytDlp(
 		timeout,
 		signal,
 		maxBuffer: 8 * 1024 * 1024,
-		env: { ...process.env, PYTHONPATH: tooling.ytDlpSource },
+		env: tooling.ytDlpSource ? { ...process.env, PYTHONPATH: tooling.ytDlpSource } : process.env,
 	});
 }
 

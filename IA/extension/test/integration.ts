@@ -188,6 +188,7 @@ class Rpc {
 				PI_CODING_AGENT_SESSION_DIR: join(WORK, "sessions"),
 				PI_SKIP_VERSION_CHECK: "1",
 				PI_OFFLINE: "1",
+				WORLD_CONSOLE_DATA_DIR: join(WORK, "worlddata"), // never touch the real world files
 			},
 		});
 		this.proc.stdout.on("data", (chunk: Buffer) => {
