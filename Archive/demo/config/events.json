@@ -1,0 +1,19 @@
+{
+  "goal_completed": {
+    "mood": "triumphant",
+    "announce": "The greater goal is COMPLETE.",
+    "propose_tool": {
+      "tool": "fetch_media",
+      "url": "https://www.youtube.com/watch?v=FANFARE_CLIP_ID",
+      "why": "triumphant mood suggests marking the moment with a short fanfare clip"
+    }
+  },
+  "deadline_near": {
+    "mood": "urgent",
+    "announce": "One hour remains on the active task."
+  },
+  "vip_arrival": {
+    "mood": "gracious",
+    "announce": "A distinguished guest has entered."
+  }
+}

@@ -1,0 +1,30 @@
+# --- Credentials -----------------------------------------------------------
+# Written by `pi-ai login` (OAuth access/refresh tokens) — never commit.
+auth.json
+app/auth.json
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# --- Runtime state ---------------------------------------------------------
+# The ledger and everything the game downloads. Recreated on first run.
+app/data/
+data/
+
+# --- Vendored binaries -----------------------------------------------------
+# Static ffmpeg (~420 MB), fetched by `./setup.sh --ffmpeg`.
+app/tools/
+
+# --- Dependencies ----------------------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+
+# --- Local tooling / editor ------------------------------------------------
+.claude/settings.local.json
+.vscode/
+.idea/
+*.swp
+.DS_Store

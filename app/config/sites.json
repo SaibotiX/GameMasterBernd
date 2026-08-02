@@ -1,0 +1,15 @@
+{
+  "text": [
+    {
+      "host": "en.wikipedia.org"
+    },
+    {
+      "host": "dragons.fandom.com"
+    }
+  ],
+  "picture": [
+    {
+      "host": "commons.wikimedia.org"
+    }
+  ]
+}

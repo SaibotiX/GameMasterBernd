@@ -1,0 +1,16 @@
+{
+  "name": "world-console",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "A text world guarded by a moody AI game master: chat in character, search the web for pictures, texts and video clips - every consequence recorded in an append-only ledger.",
+  "scripts": {
+    "start": "node src/main.ts",
+    "start:dummy": "node src/main.ts --dummy",
+    "test": "node test/run-tests.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "file:../pi/packages/ai"
+  },
+  "engines": { "node": ">=23.6" }
+}

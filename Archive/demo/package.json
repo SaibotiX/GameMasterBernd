@@ -1,0 +1,7 @@
+{
+  "name": "pi-selenium-ytdlp-demo",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-free terminal showcase: layered instructions, moods, role-gated changes, and capability-flagged yt-dlp/Selenium tool adapters (pi-harness patterns).",
+  "engines": { "node": ">=23.6" }
+}
