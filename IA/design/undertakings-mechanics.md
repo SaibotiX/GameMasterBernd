@@ -4,48 +4,57 @@ The implementable spec. Phase tags mark what ships when (see
 undertakings-build.md). Terms: a *beat* is one meaningful attempt scene; a
 quest's *clock* has `size` segments and fills by ticks.
 
-## 1. Clocks (Phase 1)
+## 1. Clocks (built; revised through playtest round 2.5)
 
-- Every granted quest draws a shape: `{ clock: 4|6|8, twist: 0|n, check: 0|n }`
-  (twist = complication beat, check = trial beat; a shape carries at most one).
-  Beats = clock/2 (standard tick = 2 segments).
-- Shape pool (as of Phase 2): plain `4`, plain `6`, twist `6@2`, twist `8@3`,
-  trial `4@2`, trial `6@3` — trials guard the FINAL beat (the climax), twists
-  land mid-quest. Long-run mix ≈ ⅓ plain.
-- Draw rules (drawQuestShape, pure + unit-tested): self-set tasks stay plain;
-  **the opening is scripted** — a story's first given quest never draws plain
-  (RimWorld's lesson; added 2026-08-03 after a playthrough whose only quest
-  drew plain); no twist right after a twisted quest, no trial right after a
-  trialed one (P2); **no droughts** — two plain quests never follow each
-  other; never the identical shape twice when another is available. Full
-  shuffle-bags still land in Phase 3.
+- Every granted quest draws a shape: `{ clock: 4|6|8, twist: 0|n, check: 0|1 }`
+  — twist = complication beat (mid-quest), check = FINALE ARMED (fires on
+  completion, not at a counted beat). Beats = clock/2 (standard tick = 2).
+- Shape pool (current): `4`, `6` (twist-free), `6@2`, `8@3` (twisted) — ALL
+  with check:1. Plain shapes are deleted: every quest's completing stroke is
+  contested (G9); "simple" means twist-free, never climax-free. Roughly half
+  the draws carry a mid-quest twist.
+- Draw rules (drawQuestShape, pure + unit-tested): self-set tasks are
+  twist-free (their finale still stands); **the opening is scripted** — a
+  story's first given quest carries a twist (RimWorld's lesson); no twist
+  right after a twisted quest (P2); never the identical shape twice when
+  another is available.
 - `twistBeat` from `ceil(beats * 0.6)` keeps the twist at 50–75% (P3); clues
   land at `twistBeat - 1`.
 - The clock is mirrored as a `- clock: n/m` line in quests.md for readability,
   but the **branch-derived ledger value is authoritative** (files are never
-  rewound by /tree). Legacy quests without a clock line lazily get `4/0` on
-  first attempt.
+  rewound by /tree). Legacy quests without a clock line lazily get `4/0/1` on
+  first attempt (finale armed like any modern quest).
 
-## 2. The attempt loop (Phase 1)
+## 2. The attempt loop (built; revised through playtest round 2.5)
 
-New tool `attempt_quest(title, approach)` — the only way work advances:
+`attempt_quest(title, approach, edge?, edge_reason?)` — the only way work
+advances. Branch order per attempt:
 
-1. Quest must be `[open]`. If this quest has a presented, unpicked
-   complication → return "the choice stands open" (no tick).
-2. If the *next* beat is `twistBeat - 1` → tick + generate the fate plan
-   (side call, §4) + hand the keeper the two clue lines to weave in (F1's
-   soft move).
-3. If the *next* beat is `twistBeat` and no other complication is pending
-   globally (P1: one at a time; if one is pending elsewhere, just tick and
-   defer) → no tick; present the complication: ledger event with the visible
-   options + the choice widget (§5). The beat is consumed by the event.
-4. Otherwise → tick (+2), return progress `n/m` and "narrate the work".
-5. Clock full → "the deed stands done — record it with update_quest".
+1. Quest must be `[open]`. A presented, unpicked twist on THIS quest → "the
+   choice stands open" (no tick). A standing trial on THIS quest → "the die
+   must fall first" (no tick).
+2. Twist presentation: next beat ≥ `twistBeat`, plan woven, unspent, and no
+   gate pending anywhere → no tick; the complication event carries the
+   visible options; the widget shows them. The beat is consumed.
+3. Clues: twist armed, plan not yet woven, next beat ≥ `twistBeat − 1` →
+   tick + weave the fate plan (side call, §4) + hand the keeper the two clue
+   lines (F1's soft move). Planner unreachable ⇒ fate_skipped, twist
+   neutralized, play continues.
+4. **Finale (G9)**: finale armed, unfired, and this tick would FILL the clock
+   (`filled + 2 ≥ size`), gates open → no tick; a `check` event (kind
+   "finale") declares the stakes contract (tier + DC public) and waits for
+   /roll. Fires once; if a twist-pick already completed the clock, the twist
+   was the peak and the finale never fires.
+5. **Hazard (G10)**: the keeper declared `edge: "hindered"` (with recorded
+   reason) → no tick; a `check` event (kind "hazard") — the bold stroke must
+   earn itself, worst of two dice. May recur if recklessness recurs; never
+   spends the finale.
+6. Otherwise → tick (+2), return progress `n/m` and "narrate the work".
 
-Gate: `update_quest(done=true)` is **refused unless the clock is full**
-(same style as redeem_quest's giver gate). `redeem_quest` unchanged.
-`attempt_quest` on done/rewarded/failed quests refuses. One attempt = one real
-scene of effort (protocol instructs the keeper; not code-enforceable).
+Gate: `update_quest(done=true)` is **refused unless the clock is full**.
+`attempt_quest` on done/rewarded/failed quests refuses. One attempt = one
+real scene of effort (protocol: a reply that advances the task in fiction
+MUST carry the call — narrated progress without it is theater).
 
 Open-quest cap (P4): `grant_quest` refuses while 4 quests stand open.
 
@@ -87,36 +96,44 @@ clean-or-windfall, at most one fail and only on a `desperate` option.
 - Ledger: the full plan is stored as a **veiled** event (describeEvent says
   "sealed", A4); the presentation event carries only the visible fields.
 
-## 5. Choice UI (Phase 1)
+## 5. Choice UI (Phase 1; extended for trials and offers)
 
 - Panel: `ctx.ui.setWidget(key, lines, { placement: "aboveEditor" })` — shows
-  the pending complication + numbered options with risk word and promise;
-  blue options marked with their qualifying fact. Never blocks the editor (G7).
+  the pending twist (options with risk word and promise, blue options marked
+  with their qualifying fact), an open offer (labels only), or a standing
+  trial (tier, DC, edge). Never blocks the editor (G7).
 - Pick: `/pick <n> [extra words]` — completions list the live options;
-  Alt+1..4 via `onTerminalInput` (consume + `setEditorText("/pick n ")`) so
+  Alt+1..9 via `onTerminalInput` (consume + `setEditorText("/pick n ")`) so
   extra words can be appended before submit.
-- Plain messages while a choice is open are conversation only — the panel
-  persists, nothing auto-picks.
+- Plain messages while a choice is open are conversation only — a TWIST
+  persists (nothing auto-picks); an OFFER lapses on the next plain turn.
 - Resolution: code applies the band (§3), records pick + outcome events,
   clears the widget, and hands the keeper an `[engine:<nonce>]` message
   (reveal + reason + "narrate diegetically, never name the mechanics, end
-  with an open move") with triggerTurn — the /web hand-off pattern.
+  with an open move") with triggerTurn — the /web hand-off pattern. Offer
+  picks carry no bands: the choice simply becomes the seeker's word.
 - Widget state derives from branch events, so /tree mid-choice rewinds the
   panel correctly (A3).
 
-## 6. Ledger events (Phase 1)
+## 6. Ledger events (Phase 1; extended through the playtest rounds)
 
 | event          | payload                              | /ledger description    |
 |----------------|--------------------------------------|------------------------|
-| quest_shape    | slug, clock, twistBeat               | "the fates take measure…" (size public, twist position not shown) |
+| quest_shape    | slug, clock, twist, check            | "the fates take measure…" (size public, twist position not shown) |
 | quest_tick     | slug, add, filled/size, note         | "the work advances…"   |
 | fate           | slug, plan (hidden fields)           | veiled: "…(sealed)"    |
+| fate_skipped   | slug                                 | "the fates hold their tongue…" |
 | complication   | slug, text, options (visible fields) | "the task twists…"     |
-| pick           | slug, option id, extra?              | "the seeker chooses…"  |
-| outcome        | slug, band, public text              | "the fates answer…"    |
+| offer          | text, options (labels)               | "choices laid before the seeker…" |
+| offer_dropped  | —                                    | "the choices pass unchosen…" |
+| pick           | slug ("" = offer), option id, extra? | "the seeker chooses…"  |
+| check          | slug, tier, dc, trial, kind, edge?   | "a trial bars…" (stakes contract, public) |
+| roll           | slug, dice[], kept, dc, band, grit   | "the die falls…" (every face public) |
+| outcome        | slug, band, add, public text         | "the fates answer…"    |
 
-derive() folds these into `undertakings[slug]` (filled, twistBeat, cluesGiven,
-pending presentation) + a global `pendingChoice`.
+derive() folds these into `undertakings[slug]` (clock, twist/finale state,
+grit, cold streak) + the global `pendingChoice` (twist|offer) and
+`pendingRoll`.
 
 ## 7. World laws file (Phase 1)
 
@@ -136,15 +153,41 @@ lines — be a fan of the seeker, make a move that follows, **never speak the
 name of your move**; failure narration written as lovingly as success; the
 task in one clear sentence, mystery in the story.
 
-## 9. Dice (Phase 2 — spec'd, not built)
+## 9. Dice (built — Phase 2)
 
-d20, six named tiers (5→30), margin bands (beat by 5+ = clean+perk / make =
-clean / miss 1–4 = cost / miss 5+ = detonate). Advantage/disadvantage = second
-visible die. Engine-rolled (crypto), recorded; roll happens in a focused
-`ctx.ui.custom` overlay (unmissable but only summoned at the moment). One
-grit token per quest = reroll after seeing the die; karmic clamp = open
-advantage after two straight hard failures. Roll-first-allocate variant
-(Citizen Sleeper) as a decision shape.
+- d20, tiers by clock size: easy DC 10 (clock 4) / middling 15 (6) / hard 20
+  (8) — announced BEFORE the cast (the stakes contract). No numeric modifiers
+  exist anywhere: the only adjustment is **edge**, a second visible die
+  (favored keeps the best, hindered the worst), declared by the keeper with a
+  recorded one-line reason.
+- Margin bands (rollBand, pure): natural 20 always **great**, natural 1
+  always **setback**; else ≥DC+5 great (+3) / ≥DC success (+2) / miss ≤4 cost
+  (+2, a visible price) / worse setback (−1, bounded — a bare die can NEVER
+  hard-fail a quest; [failed] stays exclusive to desperate twist paths).
+- /roll: in the TUI a focused overlay anchored bottom-center above the editor
+  in its own accent frame — space casts, the die tumbles, esc before casting
+  leaves the trial standing. **Grit** (one per quest) is offered inside the
+  overlay after SEEING a missed die (reroll once). Headless sessions roll
+  plainly. After two straight setbacks the next trial comes openly favored
+  ("the fates relent"). Every face is crypto-rolled and recorded; rolls and
+  picks render as colored permanent transcript lines.
+- **/roll is self-healing** (playtest 3): cast with no trial standing —
+  if a choice is what stands, it points at /pick; if open work exists, the
+  engine corrects the keeper itself (nonce-marked, carrying the open work's
+  clocks, forbidding meta-talk) so the contested effort routes through
+  attempt_quest and the true moment follows in one step. Theater costs one
+  turn, never the sitting.
+
+## 9½. Open offers (built — playtest round 2.5)
+
+`offer_choices(prompt, options[2..5])` — when a scene lays real alternatives
+before the seeker (a task board, a fork, rival requests), the keeper hands
+them to the engine: same panel, same /pick (+ optional words), NO hidden
+outcomes. An offer never binds: any turn that is not its own /pick drops it
+(`offer_dropped` — it can never deadlock the one-gate rule). Protocol: a
+prose list of courses is not a choice — enumerating tasks requires the call.
+The GM table can lay one too (fix kind "choices") and can arm a die on an
+open quest (fix kind "trial", weight easy/middling/hard).
 
 ## 10. The long game (Phase 3 — spec'd, not built)
 
@@ -153,4 +196,6 @@ draw-without-replacement, branch-aware); breadcrumbs (chains end in a named
 pointer via chronicle_place; keep 2–3 live); hook bundles per place;
 consequence-echo callbacks ("resurface later" flags); travel micro-events
 (one per leg, never zero, never two); GM-table repair kinds for clocks and
-plans; pacing fingerprints per chronicle.
+plans; pacing fingerprints per chronicle; roll-first-allocate decision shape
+(Citizen Sleeper: the die shown first, the seeker chooses where to spend it —
+moved here from Phase 2 to join the decision-shape rotation).

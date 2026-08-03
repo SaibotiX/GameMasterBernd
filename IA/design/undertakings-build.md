@@ -93,6 +93,22 @@ names the goals/invariants it serves (undertakings-goals.md).
       turned the notice board into a five-course offer UNPROMPTED and the
       offer-pick recorded with the empty slug)
 
+### Playtest 3 — theater recovery (user's third sitting, 2026-08-03)
+
+- [x] Anti-theater law extended: quest work, trials and dice named in the
+      "without the tool call it has NOT happened" rule; attempts MANDATORY
+      when a reply advances the task in fiction; prose lists of courses must
+      carry offer_choices
+- [x] /roll self-healing: no trial + pending choice ⇒ points at /pick; no
+      trial + open work ⇒ nonce-marked engine correction carrying the open
+      clocks, forbidding meta-talk, forcing the route through attempt_quest
+      ("world-console.nudge" renderer: "⚙ the engine steadies the keeper")
+- [x] Verified: 54/54 unit; recovery smoke 3/3 against the stranded
+      sitting's exact state — first try exposed the keeper apologizing aloud
+      and asking the player for the task, so the correction now carries the
+      quest facts itself; second try: attempt_quest at once, the unplayed
+      twist presented, /pick resolved clean against the sealed plan
+
 ## Phase 3 — the long game
 
 - [ ] Shuffle-bags as ledger draw events (shape / suit / decision-shape)
