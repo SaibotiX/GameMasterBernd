@@ -22,7 +22,7 @@
  *  - while barred, every find_* tool is blocked in code (tool_call handler),
  *    not by trusting the prompt
  */
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FooterComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -31,7 +31,7 @@ import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
-import { gmAsk, gmJudgeAmendment, gmJudgeTruth, type GmFix, type GmTurn } from "./gmchat.ts";
+import { gmAsk, gmJudgeAmendment, gmJudgeTruth, gmPlanFate, type GmFix, type GmTurn } from "./gmchat.ts";
 import {
 	asGameEvent,
 	derive,
@@ -40,16 +40,20 @@ import {
 	planRedemption,
 	planSetMood,
 	type DerivedState,
+	type FatePlan,
 	type GameEvent,
+	type PresentedOption,
 } from "./ledger.ts";
 import { detectTooling, searchPicture, searchVideo } from "./mediasearch.ts";
 import { assembleSystemPrompt } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
 import {
 	addItem,
+	countOpenQuests,
 	extendPlace,
 	foundPlace,
 	grantQuest,
+	hasItem,
 	logEvent,
 	movePersona,
 	openQuestLines,
@@ -59,6 +63,7 @@ import {
 	placeExists,
 	questBySlug,
 	recordPersona,
+	setQuestClock,
 	setQuestStatus,
 	slugify,
 	visitPlace,
@@ -75,7 +80,7 @@ const GAME_TOOLS = [
 	"find_text", "find_picture", "find_video",
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
-	"grant_quest", "update_quest", "redeem_quest", "add_item",
+	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
 ];
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
@@ -83,6 +88,22 @@ const KIND_BY_TOOL: Record<string, string> = {
 	find_picture: "picture",
 	find_video: "video",
 };
+// Undertaking shapes: clock size / twist beat (0 = plain). Half the draws are
+// plain — tasks are discovery, not work (goals P2/P3); beats = clock/2, the
+// twist lands after commitment. Full shuffle-bags come with Phase 3.
+const SHAPES = [
+	{ clock: 4, twist: 0 },
+	{ clock: 6, twist: 0 },
+	{ clock: 6, twist: 2 },
+	{ clock: 8, twist: 3 },
+] as const;
+/** Trouble kinds a twist may be drawn from (the complication taxonomy). */
+const SUITS = [
+	"material failure", "world-law surprise", "persona interruption", "rival interference",
+	"time pressure", "knowledge gap", "consequence echo", "windfall",
+];
+const MAX_OPEN_QUESTS = 4;
+const TICK = 2; // standard beat = 2 clock segments
 
 export default function (pi: ExtensionAPI) {
 	// Fail loudly at load time if the config tree is broken — pi then reports
@@ -222,6 +243,93 @@ export default function (pi: ExtensionAPI) {
 		requestFooterRender?.();
 	}
 
+	// ---- undertakings: shape draws, choice widget, hotkeys -----------------
+
+	/**
+	 * Draw a quest's shape. Code-owned variety (goals P2/P3/P5): self-set
+	 * tasks stay plain; no twist right after a twisted quest; never the same
+	 * shape as the previous quest when another is available.
+	 */
+	function drawShape(selfSet: boolean): { clock: number; twist: number } {
+		const last = st.recentShapes.at(-1);
+		let pool = SHAPES.filter((shape) => (selfSet || last?.twist ? shape.twist === 0 : true));
+		if (pool.length === 0) pool = SHAPES.filter((shape) => shape.twist === 0);
+		const unlike = pool.filter((shape) => !(last && shape.clock === last.clock && shape.twist === last.twist));
+		const from = unlike.length > 0 ? unlike : pool;
+		return from[randomInt(from.length)];
+	}
+
+	/** Draw the twist's trouble kind, avoiding the most recent one. */
+	function drawSuit(): string {
+		const lastSuit = st.recentSuits.at(-1);
+		const pool = SUITS.filter((suit) => suit !== lastSuit);
+		return pool[randomInt(pool.length)];
+	}
+
+	/**
+	 * The visible face of a plan's options: blue options (with `requires`)
+	 * render only when the chronicle proves the seeker qualifies — preparation
+	 * visibly buys a better path (goals F2).
+	 */
+	function presentableOptions(plan: FatePlan, files: WorldFiles): PresentedOption[] {
+		const visible: PresentedOption[] = [];
+		for (const option of plan.options) {
+			let unlockedBy: string | undefined;
+			if (option.requires) {
+				const { item, persona, place } = option.requires;
+				if (item) {
+					if (!hasItem(files, item)) continue;
+					unlockedBy = `their items hold ${item}`;
+				} else if (persona) {
+					if (!personaExists(files, persona)) continue;
+					unlockedBy = `${persona} is chronicled`;
+				} else if (place) {
+					if (!placeExists(files, place)) continue;
+					unlockedBy = `${place} is chronicled`;
+				}
+			}
+			visible.push({ id: option.id, label: option.label, risk: option.risk, promise: option.promise, unlockedBy });
+		}
+		return visible;
+	}
+
+	/** The pending-choice panel above the editor; never blocks typing (G7). */
+	function updateWidgets(ctx: ExtensionContext): void {
+		if (ctx.mode !== "tui" || typeof ctx.ui.setWidget !== "function") return;
+		const pending = st.pendingChoice;
+		if (!pending) {
+			ctx.ui.setWidget("world-console.choice", undefined);
+			return;
+		}
+		ctx.ui.setWidget("world-console.choice", [
+			`⟡ the task twists — ${clip(pending.text, 110)}`,
+			...pending.options.map(
+				(option) =>
+					`   [${option.id}] ${option.label} · ${option.risk} · ${clip(option.promise, 60)}` +
+					(option.unlockedBy ? ` · ⚑ ${option.unlockedBy}` : ""),
+			),
+			`   choose: Alt+number or /pick <n> [your own words] — plain talk stays free`,
+		]);
+	}
+
+	let unsubTerminalInput: (() => void) | undefined;
+
+	/** Alt+1..9 prefill "/pick n " so the seeker can add words and submit. */
+	function installChoiceHotkeys(ctx: ExtensionContext): void {
+		if (ctx.mode !== "tui" || typeof ctx.ui.onTerminalInput !== "function") return;
+		unsubTerminalInput?.();
+		unsubTerminalInput = ctx.ui.onTerminalInput((data) => {
+			const pending = st.pendingChoice;
+			if (!pending) return undefined;
+			const key = data.match(/^\x1b([1-9])$/); // Alt+digit
+			if (!key) return undefined;
+			const id = Number(key[1]);
+			if (!pending.options.some((option) => option.id === id)) return undefined;
+			ctx.ui.setEditorText(`/pick ${id} `);
+			return { consume: true };
+		});
+	}
+
 	/**
 	 * Append ledger events, then re-derive state from the branch (single
 	 * source of truth). Each event is also mirrored, human-readably, into the
@@ -238,6 +346,7 @@ export default function (pi: ExtensionAPI) {
 			logEvent(files, `*u${total - events.length + index + 1}* ${time}  ${describeEvent(event)}`);
 		});
 		updateFooter(ctx);
+		updateWidgets(ctx);
 	}
 
 	function branchHasAssistantReply(ctx: ExtensionContext): boolean {
@@ -402,8 +511,12 @@ export default function (pi: ExtensionAPI) {
 						);
 					}
 				}
-				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug });
-				appendEvents(ctx, [{ ev: "quest", action: "granted", title }]);
+				// Repairs record what already happened: a plain small clock, no twist.
+				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug, clockSize: 4 });
+				appendEvents(ctx, [
+					{ ev: "quest", action: "granted", title },
+					{ ev: "quest_shape", slug, clock: 4, twist: 0 },
+				]);
 				return `the task "${title}" is chronicled [open]${giver ? ` — giver ${giver}` : " — set by the seeker"} (id: ${slug})`;
 			}
 			case "persona_record": {
@@ -432,7 +545,7 @@ export default function (pi: ExtensionAPI) {
 				const slug = slugify(String(fix.title ?? ""));
 				const quest = questBySlug(files, slug);
 				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
-				const order = { open: 0, done: 1, rewarded: 2 } as const;
+				const order = { open: 0, done: 1, rewarded: 2, failed: 3 } as const;
 				const target = fix.status === "rewarded" ? "rewarded" : "done";
 				if (order[target] <= order[quest.status]) {
 					throw new Error(`"${quest.title}" already stands at [${quest.status}]`);
@@ -502,6 +615,8 @@ export default function (pi: ExtensionAPI) {
 
 		pi.setActiveTools(GAME_TOOLS);
 		updateFooter(ctx);
+		updateWidgets(ctx);
+		installChoiceHotkeys(ctx);
 		if (!pi.getSessionName()) pi.setSessionName(`World Console — ${config.world.title}`);
 		if (ctx.hasUI && (event.reason === "startup" || event.reason === "new")) {
 			ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
@@ -516,6 +631,7 @@ export default function (pi: ExtensionAPI) {
 		const stamp = chronicleStamp(ctx);
 		if (stamp.length > 0) appendEvents(ctx, stamp);
 		updateFooter(ctx);
+		updateWidgets(ctx); // a rewind may open or close a pending choice
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
@@ -616,6 +732,102 @@ export default function (pi: ExtensionAPI) {
 				: "· the seeker invokes the scrying glass";
 		return new Text(theme.fg("dim", line), options.outputPad, 0);
 	});
+
+	// /pick <n> [extra words] — the seeker commits to a path of a pending
+	// twist. Code resolves it against the sealed plan (the keeper never held
+	// the answer sheet) and hands the outcome over for narration.
+	pi.registerCommand("pick", {
+		description: "World Console: choose a path when the task twists — /pick <n> [your own words]",
+		getArgumentCompletions: (prefix: string) => {
+			const pending = st.pendingChoice;
+			if (!pending || prefix.includes(" ")) return null;
+			const items = pending.options
+				.filter((option) => String(option.id).startsWith(prefix.trim()) || !prefix.trim())
+				.map((option) => ({
+					value: `${option.id} `,
+					label: `${option.id} — ${option.label} (${option.risk}) · ${clip(option.promise, 40)}`,
+				}));
+			return items.length > 0 ? items : null;
+		},
+		handler: async (args, ctx) => {
+			const pending = st.pendingChoice;
+			if (!pending) {
+				ctx.ui.notify("No choice stands open before the seeker.", "info");
+				return;
+			}
+			const match = (args ?? "").trim().match(/^(\d+)(?:\s+([\s\S]+))?$/);
+			if (!match) {
+				ctx.ui.notify(
+					`Usage: /pick <n> [your own words] — open paths: ${pending.options
+						.map((option) => `[${option.id}] ${option.label}`)
+						.join(" · ")}`,
+					"warning",
+				);
+				return;
+			}
+			const id = Number(match[1]);
+			const extra = match[2]?.trim() || undefined;
+			const chosen = pending.options.find((option) => option.id === id);
+			if (!chosen) {
+				ctx.ui.notify(
+					`No path [${id}] stands open — choose ${pending.options.map((option) => option.id).join(", ")}.`,
+					"warning",
+				);
+				return;
+			}
+			const hidden = st.undertakings[pending.slug]?.plan?.options.find((option) => option.id === id);
+			const files = worldFiles();
+			const quest = questBySlug(files, pending.slug);
+			if (!hidden || !quest) {
+				ctx.ui.notify("The sealed fate for this choice is missing from the record — raise it at the GM table (/gm).", "error");
+				return;
+			}
+			const add = hidden.band === "setback" ? -1 : hidden.band === "fail" ? 0 : TICK;
+			const events: GameEvent[] = [
+				{ ev: "pick", slug: pending.slug, option: id, label: chosen.label, extra },
+				{ ev: "outcome", slug: pending.slug, band: hidden.band, add, text: hidden.reveal },
+			];
+			if (hidden.band === "windfall" && hidden.loot) {
+				addItem(files, `${hidden.loot} — found amid "${quest.title}"`);
+				events.push({ ev: "item", text: hidden.loot });
+			}
+			if (hidden.band === "fail") {
+				setQuestStatus(files, pending.slug, "failed", `the "${chosen.label}" path undid it`);
+				events.push({ ev: "quest", action: "failed", title: quest.title });
+			}
+			appendEvents(ctx, events);
+			const u = st.undertakings[pending.slug];
+			if (u && hidden.band !== "fail") setQuestClock(files, pending.slug, u.filled, u.size);
+			pi.sendMessage(
+				{
+					customType: "world-console.pick",
+					content:
+						`[engine:${ENGINE_NONCE}] For the task "${quest.title}" the seeker chose path [${id}] "${chosen.label}"` +
+						`${extra ? ` and spoke: "${extra}"` : ""}. Sealed outcome (${hidden.band}): ${hidden.reveal} ` +
+						`The why, for your telling (plant it so the seeker could trace it): ${hidden.reason}` +
+						`${hidden.band === "fail" ? " The task is FAILED and closed in the chronicle." : ""}` +
+						`${hidden.band === "windfall" && hidden.loot ? ` ${hidden.loot} now lies in the seeker's items.` : ""}` +
+						`${u && hidden.band !== "fail" ? ` The work now stands at ${u.filled}/${u.size}.` : ""} ` +
+						`Narrate this as living story in your voice — never name the mechanics — and end with an open move for the seeker.`,
+					display: true,
+					details: { id, label: chosen.label, extra },
+				},
+				{ triggerTurn: true },
+			);
+		},
+	});
+
+	pi.registerMessageRenderer<{ id?: number; label?: string; extra?: string }>(
+		"world-console.pick",
+		(message, options, theme) => {
+			const { id, label, extra } = message.details ?? {};
+			const line =
+				id && label
+					? `· the seeker takes path [${id}] ${label}${extra ? ` — "${extra}"` : ""}`
+					: "· the seeker commits to a path";
+			return new Text(theme.fg("dim", line), options.outputPad, 0);
+		},
+	);
 
 	pi.registerCommand("ledger", {
 		description: "World Console: show this sitting's ledger (optional: number of events)",
@@ -1261,14 +1473,24 @@ export default function (pi: ExtensionAPI) {
 					throw new Error(`${giver} is not here — the chronicle places them at ${location ?? "nowhere"}.`);
 				}
 			}
+			if (countOpenQuests(files) >= MAX_OPEN_QUESTS) {
+				throw new Error(
+					`${MAX_OPEN_QUESTS} matters already stand open — the chronicle takes no fifth. See one through first.`,
+				);
+			}
+			const shape = drawShape(!giver);
 			const { slug } = grantQuest(files, {
 				title,
 				giver,
 				task,
 				reward,
 				placeSlug: st.place.slug,
+				clockSize: shape.clock,
 			});
-			appendEvents(ctx, [{ ev: "quest", action: "granted", title }]);
+			appendEvents(ctx, [
+				{ ev: "quest", action: "granted", title },
+				{ ev: "quest_shape", slug, clock: shape.clock, twist: shape.twist },
+			]);
 			return {
 				content: [
 					{
@@ -1279,6 +1501,150 @@ export default function (pi: ExtensionAPI) {
 					},
 				],
 				details: { slug, selfSet: !giver },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "attempt_quest",
+		label: "A scene of effort",
+		description:
+			"Record one real scene of honest effort on a granted quest — the ONLY way work advances (narration alone moves nothing). Call it once per scene of actual doing, never twice in one reply, never for mere talk about the task. The engine answers with progress, with signs to weave in, or with a twist and its paths.",
+		parameters: Type.Object({
+			title: Type.String({ description: "The quest's title" }),
+			approach: Type.String({ description: "What the seeker actually does this scene, one plain line" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const approach = params.approach.trim();
+			if (!approach) throw new Error("Empty approach — say what the seeker actually does.");
+			const files = worldFiles();
+			const slug = slugify(params.title);
+			const quest = questBySlug(files, slug);
+			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
+			if (quest.status === "rewarded") throw new Error(`"${quest.title}" is already rewarded and closed.`);
+			if (quest.status === "failed") throw new Error(`"${quest.title}" failed and is closed — the story moves on.`);
+			if (quest.status === "done") throw new Error(`The deed of "${quest.title}" is done — redeem_quest awaits.`);
+
+			let u = st.undertakings[slug];
+			if (!u || u.size === 0) {
+				// A quest from before undertakings existed: a plain small clock joins it.
+				appendEvents(ctx, [{ ev: "quest_shape", slug, clock: 4, twist: 0 }]);
+				setQuestClock(files, slug, 0, 4);
+				u = st.undertakings[slug];
+			}
+			if (st.pendingChoice?.slug === slug) {
+				return {
+					content: [
+						{
+							type: "text",
+							text: "The twist stands unresolved — the seeker must choose a path (the panel shows them; they pick, you narrate nothing forward until then).",
+						},
+					],
+					details: { slug, pending: true },
+				};
+			}
+			if (u.filled >= u.size) {
+				return {
+					content: [
+						{ type: "text", text: `The work of "${quest.title}" already stands complete — update_quest with done records the deed.` },
+					],
+					details: { slug, filled: u.filled, size: u.size },
+				};
+			}
+
+			const nextBeat = u.beatsDone + 1;
+
+			// Twist beat: the plan is woven and unspent — present the paths.
+			// (Deferred while another choice is pending anywhere: one at a time.)
+			if (u.twist > 0 && u.plan && !u.presented && nextBeat >= u.twist && !st.pendingChoice) {
+				const options = presentableOptions(u.plan, files);
+				appendEvents(ctx, [{ ev: "complication", slug, text: u.plan.complication, options }]);
+				const lines = options.map(
+					(option) =>
+						`  [${option.id}] ${option.label} — ${option.risk}; ${option.promise}` +
+						(option.unlockedBy ? ` (open to them because ${option.unlockedBy})` : ""),
+				);
+				return {
+					content: [
+						{
+							type: "text",
+							text:
+								`The task twists: ${u.plan.complication}\n\nPaths before the seeker:\n${lines.join("\n")}\n\n` +
+								`Voice the twist and these paths in your own words, as real choices in the scene. Do NOT choose, ` +
+								`judge, or resolve — the seeker picks (a panel shows them how; they may add words of their own). ` +
+								`End your reply awaiting their word.`,
+						},
+					],
+					details: { slug, twist: true, options },
+				};
+			}
+
+			// Clues beat: weave the fate now, hand the keeper the warning signs.
+			if (u.twist > 0 && !u.plan && nextBeat >= u.twist - 1) {
+				let plan: FatePlan | null = null;
+				if (ctx.model) {
+					try {
+						plan = await gmPlanFate({
+							config,
+							model: { provider: ctx.model.provider, id: ctx.model.id },
+							quest: { title: quest.title, task: quest.task, reward: quest.reward, giver: quest.giver },
+							placeTitle: st.place?.title ?? "the road",
+							personasHere: st.place ? personasAt(files, st.place.slug) : [],
+							seekerName: st.playerName ?? "the seeker",
+							suit: drawSuit(),
+							recentSuits: st.recentSuits,
+						});
+					} catch {
+						plan = null; // play never blocks on the planner
+					}
+				}
+				const filled = Math.min(u.size, u.filled + TICK);
+				if (plan) {
+					appendEvents(ctx, [
+						{ ev: "quest_tick", slug, add: TICK, filled, size: u.size, note: clip(approach, 60) },
+						{ ev: "fate", slug, plan },
+					]);
+					setQuestClock(files, slug, filled, u.size);
+					return {
+						content: [
+							{
+								type: "text",
+								text:
+									`The work advances (${filled}/${u.size}). Narrate this scene of effort — and weave these ` +
+									`signs into it naturally, unremarked, for the seeker to find or miss:\n` +
+									`  1) ${plan.clues[0]}\n  2) ${plan.clues[1]}\n` +
+									`Do not resolve or explain them yet.`,
+							},
+						],
+						details: { slug, filled, size: u.size, clues: true },
+					};
+				}
+				appendEvents(ctx, [
+					{ ev: "quest_tick", slug, add: TICK, filled, size: u.size, note: clip(approach, 60) },
+					{ ev: "fate_skipped", slug },
+				]);
+				setQuestClock(files, slug, filled, u.size);
+				return {
+					content: [{ type: "text", text: `The work advances (${filled}/${u.size}). Narrate the effort.` }],
+					details: { slug, filled, size: u.size },
+				};
+			}
+
+			// A plain beat of work.
+			const filled = Math.min(u.size, u.filled + TICK);
+			appendEvents(ctx, [{ ev: "quest_tick", slug, add: TICK, filled, size: u.size, note: clip(approach, 60) }]);
+			setQuestClock(files, slug, filled, u.size);
+			return {
+				content: [
+					{
+						type: "text",
+						text:
+							filled >= u.size
+								? `The work stands COMPLETE (${filled}/${u.size}) — narrate the finish, then record the deed with update_quest.`
+								: `The work advances (${filled}/${u.size}). Narrate this scene of effort; further real work is a further attempt.`,
+					},
+				],
+				details: { slug, filled, size: u.size },
 			};
 		},
 	});
@@ -1299,7 +1665,20 @@ export default function (pi: ExtensionAPI) {
 			const quest = questBySlug(files, slug);
 			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
 			if (quest.status === "rewarded") throw new Error(`"${quest.title}" is already rewarded and closed.`);
+			if (quest.status === "failed") throw new Error(`"${quest.title}" failed and is closed — the story moves on.`);
 			const advance = params.done && quest.status === "open";
+			if (advance) {
+				// The deed is done only when the work is: the branch-derived clock
+				// gates it (quests.md's line is a mirror; legacy quests have none).
+				const u = st.undertakings[slug];
+				const size = u && u.size > 0 ? u.size : quest.clock?.size ?? 0;
+				const filled = u && u.size > 0 ? u.filled : quest.clock?.filled ?? 0;
+				if (size > 0 && filled < size) {
+					throw new Error(
+						`The deed is not done — the work stands at ${filled}/${size}. Honest effort advances it (attempt_quest); words alone do not.`,
+					);
+				}
+			}
 			setQuestStatus(files, slug, advance ? "done" : null, params.note);
 			if (advance) appendEvents(ctx, [{ ev: "quest", action: "done", title: quest.title }]);
 			return {

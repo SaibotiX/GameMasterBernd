@@ -41,7 +41,17 @@ function assistantMsg(t = "2026-08-02T12:00:02.000Z") {
 // ---- 1. derive ------------------------------------------------------------
 ok("derive: empty branch → defaults", () => {
 	const st = derive([], "neutral");
-	assert.deepEqual(st, { mood: "neutral", banned: false, chats: 0, searches: 0, refusals: 0, truths: [] });
+	assert.deepEqual(st, {
+		mood: "neutral",
+		banned: false,
+		chats: 0,
+		searches: 0,
+		refusals: 0,
+		truths: [],
+		undertakings: {},
+		recentShapes: [],
+		recentSuits: [],
+	});
 });
 
 ok("derive: mood chain, last wins", () => {
@@ -118,6 +128,66 @@ ok("derive: chronicle key stamps the story's world-file folder (\"\" = legacy)",
 	assert.equal(derive([ev({ ev: "chronicle", key: "019fc419-abc" })], "neutral").chronicle, "019fc419-abc");
 	assert.equal(derive([], "neutral").chronicle, undefined);
 	assert.match(describeEvent({ ev: "chronicle", key: "" }), /legacy chronicle/);
+});
+
+ok("derive: an undertaking folds shape → ticks → fate → twist → pick → outcome", () => {
+	const plan = {
+		suit: "material failure",
+		complication: "The axle snaps at the ford.",
+		clues: ["a hairline crack", "the wheel's wobble"],
+		options: [
+			{ id: 1, label: "Lash it with rope", risk: "risky", promise: "quick", band: "clean", reveal: "It holds.", reason: "rope is honest" },
+			{ id: 2, label: "Ford unaided", risk: "desperate", promise: "no delay", band: "fail", reveal: "The cart drowns.", reason: "spring rivers run mean" },
+		],
+	};
+	const presented = [
+		{ id: 1, label: "Lash it with rope", risk: "risky", promise: "quick" },
+		{ id: 2, label: "Ford unaided", risk: "desperate", promise: "no delay" },
+	];
+	const mid = derive(
+		[
+			ev({ ev: "quest_shape", slug: "wagon", clock: 6, twist: 2 }),
+			ev({ ev: "quest_tick", slug: "wagon", add: 2, filled: 2, size: 6 }),
+			ev({ ev: "fate", slug: "wagon", plan }),
+			ev({ ev: "complication", slug: "wagon", text: plan.complication, options: presented }),
+		],
+		"neutral",
+	);
+	assert.equal(mid.undertakings.wagon.filled, 2);
+	assert.equal(mid.undertakings.wagon.beatsDone, 2); // tick + twist beat
+	assert.equal(mid.undertakings.wagon.twist, 2);
+	assert.ok(mid.undertakings.wagon.plan, "plan folds into state");
+	assert.equal(mid.pendingChoice?.slug, "wagon");
+	assert.deepEqual(mid.recentShapes, [{ clock: 6, twist: 2 }]);
+	assert.deepEqual(mid.recentSuits, ["material failure"]);
+
+	const done = derive(
+		[
+			ev({ ev: "quest_shape", slug: "wagon", clock: 6, twist: 2 }),
+			ev({ ev: "quest_tick", slug: "wagon", add: 2, filled: 2, size: 6 }),
+			ev({ ev: "fate", slug: "wagon", plan }),
+			ev({ ev: "complication", slug: "wagon", text: plan.complication, options: presented }),
+			ev({ ev: "pick", slug: "wagon", option: 1, label: "Lash it with rope" }),
+			ev({ ev: "outcome", slug: "wagon", band: "clean", add: 2, text: "It holds." }),
+		],
+		"neutral",
+	);
+	assert.equal(done.pendingChoice, undefined, "a pick clears the pending choice");
+	assert.equal(done.undertakings.wagon.filled, 4);
+	assert.equal(done.undertakings.wagon.resolved, true);
+});
+
+ok("derive: setback clamps at zero; fate_skipped neutralizes the twist", () => {
+	const st = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 4, twist: 2 }),
+			ev({ ev: "outcome", slug: "q", band: "setback", add: -1, text: "worse" }),
+			ev({ ev: "fate_skipped", slug: "q" }),
+		],
+		"neutral",
+	);
+	assert.equal(st.undertakings.q.filled, 0, "never below zero");
+	assert.equal(st.undertakings.q.twist, 0, "skipped fate means a plain quest");
 });
 
 ok("derive: legacy milestone mood entries honored", () => {
@@ -206,11 +276,13 @@ ok("branches: rewind before the ban derives the pre-ban state", () => {
 // ---- 4. the config tree ---------------------------------------------------
 for (const worldId of ["dragon-realm", "star-frontier"]) {
 	const cfg = loadConfig(BASE, worldId);
-	ok(`config[${worldId}]: constitution, world, moods and sites load`, () => {
+	ok(`config[${worldId}]: constitution, world, laws, moods and sites load`, () => {
 		assert.ok(cfg.constitution.length > 100, "constitution missing or empty");
 		assert.equal(cfg.world.id, worldId);
 		assert.ok(cfg.world.title.length > 0 && cfg.world.voice.length > 0);
 		assert.ok(cfg.world.body.length > 100, "world body suspiciously short");
+		assert.ok(cfg.world.laws.length > 200, "laws file missing or suspiciously short");
+		assert.match(cfg.world.laws, /What goes wrong here/i);
 		assert.ok(cfg.moods.size >= 3, "too few moods");
 		assert.ok(cfg.textSites.length > 0 && cfg.pictureSites.length > 0);
 	});
@@ -239,15 +311,17 @@ ok("config: angriest mood is last in severity order", () => {
 		resumedFrom: "2026-08-01T10:00:00.000Z",
 		justArrived: false,
 	});
-	ok("prompt: layers in order", () => {
+	ok("prompt: layers in order (laws between world and mood)", () => {
 		const layers = [...p.matchAll(/<section layer="([^"]+)">/g)].map((m) => m[1]);
 		assert.deepEqual(layers, [
 			"0 · constitution",
 			"1 · world: dragon-realm",
+			"1½ · the laws of this world",
 			"2 · mood: angry",
 			"3 · the seeker's standing",
 			"4 · control protocol",
 		]);
+		assert.match(p, /Oath-magic/); // the laws body itself is in the layer
 	});
 	ok("prompt: standing shows name, ban, counters, resume line", () => {
 		assert.match(p, /The seeker before you: Bbaba\./);
@@ -260,7 +334,7 @@ ok("config: angriest mood is last in severity order", () => {
 		for (const tool of [
 			"set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name",
 			"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
-			"grant_quest", "update_quest", "redeem_quest", "add_item",
+			"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
 		]) {
 			assert.match(p, new RegExp(tool));
 		}
@@ -327,6 +401,58 @@ ok("config: angriest mood is last in severity order", () => {
 		const plain = gm.parseGmAnswer("no json at all");
 		assert.equal(plain.say, "no json at all");
 		assert.deepEqual(plain.fixes, []);
+	});
+
+	ok("gmchat: parseFatePlan accepts a fair plan and stamps ids", () => {
+		const raw = JSON.stringify({
+			complication: "The axle snaps at the ford.",
+			clues: ["a hairline crack in the axle", "the wheel wobbles on stones"],
+			options: [
+				{ label: "Lash it with rope", risk: "risky", promise: "quick and cheap", band: "clean", reveal: "It holds.", reason: "rope is honest — iron rusts honestly" },
+				{ label: "Ford the stream unaided", risk: "desperate", promise: "no delay", band: "fail", reveal: "The cart drowns.", reason: "rivers in spring run high and mean" },
+				{ label: "Beg the smith", risk: "safe", promise: "sure but slow", band: "cost", reveal: "He helps, for the morning.", reason: "the seven houses feud politely" },
+				{ label: "Use the spare axle", risk: "safe", promise: "sound repair", band: "windfall", reveal: "Better than before.", loot: "a spare iron pin", reason: "carts break on real stones", requires: { item: "spare axle" } },
+			],
+		});
+		const plan = gm.parseFatePlan(raw, "material failure");
+		assert.ok(plan, "a fair plan must parse");
+		assert.equal(plan!.suit, "material failure");
+		assert.deepEqual(plan!.options.map((option: { id: number }) => option.id), [1, 2, 3, 4]);
+		assert.equal(plan!.clues.length, 2);
+		assert.equal(plan!.options[3].requires?.item, "spare axle");
+	});
+
+	ok("gmchat: parseFatePlan rejects unfair or malformed plans", () => {
+		const base = {
+			complication: "Trouble.",
+			clues: ["sign one", "sign two"],
+			options: [
+				{ label: "A", risk: "risky", promise: "p", band: "clean", reveal: "r", reason: "law" },
+				{ label: "B", risk: "risky", promise: "p", band: "cost", reveal: "r", reason: "law" },
+			],
+		};
+		const variant = (patch: (copy: any) => void) => {
+			const copy = JSON.parse(JSON.stringify(base));
+			patch(copy);
+			return gm.parseFatePlan(JSON.stringify(copy), "s");
+		};
+		assert.ok(gm.parseFatePlan(JSON.stringify(base), "s"), "the base plan is fair");
+		assert.equal(variant((c) => (c.options[1].band = "fail")), null, "fail on a non-desperate path");
+		assert.equal(variant((c) => { c.options[0].risk = "safe"; c.options[0].band = "setback"; c.options[1].band = "windfall"; c.options[1].loot = "x"; }), null, "safe may never set back");
+		assert.equal(variant((c) => (c.options[0].band = "cost")), null, "no good path at all");
+		assert.equal(variant((c) => (c.clues = ["only one"])), null, "one clue is not a telegraph");
+		assert.equal(variant((c) => { c.options[0].band = "windfall"; delete c.options[0].loot; }), null, "windfall must name loot");
+		assert.equal(variant((c) => (c.options = [c.options[0]])), null, "one option is no choice");
+		assert.equal(
+			variant((c) => {
+				c.options[0].requires = { item: "rope" };
+				c.options[1].requires = { persona: "hedda" };
+				c.options.push({ label: "C", risk: "risky", promise: "p", band: "clean", reveal: "r", reason: "law" });
+			}),
+			null,
+			"at most one blue option",
+		);
+		assert.equal(gm.parseFatePlan("no json at all", "s"), null);
 	});
 
 	const archive = await import(join(EXT, "archive.ts"));
@@ -438,6 +564,34 @@ ok("config: angriest mood is last in severity order", () => {
 		world.addItem(files, "three copper pennies — reward");
 		assert.match(readFile(`${root}/items.md`, "utf8"), /three copper pennies/);
 		assert.equal(exists(`${root}/quests.md`), true);
+	});
+
+	ok("world: quest clocks — granted, mirrored, ticked, inserted on legacy, counted, failed", () => {
+		world.grantQuest(files, {
+			title: "Mend the mill wheel",
+			task: "True the warped wheel before market day.",
+			reward: "a sack of flour",
+			placeSlug: "millbrook-farm",
+			clockSize: 6,
+		});
+		const quest = world.questBySlug(files, "mend-the-mill-wheel");
+		assert.ok(quest);
+		assert.deepEqual(quest!.clock, { filled: 0, size: 6 });
+		assert.equal(quest!.task, "True the warped wheel before market day.");
+		assert.equal(world.setQuestClock(files, "mend-the-mill-wheel", 4, 6), true);
+		assert.deepEqual(world.questBySlug(files, "mend-the-mill-wheel")!.clock, { filled: 4, size: 6 });
+		// Legacy quest (granted without a clock): the mirror line is inserted.
+		assert.equal(world.questBySlug(files, "carrots-for-millbrook")!.clock, null);
+		assert.equal(world.setQuestClock(files, "carrots-for-millbrook", 2, 4), true);
+		assert.deepEqual(world.questBySlug(files, "carrots-for-millbrook")!.clock, { filled: 2, size: 4 });
+		assert.ok(world.countOpenQuests(files) >= 1);
+		const openBefore = world.countOpenQuests(files);
+		assert.equal(world.setQuestStatus(files, "mend-the-mill-wheel", "failed", "the wheel shattered"), true);
+		assert.equal(world.questBySlug(files, "mend-the-mill-wheel")!.status, "failed");
+		assert.equal(world.countOpenQuests(files), openBefore - 1, "failed quests leave the open count");
+		assert.ok(!world.openQuestLines(files).some((line: string) => line.includes("mill-wheel")), "failed quests leave open matters");
+		assert.equal(world.hasItem(files, "three copper pennies"), true);
+		assert.equal(world.hasItem(files, "the crown of aeldenmoor"), false);
 	});
 
 	ok("world: a giver-less quest is self-set (persona sentinel \"self\")", () => {

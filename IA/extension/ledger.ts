@@ -20,6 +20,48 @@ export const LEDGER_TYPE = "world-console.ledger";
 /** Mood entries written by the pre-ledger milestone build; still honored. */
 export const LEGACY_MOOD_TYPE = "world-console.mood";
 
+/** One option of a fate plan. Visible fields are shown to the seeker before
+ * the pick; `band`, `reveal`, `reason` (and `loot`) are the hidden answer
+ * sheet, revealed only on resolution. */
+export interface FateOption {
+	id: number;
+	label: string;
+	risk: "safe" | "risky" | "desperate";
+	/** Honest effect promise shown up front (the stakes contract). */
+	promise: string;
+	/** Hidden outcome band. */
+	band: "clean" | "cost" | "setback" | "fail" | "windfall";
+	/** Hidden: what actually happens when picked. */
+	reveal: string;
+	/** Hidden: why — must trace to a world law or palette entry. */
+	reason: string;
+	/** Windfall only: the item that lands in the seeker's coffer. */
+	loot?: string;
+	/** Blue option: rendered only when the chronicle proves the requirement. */
+	requires?: { item?: string; persona?: string; place?: string };
+}
+
+/** A pre-decided complication for one quest, produced by the fate planner. */
+export interface FatePlan {
+	/** The trouble kind the engine drew (material failure, persona interruption, …). */
+	suit: string;
+	/** The twist itself, 1–2 sentences, visible when presented. */
+	complication: string;
+	/** Two warning signs the keeper weaves in BEFORE the twist. */
+	clues: string[];
+	options: FateOption[];
+}
+
+/** The visible face of an option as presented to the seeker. */
+export interface PresentedOption {
+	id: number;
+	label: string;
+	risk: string;
+	promise: string;
+	/** The chronicle fact that unlocked this blue option, if any. */
+	unlockedBy?: string;
+}
+
 export type GameEvent =
 	| { ev: "world"; world: string }
 	| { ev: "player_named"; name: string }
@@ -43,9 +85,41 @@ export type GameEvent =
 	/** A notable soul recorded or moved in the world files. */
 	| { ev: "persona"; name: string; place: string; note?: string }
 	/** Quest lifecycle mirror of quests.md. */
-	| { ev: "quest"; action: "granted" | "done" | "rewarded"; title: string }
+	| { ev: "quest"; action: "granted" | "done" | "rewarded" | "failed"; title: string }
 	/** Loot, pay or gifts mirrored from items.md. */
-	| { ev: "item"; text: string };
+	| { ev: "item"; text: string }
+	/** A granted quest's drawn shape: clock size and (hidden) twist beat, 0 = plain. */
+	| { ev: "quest_shape"; slug: string; clock: number; twist: number }
+	/** One beat of real work on a quest; add is the segment delta. */
+	| { ev: "quest_tick"; slug: string; add: number; filled: number; size: number; note?: string }
+	/** The sealed fate plan for a quest's twist (hidden answer sheet; veiled in /ledger). */
+	| { ev: "fate"; slug: string; plan: FatePlan }
+	/** The fate planner could not be reached — the quest continues plain. */
+	| { ev: "fate_skipped"; slug: string }
+	/** A twist presented to the seeker: the visible options only. */
+	| { ev: "complication"; slug: string; text: string; options: PresentedOption[] }
+	/** The seeker's pick (option id from the presented list). */
+	| { ev: "pick"; slug: string; option: number; label: string; extra?: string }
+	/** The engine's resolution of a pick: band is public once resolved. */
+	| { ev: "outcome"; slug: string; band: string; add: number; text: string };
+
+/** Branch-derived state of one quest's undertaking (clock + twist machinery).
+ * The ledger is authoritative; the clock line in quests.md is a mirror. */
+export interface Undertaking {
+	slug: string;
+	size: number;
+	filled: number;
+	/** Twist beat (1-based), 0 = plain quest. Neutralized to 0 by fate_skipped. */
+	twist: number;
+	/** Beats consumed so far (ticks + the complication presentation). */
+	beatsDone: number;
+	/** The sealed plan, once woven. */
+	plan?: FatePlan;
+	/** True once the complication was presented (twists fire once). */
+	presented: boolean;
+	/** True once a pick resolved the complication. */
+	resolved: boolean;
+}
 
 export interface DerivedState {
 	world?: string;
@@ -63,6 +137,14 @@ export interface DerivedState {
 	chronicle?: string;
 	/** ISO timestamp of the newest entry on the branch, if any. */
 	lastEntryAt?: string;
+	/** Per-quest undertaking state, keyed by quest slug. */
+	undertakings: Record<string, Undertaking>;
+	/** The one complication awaiting the seeker's pick, if any (P1: max one). */
+	pendingChoice?: { slug: string; text: string; options: PresentedOption[] };
+	/** Shapes of recently granted quests, oldest first (variety guard). */
+	recentShapes: { clock: number; twist: number }[];
+	/** Trouble kinds of recent fate plans, oldest first (variety guard). */
+	recentSuits: string[];
 }
 
 /** Structural subset of pi's SessionEntry that derive() needs. */
@@ -96,7 +178,20 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 		searches: 0,
 		refusals: 0,
 		truths: [],
+		undertakings: {},
+		recentShapes: [],
+		recentSuits: [],
 	};
+	const undertaking = (slug: string): Undertaking =>
+		(state.undertakings[slug] ??= {
+			slug,
+			size: 0,
+			filled: 0,
+			twist: 0,
+			beatsDone: 0,
+			presented: false,
+			resolved: false,
+		});
 	for (const entry of entries) {
 		if (entry.timestamp) state.lastEntryAt = entry.timestamp;
 		if (entry.type === "message" && entry.message?.role === "user") {
@@ -139,6 +234,47 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 			case "chronicle":
 				state.chronicle = event.key;
 				break;
+			case "quest_shape": {
+				const u = undertaking(event.slug);
+				u.size = event.clock;
+				u.twist = event.twist;
+				state.recentShapes.push({ clock: event.clock, twist: event.twist });
+				if (state.recentShapes.length > 4) state.recentShapes.shift();
+				break;
+			}
+			case "quest_tick": {
+				const u = undertaking(event.slug);
+				u.size = event.size;
+				u.filled = Math.min(u.size, Math.max(0, u.filled + event.add));
+				u.beatsDone++;
+				break;
+			}
+			case "fate": {
+				const u = undertaking(event.slug);
+				u.plan = event.plan;
+				state.recentSuits.push(event.plan.suit);
+				if (state.recentSuits.length > 3) state.recentSuits.shift();
+				break;
+			}
+			case "fate_skipped":
+				undertaking(event.slug).twist = 0; // the quest continues plain
+				break;
+			case "complication": {
+				const u = undertaking(event.slug);
+				u.presented = true;
+				u.beatsDone++; // the twist consumes the beat
+				state.pendingChoice = { slug: event.slug, text: event.text, options: event.options };
+				break;
+			}
+			case "pick":
+				if (state.pendingChoice?.slug === event.slug) state.pendingChoice = undefined;
+				break;
+			case "outcome": {
+				const u = undertaking(event.slug);
+				u.filled = Math.min(u.size, Math.max(0, u.filled + event.add));
+				u.resolved = true;
+				break;
+			}
 			default:
 				break; // search_requested / search_failed carry no derived state
 		}
@@ -211,5 +347,22 @@ export function describeEvent(event: GameEvent): string {
 			return `quest ${event.action}: "${event.title}"`;
 		case "item":
 			return `item gained: ${event.text}`;
+		case "quest_shape":
+			// The twist beat stays unspoken — only the clock's size is public.
+			return `the fates take measure of "${event.slug}" (a clock of ${event.clock})`;
+		case "quest_tick":
+			return `the work advances: ${event.slug} (${event.filled}/${event.size})${event.note ? ` — ${event.note}` : ""}`;
+		case "fate":
+			return `the fates weave around "${event.slug}" (sealed)`;
+		case "fate_skipped":
+			return `the fates hold their tongue over "${event.slug}"`;
+		case "complication":
+			return `the task twists: "${event.slug}" — ${event.text} · paths: ${event.options
+				.map((option) => `${option.id}) ${option.label} [${option.risk}]`)
+				.join(" · ")}`;
+		case "pick":
+			return `the seeker chooses [${event.option}] ${event.label}${event.extra ? ` — "${event.extra}"` : ""}`;
+		case "outcome":
+			return `the fates answer (${event.band}): ${event.text}`;
 	}
 }

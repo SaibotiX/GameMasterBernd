@@ -16,6 +16,9 @@ export interface World {
 	register: string;
 	defaultMood: string;
 	body: string;
+	/** The world's laws (worlds/<id>.laws.md): physics, biology, special
+	 * mechanics, hard limits, interruption palette. "" when the file is absent. */
+	laws: string;
 }
 
 export interface Mood {
@@ -66,13 +69,15 @@ function loadWorld(dir: string, id: string): World {
 	if (!existsSync(file)) {
 		const available = existsSync(dir)
 			? readdirSync(dir)
-					.filter((f) => f.endsWith(".md"))
+					.filter((f) => f.endsWith(".md") && !f.endsWith(".laws.md"))
 					.map((f) => f.replace(/\.md$/, ""))
 					.join(", ")
 			: `(none — missing directory ${dir})`;
 		throw new Error(`unknown world "${id}" — available: ${available}`);
 	}
 	const { meta, body } = parseFrontmatter(readFileSync(file, "utf8"));
+	const lawsFile = join(dir, `${id}.laws.md`);
+	const laws = existsSync(lawsFile) ? parseFrontmatter(readFileSync(lawsFile, "utf8")).body : "";
 	return {
 		id,
 		title: meta.title ?? id,
@@ -80,6 +85,7 @@ function loadWorld(dir: string, id: string): World {
 		register: meta.register ?? "neutral",
 		defaultMood: meta.default_mood ?? "neutral",
 		body,
+		laws,
 	};
 }
 

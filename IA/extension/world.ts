@@ -200,15 +200,19 @@ const questsFile = (world: WorldFiles) => join(world.root, "quests.md");
 export interface Quest {
 	slug: string;
 	title: string;
-	status: "open" | "done" | "rewarded";
+	status: "open" | "done" | "rewarded" | "failed";
 	giver: string;
 	giverSlug: string;
+	task: string;
 	reward: string;
+	/** Readable mirror of the undertaking clock; the branch-derived ledger is
+	 * authoritative (files never rewind with /tree). Null on legacy quests. */
+	clock: { filled: number; size: number } | null;
 }
 
 export function grantQuest(
 	world: WorldFiles,
-	quest: { title: string; giver?: string; task: string; reward: string; placeSlug: string },
+	quest: { title: string; giver?: string; task: string; reward: string; placeSlug: string; clockSize?: number },
 ): { slug: string } {
 	const slug = slugify(quest.title);
 	if (questBySlug(world, slug)) throw new Error(`a quest named "${quest.title}" already exists in the chronicle`);
@@ -227,6 +231,7 @@ export function grantQuest(
 			`- granted at: ${quest.placeSlug}, ${stamp()}\n` +
 			`- task: ${quest.task.trim()}\n` +
 			`- reward: ${quest.reward.trim()}\n` +
+			(quest.clockSize ? `- clock: 0/${quest.clockSize}\n` : "") +
 			`### progress\n`,
 		"utf8",
 	);
@@ -235,26 +240,60 @@ export function grantQuest(
 
 export function questBySlug(world: WorldFiles, slug: string): Quest | null {
 	const content = read(questsFile(world));
-	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded)\\] (.+) \\(id: ${slug}\\)$`, "m"));
+	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"));
 	if (!heading) return null;
 	const section = content.slice(content.indexOf(heading[0]));
 	const body = section.slice(0, section.indexOf("\n## ", 1) === -1 ? undefined : section.indexOf("\n## ", 1));
 	const giverLine = body.match(/^- giver: (.+) \(persona: (.+)\)$/m);
+	const clockLine = body.match(/^- clock: (\d+)\/(\d+)$/m);
 	return {
 		slug,
 		title: heading[2].trim(),
 		status: heading[1] as Quest["status"],
 		giver: giverLine?.[1]?.trim() ?? "unknown",
 		giverSlug: giverLine?.[2]?.trim() ?? "unknown",
+		task: body.match(/^- task: (.+)$/m)?.[1]?.trim() ?? "(task unrecorded)",
 		reward: body.match(/^- reward: (.+)$/m)?.[1]?.trim() ?? "nothing",
+		clock: clockLine ? { filled: Number(clockLine[1]), size: Number(clockLine[2]) } : null,
 	};
 }
 
-/** Advance a quest (open → done → rewarded); progress notes always append. */
+/** Rewrite (or insert) the quest's readable clock-mirror line. */
+export function setQuestClock(world: WorldFiles, slug: string, filled: number, size: number): boolean {
+	const file = questsFile(world);
+	let content = read(file);
+	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"));
+	if (!heading) return false;
+	const sectionStart = content.indexOf(heading[0]);
+	const nextHeading = content.indexOf("\n## ", sectionStart + 1);
+	const sectionEnd = nextHeading === -1 ? content.length : nextHeading;
+	let section = content.slice(sectionStart, sectionEnd);
+	const line = `- clock: ${Math.max(0, filled)}/${size}`;
+	if (/^- clock: \d+\/\d+$/m.test(section)) {
+		section = section.replace(/^- clock: \d+\/\d+$/m, line);
+	} else {
+		// Legacy quest: the clock line joins the section just above progress.
+		section = section.includes("### progress")
+			? section.replace("### progress", `${line}\n### progress`)
+			: section + `${line}\n`;
+	}
+	content = content.slice(0, sectionStart) + section + content.slice(sectionEnd);
+	writeFileSync(file, content, "utf8");
+	return true;
+}
+
+/** How many quests currently stand [open] (the Christmas-tree cap reads this). */
+export function countOpenQuests(world: WorldFiles): number {
+	return read(questsFile(world))
+		.split("\n")
+		.filter((line) => line.startsWith("## [open] ")).length;
+}
+
+/** Advance a quest (open → done → rewarded, or → failed); notes always append. */
 export function setQuestStatus(
 	world: WorldFiles,
 	slug: string,
-	status: "done" | "rewarded" | null,
+	status: "done" | "rewarded" | "failed" | null,
 	note: string,
 ): boolean {
 	const quest = questBySlug(world, slug);
@@ -263,7 +302,7 @@ export function setQuestStatus(
 	let content = read(file);
 	if (status) {
 		content = content.replace(
-			new RegExp(`^## \\[(open|done|rewarded)\\] (.+) \\(id: ${slug}\\)$`, "m"),
+			new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"),
 			`## [${status}] $2 (id: ${slug})`,
 		);
 	}
@@ -327,4 +366,9 @@ export function addItem(world: WorldFiles, text: string): void {
 	const file = itemsFile(world);
 	if (!existsSync(file)) writeFileSync(file, `# Items of the seeker\n`, "utf8");
 	appendFileSync(file, `- ${stamp()} · ${text.trim()}\n`, "utf8");
+}
+
+/** Whether the seeker's items file mentions the given thing (blue options). */
+export function hasItem(world: WorldFiles, text: string): boolean {
+	return read(itemsFile(world)).toLowerCase().includes(text.trim().toLowerCase());
 }
