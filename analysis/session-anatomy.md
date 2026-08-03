@@ -8,8 +8,8 @@ every audit becomes archaeology instead of guesswork.
 | Artifact | Path | What it holds |
 |---|---|---|
 | **Session file** (authoritative) | `~/.pi/agent/sessions/<cwd-key>/<timestamp>_<session-id>.jsonl` | Every message, tool call, tool result, and game event, append-only. The cwd-key for this game is `--home-…-IA--` (pi keys sessions by the directory it was started in). |
-| **Chronicle folder** (world files) | `IA/data/world/<world>/<session-id>/` | `quests.md`, `items.md`, `places/*.md`, `personas/*.md` — the permanent story record. **Never rewound by /tree**, so it can legitimately disagree with a rewound branch. |
-| **Readable ledger** | `IA/data/world/<world>/<session-id>/ledger.md` | One human line per game event with its `*uN*` number. Append-only across ALL branches — it shows events from branches the player later abandoned. |
+| **Chronicle folder** (world files) | `data/world/<world>/<session-id>/` | `quests.md`, `items.md`, `places/*.md`, `personas/*.md` — the permanent story record. **Never rewound by /tree**, so it can legitimately disagree with a rewound branch. |
+| **Readable ledger** | `data/world/<world>/<session-id>/ledger.md` | One human line per game event with its `*uN*` number. Append-only across ALL branches — it shows events from branches the player later abandoned. |
 
 An audit wants all three: the session file is the truth, the chronicle shows
 what the world kept, and `ledger.md` is the quick index.
@@ -62,7 +62,7 @@ parentId. Consequences for analysis:
 ## 4. The mechanical map — always run this first
 
 ```
-node IA/analysis/tools/session-map.mjs <session.jsonl> [more…]
+node analysis/tools/session-map.mjs <session.jsonl> [more…]
 ```
 
 One bounded line per entry (`×` prefix = off the live branch), then a

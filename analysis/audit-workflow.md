@@ -7,7 +7,7 @@ with a human reviewing the clusters — and on RITE-style iteration: fix
 between batches, then re-test the same ground.
 
 **One-prompt invocation:** run `/analyze-sessions <paths|folder>` in Claude
-Code from `IA/` (the command lives in `.claude/commands/analyze-sessions.md`
+Code from the repo root (the command lives in `.claude/commands/analyze-sessions.md`
 and walks the agent through exactly this file). Or paste the prompt from §6.
 
 ---
@@ -101,7 +101,7 @@ concrete proposed change.
 4. Keep reports immutable once written — the next batch gets a new file;
    the sequence of reports IS the quality history.
 
-## 6. The one-prompt template (paste into Claude Code, run from IA/)
+## 6. The one-prompt template (paste into Claude Code, run from the repo root)
 
 ```
 Audit these playtest sessions of the World Console pi extension:

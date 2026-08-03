@@ -1,6 +1,6 @@
 /**
  * The open world on disk: places, personas, quests and items live as plain
- * markdown under IA/data/world/<world-id>/ — the persistent chronicle that
+ * markdown under data/world/<world-id>/ — the persistent chronicle that
  * outlives sittings. Unlike the session ledger, world files are never
  * rewound by /tree and never deleted; they only grow.
  *
@@ -18,7 +18,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, write
 import { join } from "node:path";
 
 export interface WorldFiles {
-	/** IA/data/world/<worldId>/<chronicle> (or the test override). */
+	/** data/world/<worldId>/<chronicle> (or the test override). */
 	root: string;
 }
 

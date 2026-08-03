@@ -1,7 +1,6 @@
 # --- Credentials -----------------------------------------------------------
 # Written by `pi-ai login` (OAuth access/refresh tokens) — never commit.
 auth.json
-app/auth.json
 .env
 .env.*
 *.pem
@@ -10,14 +9,12 @@ credentials.json
 
 # --- Runtime state ---------------------------------------------------------
 # The ledger and everything the game downloads. Recreated on first run.
-app/data/
 data/
 
 # --- Vendored binaries -----------------------------------------------------
-# Static ffmpeg (~420 MB); place a build at IA/tools/ffmpeg/ffmpeg.
-# (IA/tools/yt-dlp is a tracked git submodule — do not widen this to IA/tools/.)
-app/tools/
-IA/tools/ffmpeg/
+# Static ffmpeg (~420 MB); place a build at tools/ffmpeg/ffmpeg.
+# (tools/yt-dlp is a tracked git submodule — do not widen this to tools/.)
+tools/ffmpeg/
 
 # --- Dependencies ----------------------------------------------------------
 node_modules/
@@ -26,6 +23,7 @@ dist/
 
 # --- Local tooling / editor ------------------------------------------------
 .claude/settings.local.json
+.claude/settings.local.json.tmp.*
 .vscode/
 .idea/
 *.swp
@@ -33,4 +31,4 @@ dist/
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.
-IA/analysis/sessions-in/
+analysis/sessions-in/

@@ -1,3 +1,0 @@
-{"t":"2026-08-01T21:22:11.975Z","actor":"operator","place":"hub","action":"reload","detail":"config tree","decision":"applied"}
-{"t":"2026-08-01T21:22:28.288Z","actor":"operator","place":"hub","action":"reload","detail":"config tree","decision":"applied"}
-{"t":"2026-08-01T21:25:58.068Z","actor":"operator","place":"hub","action":"tool:fetch_media","detail":"https://www.tofugu.com/images/learn-japanese/japanese-books-133289ba.jpg (requested via console as operator)","decision":"executed"}

@@ -71,14 +71,14 @@ naturally beat nine done mechanically.
 1. **Your session file(s)** — after quitting, run:
    `ls -t ~/.pi/agent/sessions/*IA*/ | head` and copy the newest `.jsonl`
    file(s) from that folder.
-2. **Your story folder** — copy `IA/data/world/<world>/<session-id>/`
+2. **Your story folder** — copy `data/world/<world>/<session-id>/`
    (match the id in the session filename). It holds the quest log, the
    places and people the game wrote, and `ledger.md`.
 3. **Your `notes.md`.**
 4. One sentence: overall, would you play again — why or why not?
 
 Put all of it in one folder named after you and send it over. The
-maintainer drops it into `IA/analysis/sessions-in/<batch>/<you>/`.
+maintainer drops it into `analysis/sessions-in/<batch>/<you>/`.
 
 ## Privacy — read once
 

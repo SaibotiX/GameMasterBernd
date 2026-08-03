@@ -1,12 +1,4 @@
-[submodule "pi"]
-	path = Archive/pi
-	url = https://github.com/earendil-works/pi.git
-	branch = main
 [submodule "yt-dlp"]
-	path = IA/tools/yt-dlp
+	path = tools/yt-dlp
 	url = https://github.com/yt-dlp/yt-dlp.git
 	branch = master
-[submodule "selenium"]
-	path = Archive/selenium
-	url = https://github.com/SeleniumHQ/selenium.git
-	branch = trunk

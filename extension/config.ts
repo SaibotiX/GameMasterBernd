@@ -1,5 +1,5 @@
 /**
- * Read-only loader for the World Console config tree (IA/config):
+ * Read-only loader for the World Console config tree (config):
  * constitution.md, worlds/<id>.md, moods/*.md, sites.json.
  *
  * Markdown-with-frontmatter, inherited from the retired app's format. This

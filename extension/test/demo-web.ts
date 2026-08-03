@@ -1,7 +1,7 @@
 /**
  * Live demo of the /web command:
- *   node IA/extension/test/demo-web.ts            # text + picture
- *   WC_VIDEO=1 node IA/extension/test/demo-web.ts # + video (slow)
+ *   node extension/test/demo-web.ts            # text + picture
+ *   WC_VIDEO=1 node extension/test/demo-web.ts # + video (slow)
  *
  * Boots real pi (RPC mode, fresh session, dragon-realm), runs /web commands,
  * and prints the game master's in-character replies plus the ledger.
@@ -137,7 +137,7 @@ const ledgerText = ledgerLines
 show("/ledger 30", ledgerText ?? "(no ledger notification captured)");
 
 const after = readdirSync(APP_DOWNLOADS).filter((f) => !before.has(f));
-show("new files in IA/data/downloads", after.join("\n") || "(none)");
+show("new files in data/downloads", after.join("\n") || "(none)");
 
 proc.stdin.end();
 setTimeout(() => proc.kill("SIGKILL"), 3000);

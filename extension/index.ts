@@ -131,7 +131,7 @@ export default function (pi: ExtensionAPI) {
 	const ENGINE_NONCE = randomUUID().slice(0, 8);
 
 	pi.registerFlag("world", {
-		description: `World Console: world id from IA/config/worlds (default: ${DEFAULT_WORLD})`,
+		description: `World Console: world id from config/worlds (default: ${DEFAULT_WORLD})`,
 		type: "string",
 	});
 

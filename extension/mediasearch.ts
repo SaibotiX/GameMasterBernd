@@ -4,17 +4,17 @@
  * network work (and kills the yt-dlp subprocess) instead of being swallowed.
  *
  * Picture: MediaWiki file-namespace search (Wikimedia Commons by default),
- * best match downloaded to IA/data/downloads/.
+ * best match downloaded to data/downloads/.
  * Video: yt-dlp as an arm's-length subprocess from the vendored source tree
- * (the git submodule at IA/tools/yt-dlp); with ffmpeg (bundled under
- * IA/tools/ffmpeg/ or on PATH) a ~10 s clip, otherwise the shortest matching
+ * (the git submodule at tools/yt-dlp); with ffmpeg (bundled under
+ * tools/ffmpeg/ or on PATH) a ~10 s clip, otherwise the shortest matching
  * full video ≤ 90 s.
  *
  * YouTube sometimes answers with an IP-level bot check ("Sign in to confirm
  * you're not a bot") that hits every player client; per yt-dlp only cookies
  * (or a PO-token provider plugin) cure it. Escalation ladder, least invasive
  * first, per the player's 2026-08-02 choice:
- *   1. the player's own Netscape export at IA/config/youtube-cookies.txt,
+ *   1. the player's own Netscape export at config/youtube-cookies.txt,
  *      if present — they control exactly which cookies it holds;
  *   2. otherwise a bare attempt; the identity-free bgutil-ytdlp-pot-provider
  *      plugin, when installed, upgrades every attempt transparently;
@@ -178,7 +178,7 @@ export interface VideoTooling {
 	ytDlpSource: string | null; // vendored yt-dlp checkout; null → rely on a system-installed yt_dlp module
 	ffmpegDir: string | null; // directory containing a bundled ffmpeg, if any
 	hasSystemFfmpeg: boolean;
-	/** Netscape cookies file (IA/config/youtube-cookies.txt), if present. */
+	/** Netscape cookies file (config/youtube-cookies.txt), if present. */
 	cookiesFile: string | null;
 	/** Browser named by WORLD_CONSOLE_YT_BROWSER, if set. */
 	cookiesFromBrowser: string | null;
@@ -276,10 +276,10 @@ function ytDlpError(error: unknown, triedBrowser?: string): Error {
 			triedBrowser
 				? `YouTube's bot check refused even cookies borrowed from ${triedBrowser}. ` +
 					`Open youtube.com in ${triedBrowser} once (signing in helps most), then try again — ` +
-					`or save a signed-in Netscape export to IA/config/youtube-cookies.txt.`
+					`or save a signed-in Netscape export to config/youtube-cookies.txt.`
 				: "YouTube refused the request (bot check) and no browser was found to borrow cookies from. " +
 					"Set WORLD_CONSOLE_YT_BROWSER=<firefox|chrome|...>, save a Netscape cookie export to " +
-					"IA/config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
+					"config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
 		);
 	}
 	if (firstError) return new Error(firstError);

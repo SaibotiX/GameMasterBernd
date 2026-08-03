@@ -34,7 +34,7 @@ testers play  ──►  sessions-in/<batch>/<tester>/     (jsonl + story folder
 ## Quick start (maintainer)
 
 ```
-# one command, whole batch — from IA/ in Claude Code:
+# one command, whole batch — from the repo root in Claude Code:
 /analyze-sessions analysis/sessions-in/2026-08-xx-first-batch/
 
 # or by hand, following audit-workflow.md:

@@ -1,6 +1,5 @@
 /**
- * Loader shim: playing from the repo root keeps working (and keeps this
- * directory's existing pi sessions resumable). The whole game lives in
- * IA/extension — IA/ is standalone; this file only points at it.
+ * Loader shim: running pi in this folder makes it discover this file and load
+ * the World Console engine from ../../extension. All logic lives there.
  */
-export { default } from "../../IA/extension/index.ts";
+export { default } from "../../extension/index.ts";

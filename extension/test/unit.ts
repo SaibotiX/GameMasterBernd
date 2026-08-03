@@ -1,6 +1,6 @@
 /**
  * Unit tests for the world-console extension — pure modules only, no pi
- * runtime needed:  node IA/extension/test/unit.ts
+ * runtime needed:  node extension/test/unit.ts
  *
  * Covers: ledger derivation + code-owned invariants (ban/redemption),
  * branch isolation, config-loader equivalence with the app's original
