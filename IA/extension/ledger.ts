@@ -11,7 +11,7 @@
  *    Ledger (reaching the angriest mood always records the ban in the same
  *    step; redemption is a no-op unless currently banned)
  *
- * Unlike app/data/ledger.jsonl there is exactly one world per ledger: the
+ * Unlike the retired app's global ledger.jsonl there is exactly one world per ledger: the
  * first event of every session is a "world" stamp, and resuming a session
  * keeps its stamped world no matter what --world says (worlds never mix).
  */

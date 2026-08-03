@@ -37,12 +37,16 @@ export interface WorldConfig {
 	pictureSites: SiteEntry[];
 }
 
-/** Mirrors app/src/util.ts parseFrontmatter — the formats must stay identical. */
+/** Inherited from the retired app's util.ts parseFrontmatter — same format. */
 export function parseFrontmatter(raw: string): { meta: Record<string, string>; body: string } {
 	const meta: Record<string, string> = {};
+	if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1); // a BOM must not hide the fence
 	if (!raw.startsWith("---")) return { meta, body: raw.trim() };
-	const end = raw.indexOf("\n---", 3);
-	if (end === -1) return { meta, body: raw.trim() };
+	// The closing fence is "---" on a line of its own (not any line that merely
+	// starts with dashes).
+	const fence = /\n---(?:\r?\n|$)/.exec(raw.slice(3));
+	if (!fence) return { meta, body: raw.trim() };
+	const end = 3 + fence.index;
 	for (const line of raw.slice(3, end).split("\n")) {
 		const colon = line.indexOf(":");
 		if (colon === -1) continue;
@@ -54,16 +58,18 @@ export function parseFrontmatter(raw: string): { meta: Record<string, string>; b
 		if (quoted) value = value.slice(1, -1);
 		if (key) meta[key] = value;
 	}
-	return { meta, body: raw.slice(end + 4).trim() };
+	return { meta, body: raw.slice(end + fence[0].length).trim() };
 }
 
 function loadWorld(dir: string, id: string): World {
 	const file = join(dir, `${id}.md`);
 	if (!existsSync(file)) {
-		const available = readdirSync(dir)
-			.filter((f) => f.endsWith(".md"))
-			.map((f) => f.replace(/\.md$/, ""))
-			.join(", ");
+		const available = existsSync(dir)
+			? readdirSync(dir)
+					.filter((f) => f.endsWith(".md"))
+					.map((f) => f.replace(/\.md$/, ""))
+					.join(", ")
+			: `(none — missing directory ${dir})`;
 		throw new Error(`unknown world "${id}" — available: ${available}`);
 	}
 	const { meta, body } = parseFrontmatter(readFileSync(file, "utf8"));

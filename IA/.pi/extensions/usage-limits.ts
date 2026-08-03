@@ -12,6 +12,15 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+/** Anthropic's documented *-reset headers are RFC 3339 timestamps; be liberal
+ * and accept epoch seconds/milliseconds too rather than printing gibberish. */
+function formatReset(reset: string | undefined): string {
+	if (!reset) return "?";
+	const n = Number(reset);
+	const date = Number.isFinite(n) ? new Date(n < 1e11 ? n * 1000 : n) : new Date(reset);
+	return Number.isNaN(date.getTime()) ? reset : date.toLocaleString();
+}
+
 export default function (pi: ExtensionAPI) {
 	let headers: Record<string, string> = {};
 	let seenAt: string | undefined;
@@ -40,14 +49,25 @@ export default function (pi: ExtensionAPI) {
 			const lines: string[] = [];
 			if (unified.length > 0) {
 				lines.push("Verdict: requests draw from your Claude PLAN LIMITS (subscription buckets).");
-				for (const window of ["5h", "7d", "7d_sonnet"]) {
+				// Window names (5h, 7d, 7d_sonnet, 7d_opus, …) come from the
+				// headers themselves — new models and windows appear without a
+				// code change ("overage" has its own line below).
+				const windows = [
+					...new Set(
+						unified
+							.map((name) =>
+								name.match(/^anthropic-ratelimit-unified-(.+)-(status|utilization|remaining|reset)$/)?.[1],
+							)
+							.filter((window): window is string => !!window && window !== "overage"),
+					),
+				].sort();
+				for (const window of windows) {
 					const status = headers[`anthropic-ratelimit-unified-${window}-status`];
 					const utilization = headers[`anthropic-ratelimit-unified-${window}-utilization`];
 					const reset = headers[`anthropic-ratelimit-unified-${window}-reset`];
 					if (!status && !utilization && !reset) continue;
 					const pct = utilization ? `${(Number(utilization) * 100).toFixed(1)}%` : "?";
-					const resetStr = reset ? new Date(Number(reset) * 1000).toLocaleString() : "?";
-					lines.push(`  ${window}: ${pct} used · ${status ?? "?"} · resets ${resetStr}`);
+					lines.push(`  ${window}: ${pct} used · ${status ?? "?"} · resets ${formatReset(reset)}`);
 				}
 				const overage = headers["anthropic-ratelimit-unified-overage-status"];
 				if (overage) {

@@ -4,16 +4,17 @@
  * network work (and kills the yt-dlp subprocess) instead of being swallowed.
  *
  * Picture: MediaWiki file-namespace search (Wikimedia Commons by default),
- * best match downloaded to the app's data/downloads/.
- * Video: yt-dlp as an arm's-length subprocess from the vendored source tree;
- * with ffmpeg (bundled under app/tools/ffmpeg/ or on PATH) a ~10 s clip,
- * otherwise the shortest matching full video ≤ 90 s.
+ * best match downloaded to IA/data/downloads/.
+ * Video: yt-dlp as an arm's-length subprocess from the vendored source tree
+ * (the git submodule at IA/tools/yt-dlp); with ffmpeg (bundled under
+ * IA/tools/ffmpeg/ or on PATH) a ~10 s clip, otherwise the shortest matching
+ * full video ≤ 90 s.
  *
  * YouTube sometimes answers with an IP-level bot check ("Sign in to confirm
  * you're not a bot") that hits every player client; per yt-dlp only cookies
  * (or a PO-token provider plugin) cure it. Escalation ladder, least invasive
  * first, per the player's 2026-08-02 choice:
- *   1. the player's own Netscape export at app/config/youtube-cookies.txt,
+ *   1. the player's own Netscape export at IA/config/youtube-cookies.txt,
  *      if present — they control exactly which cookies it holds;
  *   2. otherwise a bare attempt; the identity-free bgutil-ytdlp-pot-provider
  *      plugin, when installed, upgrades every attempt transparently;
@@ -30,7 +31,7 @@
  * survive format extraction.
  */
 import { execFile } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -70,6 +71,8 @@ export interface PictureResult {
 
 interface WikiImage {
 	title?: string;
+	/** Search rank from the generator — the pages array itself is pageid-ordered. */
+	index?: number;
 	imageinfo?: { url?: string; mime?: string; width?: number; thumburl?: string; descriptionurl?: string }[];
 }
 
@@ -113,7 +116,9 @@ export async function searchPicture(
 			}
 			if (pages.length === 0) continue;
 
-			// Results arrive relevance-ordered ("index"), formatversion=2 keeps that order.
+			// The pages array arrives in pageid order; the search rank lives in
+			// each page's "index" field — without this sort the pick is arbitrary.
+			pages.sort((a, b) => (a.index ?? Number.MAX_SAFE_INTEGER) - (b.index ?? Number.MAX_SAFE_INTEGER));
 			const candidates = pages
 				.map((p) => ({ title: p.title ?? "", info: p.imageinfo?.[0] }))
 				.filter((c) => c.info && GOOD_MIME.test(c.info.mime ?? "") && (c.info.width ?? 0) >= 400);
@@ -135,7 +140,13 @@ export async function searchPicture(
 				const size = Number(download.headers.get("content-length") ?? 0);
 				if (size > MAX_BYTES) continue;
 				await pipeline(Readable.fromWeb(download.body as never), createWriteStream(path));
+				if (statSync(path).size > MAX_BYTES) {
+					// no content-length header and the body was oversized after all
+					rmSync(path, { force: true });
+					continue;
+				}
 			} catch {
+				rmSync(path, { force: true }); // never leave half a download behind
 				throwIfAborted(signal);
 				continue;
 			}
@@ -167,7 +178,7 @@ export interface VideoTooling {
 	ytDlpSource: string | null; // vendored yt-dlp checkout; null → rely on a system-installed yt_dlp module
 	ffmpegDir: string | null; // directory containing a bundled ffmpeg, if any
 	hasSystemFfmpeg: boolean;
-	/** Netscape cookies file (app/config/youtube-cookies.txt), if present. */
+	/** Netscape cookies file (IA/config/youtube-cookies.txt), if present. */
 	cookiesFile: string | null;
 	/** Browser named by WORLD_CONSOLE_YT_BROWSER, if set. */
 	cookiesFromBrowser: string | null;
@@ -192,7 +203,7 @@ function detectBrowser(): string | null {
 }
 
 export function detectTooling(appRoot: string): VideoTooling {
-	const ytDlpSource = join(appRoot, "..", "yt-dlp");
+	const ytDlpSource = join(appRoot, "tools", "yt-dlp");
 	const bundled = join(appRoot, "tools", "ffmpeg");
 	const cookiesFile = join(appRoot, "config", "youtube-cookies.txt");
 	return {
@@ -229,7 +240,14 @@ function ytDlp(
 		timeout,
 		signal,
 		maxBuffer: 8 * 1024 * 1024,
-		env: tooling.ytDlpSource ? { ...process.env, PYTHONPATH: tooling.ytDlpSource } : process.env,
+		env: tooling.ytDlpSource
+			? {
+					...process.env,
+					PYTHONPATH: process.env.PYTHONPATH
+						? `${tooling.ytDlpSource}:${process.env.PYTHONPATH}`
+						: tooling.ytDlpSource,
+				}
+			: process.env,
 	});
 }
 
@@ -258,10 +276,10 @@ function ytDlpError(error: unknown, triedBrowser?: string): Error {
 			triedBrowser
 				? `YouTube's bot check refused even cookies borrowed from ${triedBrowser}. ` +
 					`Open youtube.com in ${triedBrowser} once (signing in helps most), then try again — ` +
-					`or save a signed-in Netscape export to app/config/youtube-cookies.txt.`
+					`or save a signed-in Netscape export to IA/config/youtube-cookies.txt.`
 				: "YouTube refused the request (bot check) and no browser was found to borrow cookies from. " +
 					"Set WORLD_CONSOLE_YT_BROWSER=<firefox|chrome|...>, save a Netscape cookie export to " +
-					"app/config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
+					"IA/config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
 		);
 	}
 	if (firstError) return new Error(firstError);
@@ -356,8 +374,9 @@ export async function searchVideo(
 	throwIfAborted(signal);
 
 	const canClip = tooling.hasSystemFfmpeg || tooling.ffmpegDir !== null;
-	// With ffmpeg: most relevant hit, capped at 20 minutes. Without: shortest hit ≤ 90s,
-	// widening the search toward shorts when the regular results are all long.
+	// With ffmpeg: the most relevant hit, preferring ones ≤ 20 minutes but
+	// falling back to the top hit (only ~10 s is downloaded either way).
+	// Without: shortest hit ≤ 90s, widening toward shorts when all are long.
 	let pick: Candidate | undefined;
 	if (canClip) {
 		pick = candidates.find((c) => c.durationSeconds <= 1200) ?? candidates[0];

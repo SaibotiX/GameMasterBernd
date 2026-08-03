@@ -2,7 +2,6 @@
 title: The Frontier Ship "Vagant"
 voice: ARBITER-7
 register: futuristic and clipped — precise, dry, the calm of a shipboard intelligence
-model: anthropic/claude-opus-5
 default_mood: neutral
 ---
 The colony vessel Vagant drifts along the frontier arm, four hundred years out

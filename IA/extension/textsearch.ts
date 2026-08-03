@@ -82,22 +82,28 @@ export async function searchText(
 		}
 		if (!title) continue;
 
-		// 2. Pull its intro as plain text.
+		// 2. Pull its intro as plain text, plus the canonical page URL (wikis
+		//    do not all serve articles under /wiki/, and redirects may land on
+		//    a different title than the one searched).
 		const page = (await apiGet(site.host, {
 			action: "query",
-			prop: "extracts",
+			prop: "extracts|info",
 			exintro: "1",
 			explaintext: "1",
 			redirects: "1",
+			inprop: "url",
 			titles: title,
-		}, signal)) as { query?: { pages?: { title?: string; extract?: string }[] } } | null;
+		}, signal)) as { query?: { pages?: { title?: string; extract?: string; fullurl?: string }[] } } | null;
 		const extract = page?.query?.pages?.[0]?.extract?.trim();
 		if (!extract) continue;
 
 		return {
 			site: site.host,
 			title,
-			url: url ?? `https://${site.host}/wiki/${encodeURIComponent(title.replaceAll(" ", "_"))}`,
+			url:
+				page?.query?.pages?.[0]?.fullurl ??
+				url ??
+				`https://${site.host}/wiki/${encodeURIComponent(title.replaceAll(" ", "_"))}`,
 			extract: extract.length > 1200 ? extract.slice(0, 1200).trimEnd() + "…" : extract,
 		};
 	}

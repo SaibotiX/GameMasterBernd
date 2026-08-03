@@ -116,9 +116,12 @@ class PiAuthStore {
 
 let modelsPromise: Promise<PiModels> | null = null;
 function models(): Promise<PiModels> {
-	modelsPromise ??= import("@earendil-works/pi-ai/providers/all").then((pi) =>
-		(pi as unknown as PiAiModule).builtinModels({ credentials: new PiAuthStore() }),
-	);
+	modelsPromise ??= import("@earendil-works/pi-ai/providers/all")
+		.then((pi) => (pi as unknown as PiAiModule).builtinModels({ credentials: new PiAuthStore() }))
+		.catch((error) => {
+			modelsPromise = null; // one failed load must not poison every later call
+			throw error;
+		});
 	return modelsPromise;
 }
 
@@ -302,7 +305,7 @@ function tableSystemPrompt(deps: GmDeps): string {
 		`    {"kind":"place_note","place":"...","note":"..."} — append a correction note to a place's page (pages never shrink)`,
 		`    {"kind":"persona_record","name":"...","role":"...","dealings":"...","place":"..."} — chronicle a soul the record shows was met; the place must be chronicled`,
 		`    {"kind":"persona_move","name":"...","to_place":"...","reason":"..."} — correct a soul's whereabouts, reason recorded`,
-		`    {"kind":"quest_grant","title":"...","giver":"a recorded soul — OMIT for a task the seeker set themselves","task":"...","reward":"..."} — chronicle a task the record shows was agreed or self-proclaimed`,
+		`    {"kind":"quest_grant","title":"...","giver":"a recorded soul — OMIT for a task the seeker set themselves","task":"...","reward":"..."} — chronicle a task the record shows was agreed or self-proclaimed; a named giver must be recorded AND dwell at the party's current place (chain persona_record / persona_move fixes first when the record shows otherwise)`,
 		`    {"kind":"quest_status","title":"...","status":"done"|"rewarded","note":"..."} — forward only; rewarded also grants the recorded reward`,
 		`    {"kind":"item","item":"...","origin":"..."} — record a gain the story granted but the engine missed`,
 		`- Fixes execute IN THE ORDER GIVEN — chain prerequisites first: chronicle_place before persona_record at that place, persona_record before quest_grant naming that giver.`,
@@ -348,9 +351,13 @@ export async function gmAsk(deps: GmDeps, thread: GmTurn[], playerText: string):
 /** The record a truth is checked against: code collects it, the judge reads it. */
 export interface TruthEvidence {
 	truths: string[];
+	/** The newest ledger lines (describeEvent output), oldest first. */
 	ledgerLines: string[];
-	/** Everything said in play — seeker and game — oldest first, pre-clipped. */
+	/** The newest play lines — seeker and game — oldest first, pre-clipped. */
 	playLines: string[];
+	/** Code-side keyword search of the FULL record for the statement's words —
+	 * this is what reaches beyond the windows above in a long sitting. */
+	archiveHits: string[];
 }
 
 /**
@@ -381,16 +388,20 @@ export async function gmJudgeTruth(
 		`The constitution:`,
 		deps.config.constitution,
 		``,
-		`The record:`,
+		`The record (ledger and play show the NEWEST lines; the record search below reaches the WHOLE`,
+		`record, so treat its hits as equally binding):`,
 		`<established truths>`,
 		evidence.truths.map((t) => `- ${t}`).join("\n") || "(none)",
 		`</established truths>`,
 		`<ledger>`,
 		evidence.ledgerLines.join("\n") || "(empty)",
 		`</ledger>`,
-		`<play — everything said by seeker and game>`,
+		`<play — the newest exchanges of seeker and game>`,
 		evidence.playLines.join("\n") || "(no exchanges yet)",
-		`</play — everything said by seeker and game>`,
+		`</play — the newest exchanges of seeker and game>`,
+		`<record search — every line of the FULL record matching the statement's key words>`,
+		evidence.archiveHits.join("\n") || "(nothing in the record matched)",
+		`</record search — every line of the FULL record matching the statement's key words>`,
 		``,
 		`Respond with ONLY a JSON object:`,
 		`{"allow": true | false, "verdict": "ok" | "guardrail" | "contradiction",`,

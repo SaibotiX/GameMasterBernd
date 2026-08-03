@@ -1,6 +1,6 @@
 /**
  * Integration tests: the extension inside the real pi binary (RPC mode).
- *   node .pi/extensions/world-console/test/integration.ts
+ *   node IA/extension/test/integration.ts
  *
  * Part A (no LLM tokens) — crafted session files + the /ledger command:
  *   A1 banned session derives BARRED state through real SessionManager

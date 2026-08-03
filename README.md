@@ -22,9 +22,8 @@ derived — mirrored per story into a readable `ledger.md`.
 
 | Path | What it is |
 |---|---|
-| `IA/` | **The game** — pi extension, config, data, tools; standalone |
+| `IA/` | **The game** — pi extension, config, data, tools (incl. the vendored yt-dlp submodule at `IA/tools/yt-dlp/`); standalone |
 | `.pi/extensions/` | loader shims so pi finds the game from the repo root too |
-| `yt-dlp/` | Vendored yt-dlp source (submodule) — driven as a subprocess for video clips |
 | `Archive/` | Everything retired: the first round's notes and demo, the app-REPL round (`Archive/app-repl/`), and the reference checkouts of [pi](https://github.com/earendil-works/pi) and Selenium |
 
 The game runs on the **globally installed** pi CLI; the archived `Archive/pi`

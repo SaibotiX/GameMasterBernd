@@ -15,8 +15,9 @@ data/
 
 # --- Vendored binaries -----------------------------------------------------
 # Static ffmpeg (~420 MB); place a build at IA/tools/ffmpeg/ffmpeg.
+# (IA/tools/yt-dlp is a tracked git submodule — do not widen this to IA/tools/.)
 app/tools/
-IA/tools/
+IA/tools/ffmpeg/
 
 # --- Dependencies ----------------------------------------------------------
 node_modules/

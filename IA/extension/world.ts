@@ -1,6 +1,6 @@
 /**
  * The open world on disk: places, personas, quests and items live as plain
- * markdown under app/data/world/<world-id>/ — the persistent chronicle that
+ * markdown under IA/data/world/<world-id>/ — the persistent chronicle that
  * outlives sittings. Unlike the session ledger, world files are never
  * rewound by /tree and never deleted; they only grow.
  *
@@ -18,7 +18,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, write
 import { join } from "node:path";
 
 export interface WorldFiles {
-	/** app/data/world/<worldId> (or the test override). */
+	/** IA/data/world/<worldId>/<chronicle> (or the test override). */
 	root: string;
 }
 
@@ -267,13 +267,17 @@ export function setQuestStatus(
 			`## [${status}] $2 (id: ${slug})`,
 		);
 	}
-	// Progress lines live under the quest's "### progress" heading.
+	// Progress lines live under the quest's "### progress" heading. A page
+	// missing that heading (hand-edited) still gets its status change — the
+	// note is dropped rather than inserted somewhere corrupting.
 	const marker = `(id: ${slug})`;
 	const sectionStart = content.indexOf(marker);
 	const progressAt = content.indexOf("### progress", sectionStart);
-	const insertAt = content.indexOf("\n", progressAt) + 1;
-	const line = `- ${stamp()}${status ? ` [${status}]` : ""} — ${note.trim()}\n`;
-	content = content.slice(0, insertAt) + line + content.slice(insertAt);
+	if (progressAt !== -1) {
+		const insertAt = content.indexOf("\n", progressAt) + 1;
+		const line = `- ${stamp()}${status ? ` [${status}]` : ""} — ${note.trim()}\n`;
+		content = content.slice(0, insertAt) + line + content.slice(insertAt);
+	}
 	writeFileSync(file, content, "utf8");
 	return true;
 }

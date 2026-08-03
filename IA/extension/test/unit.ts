@@ -1,6 +1,6 @@
 /**
  * Unit tests for the world-console extension — pure modules only, no pi
- * runtime needed:  node .pi/extensions/world-console/test/unit.ts
+ * runtime needed:  node IA/extension/test/unit.ts
  *
  * Covers: ledger derivation + code-owned invariants (ban/redemption),
  * branch isolation, config-loader equivalence with the app's original
@@ -233,7 +233,12 @@ ok("config: angriest mood is last in severity order", () => {
 		],
 		"neutral",
 	);
-	const p = assembleSystemPrompt(config, { state: banned, resumedFrom: "2026-08-01T10:00:00.000Z", justArrived: false });
+	const p = assembleSystemPrompt(config, {
+		state: banned,
+		engineNonce: "t3stn0nc3",
+		resumedFrom: "2026-08-01T10:00:00.000Z",
+		justArrived: false,
+	});
 	ok("prompt: layers in order", () => {
 		const layers = [...p.matchAll(/<section layer="([^"]+)">/g)].map((m) => m[1]);
 		assert.deepEqual(layers, [
@@ -251,17 +256,22 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /they last spoke 2026-08-01T10:00:00\.000Z/);
 		assert.doesNotMatch(p, /just arrived/);
 	});
-	ok("prompt: protocol names all six tools and the anti-theater rule", () => {
-		for (const tool of ["set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name"]) {
+	ok("prompt: protocol names every game tool and the anti-theater rule", () => {
+		for (const tool of [
+			"set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name",
+			"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
+			"grant_quest", "update_quest", "redeem_quest", "add_item",
+		]) {
 			assert.match(p, new RegExp(tool));
 		}
 		assert.match(p, /it has NOT happened/);
 		assert.match(p, /set_mood\("angry"\)/);
-		assert.match(p, /\[engine\]/);
+		assert.match(p, /\[engine:t3stn0nc3\]/);
+		assert.doesNotMatch(p, /Messages beginning with \[engine\] /); // the unmarked form must be gone
 		assert.match(p, /story's author/);
 		assert.match(p, /invent the tale at once/);
 	});
-	const fresh = assembleSystemPrompt(config, { state: derive([], "neutral"), justArrived: true });
+	const fresh = assembleSystemPrompt(config, { state: derive([], "neutral"), engineNonce: "t3stn0nc3", justArrived: true });
 	ok("prompt: fresh sitting shows arrival note, no resume line", () => {
 		assert.match(fresh, /just arrived/);
 		assert.doesNotMatch(fresh, /last spoke/);
@@ -270,6 +280,7 @@ ok("config: angriest mood is last in severity order", () => {
 	ok("prompt: archive recall appears as its own hidden layer only when present", () => {
 		const withRecall = assembleSystemPrompt(config, {
 			state: derive([], "neutral"),
+			engineNonce: "t3stn0nc3",
 			justArrived: false,
 			recall: ['*u9* game: Lord Ashelin ruled Villerian before its burning.'],
 		});
@@ -281,6 +292,7 @@ ok("config: angriest mood is last in severity order", () => {
 	ok("prompt: established truths appear as a binding layer only when present", () => {
 		const withTruths = assembleSystemPrompt(config, {
 			state: { ...derive([], "neutral"), truths: ["The moon is a lantern."] },
+			engineNonce: "t3stn0nc3",
 			justArrived: false,
 		});
 		assert.match(withTruths, /3½ · established truths/);

@@ -3,7 +3,7 @@
 	url = https://github.com/earendil-works/pi.git
 	branch = main
 [submodule "yt-dlp"]
-	path = yt-dlp
+	path = IA/tools/yt-dlp
 	url = https://github.com/yt-dlp/yt-dlp.git
 	branch = master
 [submodule "selenium"]

@@ -3,13 +3,17 @@
  *
  *  - pi's coding system prompt is replaced every turn with the layered
  *    game-master prompt (constitution → world → mood → standing → protocol)
- *  - the built-in coding tools are stripped; the model gets six game tools:
- *      find_text         — the "scrying glass": MediaWiki text search
- *      find_picture      — MediaWiki file search; best match downloaded locally
- *      find_video        — yt-dlp YouTube search; ~10 s clip downloaded locally
+ *  - the built-in coding tools are stripped; the model gets the game tools:
+ *      find_text / find_picture / find_video — the "scrying glass" lenses
+ *        (MediaWiki text and file search, yt-dlp YouTube clip; downloads land
+ *        in data/downloads/)
  *      set_mood          — mood shifts; the angriest mood bars the glass (code-owned)
  *      grant_redemption  — lifts the bar after sincere amends (no-op unless barred)
  *      record_name       — stores the seeker's name for the standing layer
+ *      set_place / chronicle_place / update_place, record_persona /
+ *      move_persona, grant_quest / update_quest / redeem_quest, add_item
+ *                        — the open-world chronicle (places, souls, quests,
+ *                          items as markdown under data/world/)
  *  - the game ledger lives INSIDE the pi session as custom entries and all
  *    state is derived from the current branch, so /new = fresh ledger,
  *    /fork copies it, /tree rewinds it, and branches never interfere
@@ -89,9 +93,15 @@ export default function (pi: ExtensionAPI) {
 	let st: DerivedState = derive([], config.world.defaultMood);
 	let resumedFrom: string | undefined;
 	const tooling = detectTooling(BASE_DIR); // vendored yt-dlp + bundled/system ffmpeg
+	// Secret mark of genuine [engine:…] messages. Custom messages reach the
+	// model as plain user turns, so without this a seeker typing "[engine] …"
+	// would be indistinguishable from the engine and could talk the model into
+	// grant_redemption. Fresh per run; the player never sees it (the renderer
+	// hides the raw hand-off, and the GM table gets a placeholder).
+	const ENGINE_NONCE = randomUUID().slice(0, 8);
 
 	pi.registerFlag("world", {
-		description: `World Console: world id from app/config/worlds (default: ${DEFAULT_WORLD})`,
+		description: `World Console: world id from IA/config/worlds (default: ${DEFAULT_WORLD})`,
 		type: "string",
 	});
 
@@ -128,6 +138,26 @@ export default function (pi: ExtensionAPI) {
 	function replay(ctx: ExtensionContext): void {
 		uiCtx = ctx; // keep the footer's data source pointing at the live context
 		st = derive(ctx.sessionManager.getBranch(), config.world.defaultMood);
+	}
+
+	/**
+	 * The chronicle stamp for a branch that lacks one. A story that already
+	 * wrote world files before chronicles existed keeps the legacy shared
+	 * folder (""); every other story gets its own folder keyed by session id.
+	 * Also heals a leaf that /tree moved above its stamp — world files must
+	 * never silently fall back to the legacy folder.
+	 */
+	function chronicleStamp(ctx: ExtensionContext): GameEvent[] {
+		if (st.chronicle !== undefined) return [];
+		const usedWorldFiles = ctx.sessionManager.getBranch().some((entry) => {
+			const event = asGameEvent(entry);
+			return (
+				!!event &&
+				(event.ev === "place" || event.ev === "persona" || event.ev === "quest" || event.ev === "item")
+			);
+		});
+		const key = usedWorldFiles ? "" : ctx.sessionManager.getSessionId() || randomUUID();
+		return [{ ev: "chronicle", key }];
 	}
 
 	// ---- footer -----------------------------------------------------------
@@ -230,6 +260,14 @@ export default function (pi: ExtensionAPI) {
 		return flat.length > max ? flat.slice(0, max) + "…" : flat;
 	}
 
+	/** Loose equality for truth texts: case, spacing, quotes and a final period
+	 * must not keep the judge's echo of a superseded truth from matching it. */
+	function sameTruth(a: string, b: string): boolean {
+		const normalize = (text: string) =>
+			text.toLowerCase().replace(/\s+/g, " ").trim().replace(/^["'«»]+|["'«».]+$/g, "");
+		return normalize(a) === normalize(b);
+	}
+
 	/**
 	 * The whole branch as numbered lines — play messages AND ledger events.
 	 * uN = the entry's 1-based position in the append-only session file, so
@@ -288,12 +326,18 @@ export default function (pi: ExtensionAPI) {
 		return [`…(${lines.length - limit} earlier lines omitted)`, ...lines.slice(-limit)];
 	}
 
-	/** The full record a proposed truth is checked against (code-collected). */
-	function truthEvidence(ctx: ExtensionContext) {
+	/**
+	 * The record a proposed truth is checked against (code-collected): the
+	 * newest ledger and play lines PLUS a keyword search over the full record
+	 * for the statement's own words — so a contradiction older than the tail
+	 * windows still reaches the judge in a long sitting.
+	 */
+	function truthEvidence(ctx: ExtensionContext, text: string) {
 		return {
 			truths: st.truths,
 			ledgerLines: branchLedgerLines(ctx, 80),
 			playLines: branchPlayLines(ctx, 80),
+			archiveHits: searchArchive(archiveLinesOf(ctx), extractKeywords(text), 1, 40).map(formatArchiveLine),
 		};
 	}
 
@@ -343,8 +387,20 @@ export default function (pi: ExtensionAPI) {
 				if (!title || !task) throw new Error("a task needs a title and what must be done");
 				const reward = String(fix.reward ?? "").trim() || "what the story yields";
 				const giver = String(fix.giver ?? "").trim() || undefined;
-				if (giver && !personaExists(files, giver)) {
-					throw new Error(`no page exists for ${giver} — chain a persona_record fix before this one`);
+				// Repairs pass the same gate as grant_quest itself: the giver must
+				// be recorded AND present — a repair must not smuggle a quest past
+				// the rules the game enforces.
+				if (giver) {
+					if (!personaExists(files, giver)) {
+						throw new Error(`no page exists for ${giver} — chain a persona_record fix before this one`);
+					}
+					const location = personaLocation(files, giver);
+					if (location !== st.place.slug) {
+						throw new Error(
+							`${giver} is not at ${st.place.title} — the chronicle places them at ${location ?? "nowhere"}; ` +
+								`chain a persona_move fix (with the record's reason) before this one`,
+						);
+					}
 				}
 				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug });
 				appendEvents(ctx, [{ ev: "quest", action: "granted", title }]);
@@ -382,9 +438,15 @@ export default function (pi: ExtensionAPI) {
 					throw new Error(`"${quest.title}" already stands at [${quest.status}]`);
 				}
 				const note = String(fix.note ?? "").trim() || "corrected at the GM table";
-				if (target === "rewarded" && quest.status === "open") setQuestStatus(files, slug, "done", note);
+				const events: GameEvent[] = [];
+				if (target === "rewarded" && quest.status === "open") {
+					// Passing through [done] gets its own ledger event and a terse
+					// note — the real note belongs to the final step, once.
+					setQuestStatus(files, slug, "done", "deed done (GM-table repair)");
+					events.push({ ev: "quest", action: "done", title: quest.title });
+				}
 				setQuestStatus(files, slug, target, note);
-				const events: GameEvent[] = [{ ev: "quest", action: target, title: quest.title }];
+				events.push({ ev: "quest", action: target, title: quest.title });
 				if (target === "rewarded") {
 					addItem(files, `${quest.reward} — reward of "${quest.title}" (GM-table repair)`);
 					events.push({ ev: "item", text: quest.reward });
@@ -430,20 +492,13 @@ export default function (pi: ExtensionAPI) {
 
 		replay(ctx);
 		resumedFrom = st.lastEntryAt; // undefined on a fresh session
-		if (!st.world) appendEvents(ctx, [{ ev: "world", world: worldId }]);
-		if (st.chronicle === undefined) {
-			// A story that already wrote world files before chronicles existed
-			// keeps the legacy shared folder; every new story gets its own.
-			const usedWorldFiles = ctx.sessionManager.getBranch().some((entry) => {
-				const event = asGameEvent(entry);
-				return (
-					!!event &&
-					(event.ev === "place" || event.ev === "persona" || event.ev === "quest" || event.ev === "item")
-				);
-			});
-			const key = usedWorldFiles ? "" : ctx.sessionManager.getSessionId() || randomUUID();
-			appendEvents(ctx, [{ ev: "chronicle", key }]);
-		}
+		// One batch, chronicle stamp included: appendEvents replays before
+		// mirroring, so even the world line lands in the story's own ledger.md
+		// (split appends used to misfile it into the legacy shared folder).
+		const boot: GameEvent[] = [];
+		if (!st.world) boot.push({ ev: "world", world: worldId });
+		boot.push(...chronicleStamp(ctx));
+		if (boot.length > 0) appendEvents(ctx, boot);
 
 		pi.setActiveTools(GAME_TOOLS);
 		updateFooter(ctx);
@@ -456,12 +511,20 @@ export default function (pi: ExtensionAPI) {
 	// /tree moves the leaf to another branch: derive everything again from it.
 	pi.on("session_tree", async (_event, ctx) => {
 		replay(ctx);
+		// A leaf moved above its chronicle stamp gets a fresh one at once —
+		// world files must never fall back to the legacy shared folder.
+		const stamp = chronicleStamp(ctx);
+		if (stamp.length > 0) appendEvents(ctx, stamp);
 		updateFooter(ctx);
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		reloadFor(worldId); // hot reload: config edits apply on the next turn
 		replay(ctx);
+		// Belt and braces: no turn (and so no world-file write) ever runs on an
+		// unstamped branch, whatever moved the leaf.
+		const stamp = chronicleStamp(ctx);
+		if (stamp.length > 0) appendEvents(ctx, stamp);
 		// In-game archive recall: search the sitting's FULL record (compaction
 		// notwithstanding — getBranch keeps every entry) for this turn's words
 		// and hand the hits to the keeper through a prompt layer. Pure code,
@@ -472,6 +535,7 @@ export default function (pi: ExtensionAPI) {
 		return {
 			systemPrompt: assembleSystemPrompt(config, {
 				state: st,
+				engineNonce: ENGINE_NONCE,
 				resumedFrom,
 				justArrived: !branchHasAssistantReply(ctx),
 				openQuests: questStandings(),
@@ -530,7 +594,7 @@ export default function (pi: ExtensionAPI) {
 				{
 					customType: "world-console.command",
 					content:
-						`[engine] The seeker invokes the scrying glass directly: kind="${kind}", query="${query}". ` +
+						`[engine:${ENGINE_NONCE}] The seeker invokes the scrying glass directly: kind="${kind}", query="${query}". ` +
 						`Judge this request against the world's theme and the constitution (refuse what is foreign politely; refuse filth with anger). ` +
 						`If worthy, perform it now with the ${tool} tool and present the findings in your voice. If not, refuse in character.`,
 					display: true,
@@ -612,7 +676,9 @@ export default function (pi: ExtensionAPI) {
 		const amendMatch = trimmed.match(/^amend_truth\s+(.+)$/is);
 		if (amendMatch) {
 			const rawText = amendMatch[1].trim();
-			const refMatch = rawText.match(/\*u(\d+)\*/i);
+			// The documented syntax puts the proof LAST — take the last mark, so
+			// a fact that itself quotes an earlier *uN* is not mistaken for it.
+			const refMatch = [...rawText.matchAll(/\*u(\d+)\*/gi)].at(-1);
 			if (!refMatch) {
 				ctx.ui.notify(
 					"An amendment must cite the record: /gm amend_truth <fact> *uN* — find N in /ledger or in the table's archive citations.",
@@ -658,7 +724,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			const events: GameEvent[] = [];
 			const superseded = verdict.supersedes
-				? st.truths.find((truth) => truth.toLowerCase() === verdict.supersedes!.toLowerCase())
+				? st.truths.find((truth) => sameTruth(truth, verdict.supersedes!))
 				: undefined;
 			if (superseded) events.push({ ev: "truth_retracted", text: superseded });
 			events.push({ ev: "truth", text, source: "amendment", ref: uref });
@@ -680,7 +746,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			let verdict;
 			try {
-				verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx) }, text);
+				verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx, text) }, text);
 			} catch (error) {
 				ctx.ui.notify(
 					`The guardian could not be reached — nothing was bound. (${(error as Error).message})`,
@@ -711,8 +777,12 @@ export default function (pi: ExtensionAPI) {
 				{
 					config,
 					state: st,
+					// The table sees the prompt's structure for transparency, but
+					// never the real nonce — it is required to answer machinery
+					// questions and would hand a spoofable mark to the seeker.
 					gamePrompt: assembleSystemPrompt(config, {
 						state: st,
+						engineNonce: "(hidden at the GM table)",
 						resumedFrom,
 						justArrived: !branchHasAssistantReply(ctx),
 						openQuests: questStandings(),
@@ -738,7 +808,7 @@ export default function (pi: ExtensionAPI) {
 			} else {
 				let verdict = null;
 				try {
-					verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx) }, text);
+					verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx, text) }, text);
 				} catch (error) {
 					out += `\n\nThe engine could not check the record — nothing was bound. (${(error as Error).message})`;
 				}
@@ -1004,8 +1074,8 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	// ---- the open world: places, souls, quests, items ---------------------
-	// World files are the permanent chronicle (app/data/world/<world>/) —
-	// never rewound by /tree, never deleted, only extended. The engine writes
+	// World files are the permanent chronicle (data/world/<world>/<chronicle>/)
+	// — never rewound by /tree, never deleted, only extended. The engine writes
 	// them; the model supplies content through these tools.
 
 	pi.registerTool({
@@ -1107,6 +1177,10 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const name = params.name.trim();
 			if (!name) throw new Error("Empty name.");
+			const role = params.role.trim();
+			if (!role) throw new Error("Empty role — say in a line or two who they are.");
+			const dealings = params.dealings.trim();
+			if (!dealings) throw new Error("Empty dealings — say what was said, promised or traded.");
 			const files = worldFiles();
 			const placeName = params.place?.trim();
 			let placeSlug: string;
@@ -1119,7 +1193,7 @@ export default function (pi: ExtensionAPI) {
 				if (!st.place) throw new Error("The party stands nowhere yet — set_place first, or name a chronicled place.");
 				placeSlug = st.place.slug;
 			}
-			const result = recordPersona(files, name, params.role, params.dealings, placeSlug);
+			const result = recordPersona(files, name, role, dealings, placeSlug);
 			appendEvents(ctx, [{ ev: "persona", name, place: placeSlug }]);
 			return {
 				content: [
@@ -1172,6 +1246,12 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			const title = params.title.trim();
+			if (!title) throw new Error("Empty quest title.");
+			const task = params.task.trim();
+			if (!task) throw new Error("Empty task — say plainly what must be done.");
+			const reward = params.reward.trim();
+			if (!reward) throw new Error("Empty reward — name what the seeker earns.");
 			const files = worldFiles();
 			const giver = params.giver?.trim() || undefined;
 			if (giver) {
@@ -1182,20 +1262,20 @@ export default function (pi: ExtensionAPI) {
 				}
 			}
 			const { slug } = grantQuest(files, {
-				title: params.title,
+				title,
 				giver,
-				task: params.task,
-				reward: params.reward,
+				task,
+				reward,
 				placeSlug: st.place.slug,
 			});
-			appendEvents(ctx, [{ ev: "quest", action: "granted", title: params.title.trim() }]);
+			appendEvents(ctx, [{ ev: "quest", action: "granted", title }]);
 			return {
 				content: [
 					{
 						type: "text",
 						text: giver
-							? `Quest granted and chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`
-							: `Self-set task chronicled: "${params.title.trim()}" [open] — reward: ${params.reward.trim()}.`,
+							? `Quest granted and chronicled: "${title}" [open] — reward: ${reward}.`
+							: `Self-set task chronicled: "${title}" [open] — reward: ${reward}.`,
 					},
 				],
 				details: { slug, selfSet: !giver },
