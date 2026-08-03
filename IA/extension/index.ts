@@ -31,14 +31,18 @@ import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
-import { gmAsk, gmJudgeAmendment, gmJudgeTruth, gmPlanFate, type GmFix, type GmTurn } from "./gmchat.ts";
+import { gmAsk, gmChronicle, gmJudgeAmendment, gmJudgeTruth, gmPlanFate, type GmFix, type GmTurn } from "./gmchat.ts";
 import {
 	asGameEvent,
 	BAND_TICKS,
 	derive,
 	describeEvent,
+	drawFuseTurns,
+	drawPerilTier,
 	drawQuestShape,
 	LEDGER_TYPE,
+	MAX_WOUNDS,
+	PERILS,
 	planRedemption,
 	planSetMood,
 	rollBand,
@@ -47,10 +51,12 @@ import {
 	type FatePlan,
 	type GameEvent,
 	type PresentedOption,
+	type QuestShape,
 } from "./ledger.ts";
 import { detectTooling, searchPicture, searchVideo } from "./mediasearch.ts";
 import { assembleSystemPrompt } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
+import { gridBox, type GridCell } from "./ui.ts";
 import {
 	addItem,
 	countOpenQuests,
@@ -60,17 +66,22 @@ import {
 	hasItem,
 	logEvent,
 	movePersona,
+	listPages,
 	openQuestLines,
 	personaExists,
 	personaLocation,
+	personaPage,
 	personasAt,
 	placeExists,
+	placePage,
 	questBySlug,
 	recordPersona,
 	setQuestClock,
 	setQuestStatus,
+	shelvedQuests,
 	slugify,
 	visitPlace,
+	type Quest,
 	type WorldFiles,
 } from "./world.ts";
 
@@ -85,7 +96,7 @@ const GAME_TOOLS = [
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
-	"offer_choices",
+	"offer_choices", "shelve_quest", "heal_wounds",
 ];
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
@@ -93,17 +104,6 @@ const KIND_BY_TOOL: Record<string, string> = {
 	find_picture: "picture",
 	find_video: "video",
 };
-// Undertaking shapes: clock size / twist beat / finale flag. EVERY quest's
-// completing stroke is a trial (check > 0 arms it — the playtest verdict:
-// the peak must be contested); half additionally seal a mid-quest twist.
-// "Simple" means no mid-work interruption, never no climax. Beats = clock/2.
-// Full shuffle-bags come with Phase 3.
-const SHAPES = [
-	{ clock: 4, twist: 0, check: 1 },
-	{ clock: 6, twist: 0, check: 1 },
-	{ clock: 6, twist: 2, check: 1 },
-	{ clock: 8, twist: 3, check: 1 },
-] as const;
 /** Trouble kinds a twist may be drawn from (the complication taxonomy). */
 const SUITS = [
 	"material failure", "world-law surprise", "persona interruption", "rival interference",
@@ -111,6 +111,8 @@ const SUITS = [
 ];
 const MAX_OPEN_QUESTS = 4;
 const TICK = 2; // standard beat = 2 clock segments
+/** No peril strikes in a story's first few exchanges (let the tale stand up). */
+const PERIL_GRACE_TURNS = 3;
 
 export default function (pi: ExtensionAPI) {
 	// Fail loudly at load time if the config tree is broken — pi then reports
@@ -150,6 +152,15 @@ export default function (pi: ExtensionAPI) {
 			return openQuestLines(worldFiles());
 		} catch {
 			return [];
+		}
+	}
+
+	/** Death is real: the tools of the living refuse a finished tale. */
+	function ensureAlive(): void {
+		if (st.dead) {
+			throw new Error(
+				"The seeker's tale has ENDED — narrate aftermath only; grant, advance and roll nothing. A new tale begins with /new.",
+			);
 		}
 	}
 
@@ -196,9 +207,11 @@ export default function (pi: ExtensionAPI) {
 	let requestFooterRender: (() => void) | undefined;
 
 	function gameFooterLine(): string {
+		if (st.dead) return `☠ the tale has ended · ${config.world.title} · a new tale begins with /new`;
 		const barred = st.banned ? " · glass BARRED" : "";
+		const wounds = st.wounds > 0 ? ` · wounds ${st.wounds}/${MAX_WOUNDS}` : "";
 		const place = st.place ? ` · ${st.place.title}` : "";
-		return `${config.world.voice} · mood: ${st.mood}${barred} · ${config.world.title}${place}`;
+		return `${config.world.voice} · mood: ${st.mood}${barred} · lvl ${st.level}${wounds} · ${config.world.title}${place}`;
 	}
 
 	function installFooter(ctx: ExtensionContext): void {
@@ -252,9 +265,19 @@ export default function (pi: ExtensionAPI) {
 
 	// ---- undertakings: shape draws, choice widget, hotkeys -----------------
 
-	/** Draw a quest's shape — pacing rules live in drawQuestShape (pure, tested). */
-	function drawShape(selfSet: boolean): { clock: number; twist: number; check: number } {
-		return drawQuestShape(SHAPES, st.recentShapes.at(-1), selfSet, (n) => randomInt(n));
+	/** Draw a quest's shape — difficulty by renown (or the keeper's named
+	 * weight), pacing rules in drawQuestShape (pure, tested). The OPENING is a
+	 * story's first GIVEN quest: no prior shape on the branch was given. */
+	function drawShape(selfSet: boolean, weight?: "easy" | "middling" | "hard"): QuestShape {
+		const opening = !st.recentShapes.some((shape) => shape.selfSet === false);
+		return drawQuestShape({
+			level: st.level,
+			last: st.recentShapes.at(-1),
+			selfSet,
+			opening,
+			weight,
+			rand: (n) => randomInt(n),
+		});
 	}
 
 	/** Draw the twist's trouble kind, avoiding the most recent one. */
@@ -291,42 +314,94 @@ export default function (pi: ExtensionAPI) {
 		return visible;
 	}
 
-	/** The pending choice/trial panel above the editor; never blocks typing (G7). */
+	/** Signature of the currently shown gate, so a NEW one may ring the bell. */
+	let lastGateKey = "";
+
+	/**
+	 * The pending choice/trial panel above the editor; never blocks TYPING
+	 * (G7) — but a twist or a die holds all WORK until answered, so the panel
+	 * burns red and the terminal bell rings once when such a gate opens. The
+	 * choice renders as the four-slot board (same architecture as /quest).
+	 *
+	 * pi contract (setExtensionWidget): non-array content must be a FACTORY
+	 * `(ui, theme) => Component` — passing a bare component object made every
+	 * widget refresh throw "content is not a function", which poisoned the
+	 * very tool results that present twists (the apple-quest stranding).
+	 * And so: never let widget rendering break the game — this function must
+	 * not throw, whatever pi's UI does.
+	 */
 	function updateWidgets(ctx: ExtensionContext): void {
 		if (ctx.mode !== "tui" || typeof ctx.ui.setWidget !== "function") return;
-		const pending = st.pendingChoice;
-		if (pending) {
-			const head =
-				pending.kind === "offer"
-					? `⟡ choices before you — ${clip(pending.text, 110)}`
-					: `⟡ the task twists — ${clip(pending.text, 110)}`;
-			const foot =
-				pending.kind === "offer"
-					? `   choose: Alt+number or /pick <n> [your own words] — or simply speak on (the offer lapses)`
-					: `   choose: Alt+number or /pick <n> [your own words] — plain talk stays free`;
-			ctx.ui.setWidget("world-console.choice", [
-				head,
-				...pending.options.map(
-					(option) =>
-						`   [${option.id}] ${option.label}` +
-						(option.risk ? ` · ${option.risk}` : "") +
-						(option.promise ? ` · ${clip(option.promise, 60)}` : "") +
-						(option.unlockedBy ? ` · ⚑ ${option.unlockedBy}` : ""),
-				),
-				foot,
-			]);
-			return;
+		try {
+			const pending = st.pendingChoice;
+			const trial = st.pendingRoll;
+			const gateKey = pending
+				? `${pending.kind}:${pending.slug}:${pending.text}`
+				: trial
+					? `roll:${trial.slug}:${trial.trial}`
+					: "";
+			const urgent = pending?.kind === "twist" || (!!trial && (trial.kind === "finale" || trial.kind === "peril"));
+			if (gateKey && gateKey !== lastGateKey && urgent) {
+				try {
+					process.stdout.write("\x07"); // the moment must not be missed
+				} catch {
+					// a mute terminal changes nothing
+				}
+			}
+			lastGateKey = gateKey;
+			if (pending) {
+				const color = pending.kind === "twist" ? "error" : "accent";
+				const head =
+					pending.kind === "offer"
+						? `⟡ choices before you — ${clip(pending.text, 110)}`
+						: `⟡ THE TASK TWISTS — ${clip(pending.text, 110)}`;
+				const foot =
+					pending.kind === "offer"
+						? `  choose: Alt+number or /pick <n> [your own words] — or simply speak on (the offer lapses)`
+						: `  choose: Alt+number or /pick <n> [your own words] — talk stays free, but NO work moves until you decide`;
+				const cells: GridCell[] = pending.options.map((option) => ({
+					lines: [
+						`[${option.id}] ${option.label}`,
+						[option.risk, option.promise && clip(option.promise, 60)].filter(Boolean).join(" · "),
+						option.unlockedBy ? `⚑ ${option.unlockedBy}` : "",
+					].filter(Boolean),
+				}));
+				const factory = (_ui: unknown, theme: { fg(color: string, text: string): string }) => ({
+					render(width: number): string[] {
+						const boxWidth = Math.max(24, Math.min(width - 2, 76));
+						return [
+							theme.fg(color, head),
+							...gridBox(cells, boxWidth, (border) => theme.fg(color, border)),
+							theme.fg("dim", foot),
+						];
+					},
+				});
+				ctx.ui.setWidget("world-console.choice", factory as never);
+				return;
+			}
+			if (trial) {
+				const color = trial.kind === "finale" || trial.kind === "peril" ? "error" : "warning";
+				const head =
+					trial.kind === "peril"
+						? `⚠ THE WORLD STRIKES — ${clip(trial.trial, 90)} · ${trial.tier} (DC ${trial.dc})`
+						: `⚀ a trial bars the way — ${trial.tier} (DC ${trial.dc})` +
+							(trial.edge ? ` · ${trial.edge}: two dice, ${trial.edge === "favored" ? "best" : "worst"} counts` : "");
+				const factory = (_ui: unknown, theme: { fg(color: string, text: string): string }) => ({
+					render(width: number): string[] {
+						return [
+							truncateToWidth(theme.fg(color, head), Math.max(24, width - 2), "…"),
+							theme.fg("dim", `  cast the die: /roll — talk stays free, but NO work moves until it falls`),
+						];
+					},
+				});
+				ctx.ui.setWidget("world-console.choice", factory as never);
+				return;
+			}
+			ctx.ui.setWidget("world-console.choice", undefined);
+		} catch {
+			// A broken panel must never break a turn: the game state is already
+			// recorded; the seeker still has /pick, /roll and /quest.
 		}
-		const trial = st.pendingRoll;
-		if (trial) {
-			ctx.ui.setWidget("world-console.choice", [
-				`⚀ a trial bars the way — ${trial.tier} (DC ${trial.dc})` +
-					(trial.edge ? ` · ${trial.edge}: two dice, ${trial.edge === "favored" ? "best" : "worst"} counts` : ""),
-				`   cast the die: /roll — plain talk stays free until it falls`,
-			]);
-			return;
-		}
-		ctx.ui.setWidget("world-console.choice", undefined);
 	}
 
 	let unsubTerminalInput: (() => void) | undefined;
@@ -453,6 +528,30 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	/**
+	 * RESOLVED fates, hidden fields open — what each path would have brought
+	 * and why. Once a twist is answered, the table shows the whole sheet (A4:
+	 * veiled while live, open afterwards — the "I told you we should have…"
+	 * arguments get real answers). Unresolved plans never appear here.
+	 */
+	function resolvedAnswerSheets(): string[] {
+		const lines: string[] = [];
+		for (const u of Object.values(st.undertakings)) {
+			if (!u.resolved || !u.plan) continue;
+			lines.push(
+				`"${u.slug}" — ${u.plan.complication} (trouble: ${u.plan.suit}; the planted signs: ${u.plan.clues.join(" · ")})`,
+			);
+			for (const option of u.plan.options) {
+				lines.push(
+					`  [${option.id}] ${option.label} (${option.risk} → ${option.band})${
+						u.pickedOption === option.id ? " ← THE SEEKER'S PICK" : ""
+					}: ${option.reveal} — why: ${option.reason}${option.loot ? ` — loot: ${option.loot}` : ""}`,
+				);
+			}
+		}
+		return lines;
+	}
+
+	/**
 	 * The record a proposed truth is checked against (code-collected): the
 	 * newest ledger and play lines PLUS a keyword search over the full record
 	 * for the statement's own words — so a contradiction older than the tail
@@ -513,9 +612,9 @@ export default function (pi: ExtensionAPI) {
 				if (!title || !task) throw new Error("a task needs a title and what must be done");
 				const reward = String(fix.reward ?? "").trim() || "what the story yields";
 				const giver = String(fix.giver ?? "").trim() || undefined;
-				// Repairs pass the same gate as grant_quest itself: the giver must
-				// be recorded AND present — a repair must not smuggle a quest past
-				// the rules the game enforces.
+				// Repairs pass the same gates as grant_quest itself: the giver must
+				// be recorded AND present, and the four-slot cap holds — a repair
+				// must not smuggle a quest past the rules the game enforces.
 				if (giver) {
 					if (!personaExists(files, giver)) {
 						throw new Error(`no page exists for ${giver} — chain a persona_record fix before this one`);
@@ -528,12 +627,17 @@ export default function (pi: ExtensionAPI) {
 						);
 					}
 				}
+				if (countOpenQuests(files) >= MAX_OPEN_QUESTS) {
+					throw new Error(
+						`${MAX_OPEN_QUESTS} matters already stand open — the cap binds repairs too; the seeker must shelve one in play first`,
+					);
+				}
 				// Repairs record what already happened: a small clock, no twist —
 				// the finale stays armed like any quest.
 				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug, clockSize: 4 });
 				appendEvents(ctx, [
 					{ ev: "quest", action: "granted", title },
-					{ ev: "quest_shape", slug, clock: 4, twist: 0, check: 1 },
+					{ ev: "quest_shape", slug, clock: 4, twist: 0, check: 1, mids: [], selfSet: !giver },
 				]);
 				return `the task "${title}" is chronicled [open]${giver ? ` — giver ${giver}` : " — set by the seeker"} (id: ${slug})`;
 			}
@@ -563,7 +667,10 @@ export default function (pi: ExtensionAPI) {
 				const slug = slugify(String(fix.title ?? ""));
 				const quest = questBySlug(files, slug);
 				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
-				const order = { open: 0, done: 1, rewarded: 2, failed: 3 } as const;
+				if (quest.status === "shelved") {
+					throw new Error(`"${quest.title}" is shelved — the seeker must take it up again before its standing can move`);
+				}
+				const order = { open: 0, shelved: 0, done: 1, rewarded: 2, failed: 3 } as const;
 				const target = fix.status === "rewarded" ? "rewarded" : "done";
 				if (order[target] <= order[quest.status]) {
 					throw new Error(`"${quest.title}" already stands at [${quest.status}]`);
@@ -612,14 +719,52 @@ export default function (pi: ExtensionAPI) {
 				const labels = (Array.isArray(fix.options) ? fix.options : [])
 					.map((option) => String(option ?? "").trim())
 					.filter(Boolean)
-					.slice(0, 5);
-				if (!prompt || labels.length < 2) throw new Error("choices need a prompt and 2–5 courses");
+					.slice(0, 4);
+				if (!prompt || labels.length < 2) throw new Error("choices need a prompt and 2–4 courses");
 				if (st.pendingChoice || st.pendingRoll) {
 					throw new Error("something already awaits the seeker's word — one gate at a time");
 				}
 				const options: PresentedOption[] = labels.map((label, index) => ({ id: index + 1, label, risk: "", promise: "" }));
-				appendEvents(ctx, [{ ev: "offer", text: prompt, options }]);
+				appendEvents(ctx, [{ ev: "offer", text: prompt, options, place: st.place?.slug }]);
 				return `choices now stand before the seeker: ${labels.join(" · ")} (they pick, or speak past them)`;
+			}
+			case "untwist": {
+				const slug = slugify(String(fix.title ?? ""));
+				const quest = questBySlug(files, slug);
+				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
+				const u = st.undertakings[slug];
+				const standing = u && (u.twist > 0 || (!!u.plan && !u.resolved));
+				if (!standing) throw new Error(`no woven or presented twist stands over "${quest.title}"`);
+				const reason = String(fix.reason ?? "").trim();
+				if (reason.length < 10) throw new Error("dissolving a twist needs the record's reason, plainly stated");
+				appendEvents(ctx, [{ ev: "twist_dropped", slug, reason }]);
+				return `the twist over "${quest.title}" dissolves — the quest continues twist-free; its sealed plan now lies open at this table`;
+			}
+			case "clock": {
+				const slug = slugify(String(fix.title ?? ""));
+				const quest = questBySlug(files, slug);
+				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
+				if (quest.status !== "open") throw new Error(`"${quest.title}" stands [${quest.status}] — only open work has a live clock`);
+				if (st.pendingChoice?.slug === slug || st.pendingRoll?.slug === slug) {
+					throw new Error(`a choice or die stands on "${quest.title}" — chain an untwist (or let the die fall) before repairing its clock`);
+				}
+				const u = st.undertakings[slug];
+				const size = u && u.size > 0 ? u.size : quest.clock?.size ?? 0;
+				if (size === 0) throw new Error(`"${quest.title}" has no clock on this branch — attempt it once first`);
+				const target = Math.round(Number(fix.filled));
+				if (!Number.isFinite(target) || target < 0 || target > size) {
+					throw new Error(`the clock of "${quest.title}" holds 0..${size} — ${fix.filled} fits nowhere`);
+				}
+				const current = u?.filled ?? 0;
+				if (target === current) return `the clock of "${quest.title}" already stands at ${target}/${size}`;
+				const note = String(fix.note ?? "").trim() || "GM-table repair";
+				appendEvents(ctx, [
+					{ ev: "quest_tick", slug, add: target - current, filled: target, size, note: `GM-table repair: ${note}` },
+				]);
+				setQuestClock(files, slug, target, size);
+				return `the clock of "${quest.title}" now stands at ${target}/${size} (repair recorded)${
+					target >= size ? " — the deed can be recorded done (quest_status)" : ""
+				}`;
 			}
 			default:
 				throw new Error(`unknown repair kind "${(fix as { kind?: string }).kind}"`);
@@ -658,6 +803,11 @@ export default function (pi: ExtensionAPI) {
 		const boot: GameEvent[] = [];
 		if (!st.world) boot.push({ ev: "world", world: worldId });
 		boot.push(...chronicleStamp(ctx));
+		// The world is alive: wind the first peril fuse (branch-aware — a
+		// rewound or resumed story keeps the spring it already carries).
+		if (!st.fuse && !st.dead) {
+			boot.push({ ev: "peril_fuse", at: st.chats, turns: drawFuseTurns(st.level, (n) => randomInt(n)) });
+		}
 		if (boot.length > 0) appendEvents(ctx, boot);
 
 		pi.setActiveTools(GAME_TOOLS);
@@ -691,6 +841,27 @@ export default function (pi: ExtensionAPI) {
 		// An open OFFER never binds: the seeker speaking past it (any turn that
 		// is not its own /pick resolution) lets it lapse. Twists stay standing.
 		if (st.pendingChoice?.kind === "offer") appendEvents(ctx, [{ ev: "offer_dropped" }]);
+		// The world is alive: when the wound fuse has run out — and no gate
+		// stands, and the tale is past its opening grace — the world strikes.
+		// The keeper narrates it THIS turn (the standing layer carries it);
+		// the seeker's die decides (/roll). A new fuse winds after resolution.
+		if (
+			!st.dead &&
+			st.fuse &&
+			st.chats >= st.fuse.at + st.fuse.turns &&
+			st.chats >= PERIL_GRACE_TURNS &&
+			!st.pendingChoice &&
+			!st.pendingRoll
+		) {
+			const clock = drawPerilTier(st.level, (n) => randomInt(n));
+			const { tier, dc } = TIERS[clock];
+			const kind = PERILS[randomInt(PERILS.length)];
+			const text = `${kind} — at ${st.place?.title ?? "the road"}, unlooked for`;
+			appendEvents(ctx, [
+				{ ev: "peril", kind, tier, dc, text },
+				{ ev: "check", slug: "", tier, dc, trial: text, kind: "peril" },
+			]);
+		}
 		// In-game archive recall: search the sitting's FULL record (compaction
 		// notwithstanding — getBranch keeps every entry) for this turn's words
 		// and hand the hits to the keeper through a prompt layer. Pure code,
@@ -777,9 +948,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerMessageRenderer<{ kind?: string; query?: string }>("world-console.command", (message, options, theme) => {
 		const { kind, query } = message.details ?? {};
 		const line =
-			kind && query
-				? `· the seeker invokes the scrying glass — ${kind}: "${query}"`
-				: "· the seeker invokes the scrying glass";
+			kind === "quest-accept"
+				? `· the seeker takes up a matter — "${query ?? ""}"`
+				: kind && query
+					? `· the seeker invokes the scrying glass — ${kind}: "${query}"`
+					: "· the seeker invokes the scrying glass";
 		return new Text(theme.fg("dim", line), options.outputPad, 0);
 	});
 
@@ -1035,6 +1208,10 @@ export default function (pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			const trial = st.pendingRoll;
 			if (!trial) {
+				if (st.dead) {
+					ctx.ui.notify("The tale has ended — no die remains to cast. A new tale begins with /new.", "info");
+					return;
+				}
 				// A choice, not a die, may be what actually stands.
 				if (st.pendingChoice) {
 					ctx.ui.notify(
@@ -1085,8 +1262,61 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify("No trial stands — there is nothing to roll.", "info");
 				return;
 			}
-			const u = st.undertakings[trial.slug];
 			const files = worldFiles();
+			// A PERIL (slug "") is the world's own strike: no quest, no clock —
+			// the stake is the seeker's skin. Wounds land on a bad die; three
+			// wounds end the tale. A new fuse winds once the die has fallen.
+			if (trial.slug === "" || trial.kind === "peril") {
+				let result: { dice: number[]; kept: number; grit: boolean } | null;
+				if (ctx.mode === "tui" && typeof ctx.ui.custom === "function") {
+					result = await rollCeremony(ctx, trial, false); // no grit against the world
+					if (!result) return; // escaped before casting — the peril stands
+				} else {
+					const count = trial.edge ? 2 : 1;
+					const dice = Array.from({ length: count }, () => randomInt(1, 21));
+					const kept =
+						trial.edge === "favored" ? Math.max(...dice) : trial.edge === "hindered" ? Math.min(...dice) : dice[0];
+					result = { dice, kept, grit: false };
+				}
+				const band = rollBand(result.kept, trial.dc);
+				const events: GameEvent[] = [
+					{ ev: "roll", slug: "", dice: result.dice, kept: result.kept, dc: trial.dc, band, grit: false },
+					{ ev: "outcome", slug: "", band, add: 0, text: `the peril "${trial.trial}" — ${band}` },
+				];
+				let dies = false;
+				if (band === "setback") {
+					const hurt = trial.dc >= 20 ? 2 : 1;
+					dies = st.wounds + hurt >= MAX_WOUNDS;
+					events.push({ ev: "wound", add: hurt, reason: trial.trial });
+					if (dies) events.push({ ev: "death", reason: trial.trial });
+				}
+				if (!dies) {
+					events.push({ ev: "peril_fuse", at: st.chats, turns: drawFuseTurns(st.level, (n) => randomInt(n)) });
+				}
+				appendEvents(ctx, events);
+				const guidance = dies
+					? `the blow is MORTAL — the seeker DIES here. Narrate the end with weight and honesty: what they were, what remains, who will remember. The tale is over; nothing undoes it.`
+					: band === "setback"
+						? `the world draws blood — the seeker is WOUNDED (${st.wounds}/${MAX_WOUNDS}; at three the tale ends). Narrate the hurt honestly; the scene stays open.`
+						: band === "cost"
+							? `the seeker escapes by a hair — unhurt, but it COSTS something visible in this scene (time, coin, standing, a dropped thing). Name the price.`
+							: band === "great"
+								? `the seeker turns the strike to their favor — narrate the escape with flair and let a small earned advantage show.`
+								: `the seeker weathers it — narrate the escape; the scene carries on.`;
+				pi.sendMessage(
+					{
+						customType: "world-console.roll",
+						content:
+							`[engine:${ENGINE_NONCE}] The die fell against the world's strike ("${trial.trial}"): kept ${result.kept} ` +
+							`against DC ${trial.dc} — ${band}. Narrate: ${guidance} Diegetically, never the mechanics.`,
+						display: true,
+						details: { kept: result.kept, dc: trial.dc, band, dice: result.dice, grit: false },
+					},
+					{ triggerTurn: true },
+				);
+				return;
+			}
+			const u = st.undertakings[trial.slug];
 			const quest = questBySlug(files, trial.slug);
 			if (!u || !quest) {
 				ctx.ui.notify("The trial's quest is missing from the chronicle — raise it at the GM table (/gm).", "error");
@@ -1177,8 +1407,341 @@ export default function (pi: ExtensionAPI) {
 			const barred = st.banned ? " · glass BARRED" : "";
 			const head =
 				`world: ${st.world ?? worldId} · seeker: ${st.playerName ?? "unnamed"} · mood: ${st.mood}${barred} · at: ${st.place?.title ?? "nowhere"}\n` +
+				`level ${st.level} (score ${st.score}) · wounds ${st.wounds}/${MAX_WOUNDS}${st.dead ? " · ☠ the tale has ended" : ""}\n` +
 				`${st.chats} messages · ${st.searches} searches granted · ${st.refusals} refused`;
 			ctx.ui.notify(`${head}\n${lines.slice(-n).join("\n") || "(no events yet)"}`, "info");
+		},
+	});
+
+	// ---- the seeker's records: /quest, /place, /persons, /history ----------
+
+	/** The four active matters as board cells (open and done quests). */
+	function questCells(files: WorldFiles): GridCell[] {
+		const slugs = openQuestLines(files)
+			.map((line) => line.match(/\(id: (.+)\)$/)?.[1])
+			.filter((slug): slug is string => !!slug)
+			.slice(0, 4);
+		return slugs.map((slug) => {
+			const quest = questBySlug(files, slug);
+			if (!quest) return { lines: [slug] };
+			const u = st.undertakings[slug];
+			const clock =
+				u && u.size > 0
+					? `${u.filled}/${u.size}`
+					: quest.clock
+						? `${quest.clock.filled}/${quest.clock.size}`
+						: "—";
+			const flag =
+				st.pendingChoice?.slug === slug
+					? "⟡ a choice stands open"
+					: st.pendingRoll?.slug === slug
+						? "⚀ a die must fall"
+						: quest.status === "done"
+							? "✓ done — redeem at the giver"
+							: "";
+			return {
+				lines: [
+					`${quest.status === "done" ? "✓" : "◔"} ${quest.title}`,
+					`clock ${clock} · ${quest.giverSlug === "self" ? "self-set" : `for ${quest.giver}`}`,
+					flag,
+				].filter(Boolean),
+			};
+		});
+	}
+
+	/** The quest board: a four-slot window in the dice ceremony's dress. */
+	function questWindow(ctx: ExtensionContext, cells: GridCell[]): Promise<null> {
+		return ctx.ui.custom<null>(
+			(_tui, theme, _keybindings, done) => ({
+				render(width: number): string[] {
+					const inner = Math.min(width - 2, 74);
+					const frame = (line: string) => theme.fg("borderAccent", "│ ") + truncateToWidth(line, inner - 4, "…");
+					const head = theme.fg("accent", "⟡ THE CHRONICLE'S FOUR SLOTS — open matters");
+					const grid = gridBox(cells, inner - 6, (border) => theme.fg("borderAccent", border));
+					const hint = theme.fg("dim", "[any key] close · shelved & untaken matters: the note below");
+					return [
+						theme.fg("borderAccent", "╭" + "─".repeat(inner - 2)),
+						...[head, ...grid, hint].map(frame),
+						theme.fg("borderAccent", "╰" + "─".repeat(inner - 2)),
+					];
+				},
+				handleInput() {
+					done(null);
+				},
+			}),
+			{
+				overlay: true,
+				overlayOptions: { anchor: "bottom-center", offsetY: -3, width: 76, maxHeight: 16 },
+			},
+		);
+	}
+
+	/** Shelved + untaken lists (with accept ids) for /quest's note. */
+	function questSidelines(files: WorldFiles): string {
+		const shelved = shelvedQuests(files).map(
+			(quest) =>
+				`  [${quest.slug}] ${quest.title} — granted at ${quest.grantedAt ?? "(unrecorded)"}${
+					st.place?.slug && quest.grantedAt === st.place.slug ? " (HERE — acceptable now)" : ""
+				}`,
+		);
+		const untaken = st.untakenOffers.flatMap((offer) =>
+			offer.options.map(
+				(option) =>
+					`  [${offer.n}.${option.id}] ${option.label} — laid at ${offer.place ?? "(the road)"}${
+						st.place?.slug && offer.place === st.place.slug ? " (HERE — acceptable now)" : ""
+					}`,
+			),
+		);
+		return [
+			shelved.length ? `Shelved (set aside by your word):\n${shelved.join("\n")}` : "",
+			untaken.length ? `Untaken courses (offered once, never again by any soul):\n${untaken.join("\n")}` : "",
+			shelved.length || untaken.length
+				? "Take one up: /quest accept <id> — standing at the place where it was laid or granted."
+				: "",
+		]
+			.filter(Boolean)
+			.join("\n");
+	}
+
+	pi.registerCommand("quest", {
+		description: "World Console: the quest board — /quest, or /quest accept <id> (shelved slug or n.m untaken course)",
+		getArgumentCompletions: (prefix: string) => {
+			if (prefix.includes(" ")) {
+				const files = worldFiles();
+				const ids = [
+					...shelvedQuests(files).map((quest) => ({ value: `accept ${quest.slug}`, label: `accept ${quest.slug} — ${quest.title} (shelved)` })),
+					...st.untakenOffers.flatMap((offer) =>
+						offer.options.map((option) => ({
+							value: `accept ${offer.n}.${option.id}`,
+							label: `accept ${offer.n}.${option.id} — ${option.label} (untaken)`,
+						})),
+					),
+				];
+				return ids.length > 0 ? ids : null;
+			}
+			return [{ value: "accept ", label: "accept — take up a shelved or untaken matter" }];
+		},
+		handler: async (args, ctx) => {
+			const files = worldFiles();
+			const accept = (args ?? "").trim().match(/^accept\s+(.+)$/i);
+			if (accept) {
+				if (st.dead) {
+					ctx.ui.notify("The tale has ended — no work remains to take up. A new tale begins with /new.", "info");
+					return;
+				}
+				const id = accept[1].trim();
+				const untakenRef = id.match(/^(\d+)[.\-](\d+)$/);
+				if (untakenRef) {
+					const n = Number(untakenRef[1]);
+					const optionId = Number(untakenRef[2]);
+					const offer = st.untakenOffers.find((entry) => entry.n === n);
+					const option = offer?.options.find((entry) => entry.id === optionId);
+					if (!offer || !option) {
+						ctx.ui.notify(`No untaken course [${id}] stands in the record — /quest lists them.`, "warning");
+						return;
+					}
+					if (offer.place && st.place?.slug !== offer.place) {
+						ctx.ui.notify(
+							`That course was laid at ${offer.place} — the seeker must stand there to take it up (now at ${st.place?.slug ?? "nowhere"}).`,
+							"warning",
+						);
+						return;
+					}
+					if (countOpenQuests(files) >= MAX_OPEN_QUESTS) {
+						ctx.ui.notify(
+							`${MAX_OPEN_QUESTS} matters already stand open — the chronicle takes no fifth. Shelve one first (ask in play).`,
+							"warning",
+						);
+						return;
+					}
+					appendEvents(ctx, [{ ev: "offer_taken", n, option: optionId }]);
+					pi.sendMessage(
+						{
+							customType: "world-console.command",
+							content:
+								`[engine:${ENGINE_NONCE}] The seeker takes up a course once laid before them and left standing: ` +
+								`"${option.label}" (from the offer "${offer.text}", laid at ${offer.place ?? "the road"}). ` +
+								`Grant it NOW with grant_quest — a giver only if the record names one; the task in one clear ` +
+								`sentence drawn from that course — then weave its taking-up into the scene and play on.`,
+							display: true,
+							details: { kind: "quest-accept", query: option.label },
+						},
+						{ triggerTurn: true },
+					);
+					return;
+				}
+				const slug = slugify(id);
+				const quest = questBySlug(files, slug);
+				if (!quest) {
+					ctx.ui.notify(`No quest "${id}" in the chronicle — /quest lists what can be taken up.`, "warning");
+					return;
+				}
+				if (quest.status !== "shelved") {
+					ctx.ui.notify(`"${quest.title}" stands [${quest.status}] — only shelved matters can be taken up.`, "warning");
+					return;
+				}
+				if (quest.grantedAt && st.place?.slug !== quest.grantedAt) {
+					ctx.ui.notify(
+						`"${quest.title}" was granted at ${quest.grantedAt} — the seeker must stand there to take it up (now at ${st.place?.slug ?? "nowhere"}).`,
+						"warning",
+					);
+					return;
+				}
+				if (countOpenQuests(files) >= MAX_OPEN_QUESTS) {
+					ctx.ui.notify(
+						`${MAX_OPEN_QUESTS} matters already stand open — the chronicle takes no fifth. Shelve one first (ask in play).`,
+						"warning",
+					);
+					return;
+				}
+				setQuestStatus(files, slug, "open", "taken up again by the seeker");
+				appendEvents(ctx, [{ ev: "quest", action: "revived", title: quest.title }]);
+				pi.sendMessage(
+					{
+						customType: "world-console.command",
+						content:
+							`[engine:${ENGINE_NONCE}] The seeker takes up the shelved matter "${quest.title}" again ` +
+							`(task: ${quest.task}). It stands [open] once more — weave its return into the scene and play on.`,
+						display: true,
+						details: { kind: "quest-accept", query: quest.title },
+					},
+					{ triggerTurn: true },
+				);
+				return;
+			}
+			const cells = questCells(files);
+			const sidelines = questSidelines(files);
+			const stats = `open ${countOpenQuests(files)}/${MAX_OPEN_QUESTS} · done-awaiting-reward ${
+				openQuestLines(files).filter((line) => line.startsWith("[done]")).length
+			} · rewarded ${st.tally.rewarded} · failed ${st.tally.failed} · shelved ${Math.max(0, st.tally.shelved - st.tally.revived)}`;
+			if (ctx.mode === "tui" && typeof ctx.ui.custom === "function" && cells.length > 0) {
+				await questWindow(ctx, cells);
+			}
+			const board =
+				cells.length > 0
+					? cells.map((cell) => `  ${cell.lines.join(" · ")}`).join("\n")
+					: "  (no open matters — the world waits)";
+			ctx.ui.notify(`⟡ the quest board\n${board}\n${stats}${sidelines ? `\n\n${sidelines}` : ""}`, "info");
+		},
+	});
+
+	/** Shared list/detail command body for /place and /persons. */
+	async function pagesCommand(
+		ctx: ExtensionContext,
+		args: string,
+		kind: "places" | "personas",
+	): Promise<void> {
+		const files = worldFiles();
+		const name = (args ?? "").trim();
+		if (name) {
+			const slug = slugify(name);
+			const page = kind === "places" ? placePage(files, slug) : personaPage(files, slug);
+			if (!page) {
+				ctx.ui.notify(`No ${kind === "places" ? "place" : "soul"} "${name}" in the chronicle.`, "warning");
+				return;
+			}
+			ctx.ui.notify(clip(page, 3000), "info");
+			return;
+		}
+		const pages = listPages(files, kind);
+		if (pages.length === 0) {
+			ctx.ui.notify(`The chronicle holds no ${kind === "places" ? "places" : "souls"} yet.`, "info");
+			return;
+		}
+		const lines = pages.map((page) => {
+			const here = kind === "places" && st.place?.slug === page.slug ? " ← the party stands here" : "";
+			return `  ${page.title}${here}\n    ${clip(page.firstLine, 90) || "(no description recorded)"}`;
+		});
+		const head = kind === "places" ? `⟡ places walked or chronicled (${pages.length})` : `⟡ souls met (${pages.length})`;
+		ctx.ui.notify(`${head}\n${lines.join("\n")}\n\nDetails: /${kind === "places" ? "place" : "persons"} <name>`, "info");
+	}
+
+	pi.registerCommand("place", {
+		description: "World Console: places of the chronicle — /place lists them, /place <name> shows the page",
+		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "places"),
+	});
+	pi.registerCommand("persons", {
+		description: "World Console: souls of the chronicle — /persons lists them, /persons <name> shows the page",
+		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "personas"),
+	});
+
+	/** The events worth a timeline line (ticks and machinery stay out). */
+	function historyLine(event: GameEvent): string | null {
+		switch (event.ev) {
+			case "world":
+			case "player_named":
+			case "place":
+			case "quest":
+			case "truth":
+			case "truth_retracted":
+			case "peril":
+			case "wound":
+			case "heal":
+			case "death":
+				return describeEvent(event);
+			case "outcome":
+				return event.slug ? null : describeEvent(event); // peril outcomes only
+			default:
+				return null;
+		}
+	}
+
+	pi.registerCommand("history", {
+		description: "World Console: the tale so far — /history (timeline + achievements), /history long (the chronicler's saga)",
+		getArgumentCompletions: (prefix: string) =>
+			"long".startsWith(prefix.toLowerCase()) ? [{ value: "long", label: "long — a written saga of the sitting (one side call)" }] : null,
+		handler: async (args, ctx) => {
+			const wantLong = (args ?? "").trim().toLowerCase() === "long";
+			const achievements = [
+				`⟡ the tale in numbers — renown level ${st.level} (score ${st.score})${st.dead ? " · ☠ ENDED" : ""}`,
+				`  quests: ${st.tally.granted} granted · ${st.tally.rewarded} rewarded · ${st.tally.failed} failed · ${Math.max(0, st.tally.shelved - st.tally.revived)} shelved · ${countOpenQuests(worldFiles())} open`,
+				`  world: ${st.tally.placesVisited} places walked · ${st.tally.placesChronicled} chronicled from afar · ${st.tally.personasMet} souls met`,
+				`  fortune: ${st.tally.items} items gained · wounds ${st.wounds}/${MAX_WOUNDS}`,
+				`  fate: ${st.tally.picks} paths chosen · ${st.tally.rolls} dice cast · ${st.tally.perils} perils faced · ${st.tally.truthsBound} truths bound`,
+				`  the glass: ${st.searches} scryings granted · ${st.refusals} refused · ${st.chats} words spoken`,
+			].join("\n");
+			if (wantLong) {
+				if (!ctx.model) {
+					ctx.ui.notify("The chronicler needs a model — pick one with /model first.", "error");
+					return;
+				}
+				try {
+					const lines = withTail(archiveLinesOf(ctx).map(formatArchiveLine), 400);
+					const saga = await gmChronicle({
+						config,
+						model: { provider: ctx.model.provider, id: ctx.model.id },
+						lines,
+					});
+					ctx.ui.notify(`${saga}\n\n${achievements}`, "info");
+				} catch (error) {
+					ctx.ui.notify(
+						`The chronicler could not be reached (${(error as Error).message}) — the plain timeline instead:\n\n` +
+							`${withTail(
+								ctx.sessionManager
+									.getBranch()
+									.map((entry) => asGameEvent(entry))
+									.filter((event): event is GameEvent => !!event)
+									.map(describeEvent),
+								120,
+							).join("\n")}\n\n${achievements}`,
+						"info",
+					);
+				}
+				return;
+			}
+			const timeline = withTail(
+				ctx.sessionManager
+					.getBranch()
+					.map((entry) => asGameEvent(entry))
+					.filter((event): event is GameEvent => !!event)
+					.map(historyLine)
+					.filter((line): line is string => !!line),
+				40,
+			);
+			ctx.ui.notify(
+				`⟡ the tale so far\n${timeline.map((line) => `  ${line}`).join("\n") || "  (nothing yet)"}\n\n${achievements}\n\nA fuller telling: /history long`,
+				"info",
+			);
 		},
 	});
 
@@ -1332,6 +1895,7 @@ export default function (pi: ExtensionAPI) {
 					recentPlay: branchPlayLines(ctx),
 					ledgerLines: branchLedgerLines(ctx),
 					excerpts: searchArchive(archiveLinesOf(ctx), extractKeywords(trimmed)).map(formatArchiveLine),
+					answerSheets: resolvedAnswerSheets(),
 					model,
 				},
 				gmThread,
@@ -1692,7 +2256,7 @@ export default function (pi: ExtensionAPI) {
 			details: Type.String({ description: "The new details, a few plain sentences" }),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
-			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place FIRST in this same reply: invent the place from the story’s own cues (name and description); never ask the seeker to name it.");
 			if (!extendPlace(worldFiles(), st.place.slug, params.details)) {
 				throw new Error(`No page exists for ${st.place.title} — set_place founds it.`);
 			}
@@ -1732,7 +2296,7 @@ export default function (pi: ExtensionAPI) {
 				}
 				placeSlug = slugify(placeName);
 			} else {
-				if (!st.place) throw new Error("The party stands nowhere yet — set_place first, or name a chronicled place.");
+				if (!st.place) throw new Error("The party stands nowhere yet — set_place FIRST in this same reply (invent the place from the story’s cues; never ask the seeker to name it), or name a chronicled place for this soul.");
 				placeSlug = st.place.slug;
 			}
 			const result = recordPersona(files, name, role, dealings, placeSlug);
@@ -1785,9 +2349,16 @@ export default function (pi: ExtensionAPI) {
 			),
 			task: Type.String({ description: "What must be done, plainly" }),
 			reward: Type.String({ description: "What the seeker earns on completion" }),
+			weight: Type.Optional(
+				StringEnum(["easy", "middling", "hard"], {
+					description:
+						"ONLY when the fiction plainly signals scale (a dragon's head is never easy; a lost cat never hard). Omitted, the engine draws it from the seeker's renown.",
+				}),
+			),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			ensureAlive();
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place FIRST in this same reply: invent the place from the story’s own cues; never ask the seeker to name it. Then grant the work.");
 			const title = params.title.trim();
 			if (!title) throw new Error("Empty quest title.");
 			const task = params.task.trim();
@@ -1805,10 +2376,10 @@ export default function (pi: ExtensionAPI) {
 			}
 			if (countOpenQuests(files) >= MAX_OPEN_QUESTS) {
 				throw new Error(
-					`${MAX_OPEN_QUESTS} matters already stand open — the chronicle takes no fifth. See one through first.`,
+					`${MAX_OPEN_QUESTS} matters already stand open — the chronicle takes no fifth. Lay the four before the seeker (offer_choices) and ask which to set aside; shelve_quest the one they name, then grant this anew. If they keep all four, this work waits.`,
 				);
 			}
-			const shape = drawShape(!giver);
+			const shape = drawShape(!giver, params.weight);
 			const { slug } = grantQuest(files, {
 				title,
 				giver,
@@ -1819,7 +2390,15 @@ export default function (pi: ExtensionAPI) {
 			});
 			appendEvents(ctx, [
 				{ ev: "quest", action: "granted", title },
-				{ ev: "quest_shape", slug, clock: shape.clock, twist: shape.twist, check: shape.check },
+				{
+					ev: "quest_shape",
+					slug,
+					clock: shape.clock,
+					twist: shape.twist,
+					check: shape.check,
+					mids: shape.mids ?? [],
+					selfSet: !giver,
+				},
 			]);
 			return {
 				content: [
@@ -1854,6 +2433,7 @@ export default function (pi: ExtensionAPI) {
 			),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
 			const approach = params.approach.trim();
 			if (!approach) throw new Error("Empty approach — say what the seeker actually does.");
 			const files = worldFiles();
@@ -1862,6 +2442,7 @@ export default function (pi: ExtensionAPI) {
 			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
 			if (quest.status === "rewarded") throw new Error(`"${quest.title}" is already rewarded and closed.`);
 			if (quest.status === "failed") throw new Error(`"${quest.title}" failed and is closed — the story moves on.`);
+			if (quest.status === "shelved") throw new Error(`"${quest.title}" is shelved — only the seeker may take it up again.`);
 			if (quest.status === "done") throw new Error(`The deed of "${quest.title}" is done — redeem_quest awaits.`);
 
 			let u = st.undertakings[slug];
@@ -1894,6 +2475,29 @@ export default function (pi: ExtensionAPI) {
 					details: { slug, rollPending: true },
 				};
 			}
+			// ONE GATE HOLDS ALL WORK: while any choice or die stands unresolved
+			// — on another quest, or the world's own peril — nothing anywhere
+			// advances (G9/G10: the peak can never slip past its trial by way of
+			// a side errand). Talk stays free; work waits.
+			if (st.pendingChoice || st.pendingRoll) {
+				const standing =
+					st.pendingChoice?.kind === "twist"
+						? `a choice on "${st.pendingChoice.slug}" stands unresolved`
+						: st.pendingChoice
+							? "laid choices await the seeker's word"
+							: st.pendingRoll?.kind === "peril"
+								? "the world's own peril bars the way"
+								: `a die on "${st.pendingRoll?.slug}" has not fallen`;
+				return {
+					content: [
+						{
+							type: "text",
+							text: `No work advances — ${standing}. Steer the scene back to that moment; only the seeker's word or die opens the way (nothing may be resolved around it).`,
+						},
+					],
+					details: { slug, held: true },
+				};
+			}
 			if (u.filled >= u.size) {
 				return {
 					content: [
@@ -1904,25 +2508,32 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const nextBeat = u.beatsDone + 1;
-			const gatesOpen = !st.pendingChoice && !st.pendingRoll;
 
-			/** Declare a trial on this beat — the stakes contract, then the die. */
-			const declareTrial = (kind: "finale" | "hazard") => {
+			/** Declare a trial on this beat — the stakes contract, then the die.
+			 * HINDERED BEATS MERCY (G10): a reckless stroke earns the worst of
+			 * two dice even mid-cold-streak — the fates relent only for the
+			 * careful; the clamp waits for the next honest trial. */
+			const declareTrial = (kind: "finale" | "hazard" | "checkpoint") => {
 				const { tier, dc } = TIERS[u.size] ?? TIERS[6];
 				let edge: "favored" | "hindered" | undefined;
 				let edgeReason: string | undefined;
-				if (u.coldStreak >= 2) {
+				if (params.edge === "hindered") {
+					edge = "hindered";
+					edgeReason = params.edge_reason?.trim() || "the keeper's judgment of the seeker's position";
+				} else if (u.coldStreak >= 2) {
 					edge = "favored"; // the karmic clamp: two straight setbacks
 					edgeReason = "the fates relent after the run of misfortune";
-				} else if (params.edge === "favored" || params.edge === "hindered") {
-					edge = params.edge;
+				} else if (params.edge === "favored") {
+					edge = "favored";
 					edgeReason = params.edge_reason?.trim() || "the keeper's judgment of the seeker's position";
 				}
 				appendEvents(ctx, [{ ev: "check", slug, tier, dc, trial: clip(approach, 80), kind, edge, edgeReason }]);
 				const framing =
 					kind === "finale"
 						? `The completing stroke of "${quest.title}" is a trial — the moment that decides it: ${tier} (DC ${dc})`
-						: `The seeker attempts this against the odds — the stroke must earn itself: ${tier} (DC ${dc})`;
+						: kind === "hazard"
+							? `The seeker attempts this against the odds — the stroke must earn itself: ${tier} (DC ${dc})`
+							: `This stretch of "${quest.title}" is a trial in its own right — no idle beat: ${tier} (DC ${dc})`;
 				return {
 					content: [
 						{
@@ -1940,8 +2551,7 @@ export default function (pi: ExtensionAPI) {
 			};
 
 			// Twist beat: the plan is woven and unspent — present the paths.
-			// (Deferred while another choice or die is pending: one at a time.)
-			if (u.twist > 0 && u.plan && !u.presented && nextBeat >= u.twist && gatesOpen) {
+			if (u.twist > 0 && u.plan && !u.presented && nextBeat >= u.twist) {
 				const options = presentableOptions(u.plan, files);
 				appendEvents(ctx, [{ ev: "complication", slug, text: u.plan.complication, options }]);
 				const lines = options.map(
@@ -1969,11 +2579,15 @@ export default function (pi: ExtensionAPI) {
 				let plan: FatePlan | null = null;
 				if (ctx.model) {
 					try {
+						// The planner grounds the twist in the place's own page —
+						// what the record already knows, never thin air (A5).
+						const page = st.place ? clip(placePage(files, st.place.slug), 1200) : "";
 						plan = await gmPlanFate({
 							config,
 							model: { provider: ctx.model.provider, id: ctx.model.id },
 							quest: { title: quest.title, task: quest.task, reward: quest.reward, giver: quest.giver },
 							placeTitle: st.place?.title ?? "the road",
+							placeBody: page || undefined,
 							personasHere: st.place ? personasAt(files, st.place.slug) : [],
 							seekerName: st.playerName ?? "the seeker",
 							suit: drawSuit(),
@@ -2017,14 +2631,22 @@ export default function (pi: ExtensionAPI) {
 
 			// The finale: whatever attempt would COMPLETE the work is a trial —
 			// the peak is always contested, never a flat tick (playtest verdict).
-			if (u.check > 0 && !u.checkFired && u.filled + TICK >= u.size && gatesOpen) {
+			if (u.check > 0 && !u.checkFired && u.filled + TICK >= u.size) {
 				return declareTrial("finale");
+			}
+
+			// A checkpoint: this beat was drawn contested at the grant (the
+			// ≤1-autoresolve rule — at most one beat of any quest passes as a
+			// plain tick; the rest are twists, clue weaves, or trials). A
+			// hindered attempt here folds into the same die (worst of two).
+			if (u.checkpointsFired < u.mids.length && nextBeat >= u.mids[u.checkpointsFired]) {
+				return declareTrial("checkpoint");
 			}
 
 			// A hazard: the keeper says the fiction stacks against this attempt
 			// (outnumbered, unprepared, reckless haste) — the bold stroke must
 			// earn itself. Sound tactics that remove the hindrance tick freely.
-			if (params.edge === "hindered" && gatesOpen) {
+			if (params.edge === "hindered") {
 				return declareTrial("hazard");
 			}
 
@@ -2051,16 +2673,17 @@ export default function (pi: ExtensionAPI) {
 		name: "offer_choices",
 		label: "Lay out the choices",
 		description:
-			"Lay real alternatives cleanly before the seeker — a board of tasks, a fork in the road, rival requests, which reward to take. 2–5 short options; the seeker picks one through the panel (or simply speaks on, which lets the offer lapse — it never binds). Use when a scene genuinely presents distinct courses; never to railroad, and never for a twist's sealed paths (the engine presents those itself).",
+			"Lay real alternatives cleanly before the seeker — a board of tasks, a fork in the road, rival requests, which reward to take. 2–4 short options (the board holds four slots); the seeker picks one through the panel (or simply speaks on, which lets the offer lapse — it never binds). Use when a scene genuinely presents distinct courses; never to railroad, and never for a twist's sealed paths (the engine presents those itself).",
 		parameters: Type.Object({
 			prompt: Type.String({ description: "The question before the seeker, one line, e.g. 'Which task calls to you?'" }),
 			options: Type.Array(Type.String({ description: "One course, plainly named" }), {
 				minItems: 2,
-				maxItems: 5,
+				maxItems: 4,
 				description: "The distinct courses open to the seeker",
 			}),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
 			const prompt = params.prompt.trim();
 			if (!prompt) throw new Error("Empty prompt — name the question before the seeker.");
 			const labels = params.options.map((option) => option.trim()).filter(Boolean);
@@ -2074,7 +2697,9 @@ export default function (pi: ExtensionAPI) {
 				risk: "",
 				promise: "",
 			}));
-			appendEvents(ctx, [{ ev: "offer", text: prompt, options }]);
+			// The place anchors untaken courses: only there may the seeker later
+			// take one up (/quest accept) — never through a fresh offer.
+			appendEvents(ctx, [{ ev: "offer", text: prompt, options, place: st.place?.slug }]);
 			return {
 				content: [
 					{
@@ -2101,20 +2726,28 @@ export default function (pi: ExtensionAPI) {
 			done: Type.Boolean({ description: "True when the deed is fully done" }),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
 			const files = worldFiles();
 			const slug = slugify(params.title);
 			const quest = questBySlug(files, slug);
 			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
 			if (quest.status === "rewarded") throw new Error(`"${quest.title}" is already rewarded and closed.`);
 			if (quest.status === "failed") throw new Error(`"${quest.title}" failed and is closed — the story moves on.`);
+			if (quest.status === "shelved") throw new Error(`"${quest.title}" is shelved — only the seeker may take it up again.`);
 			const advance = params.done && quest.status === "open";
 			if (advance) {
 				// The deed is done only when the work is: the branch-derived clock
-				// gates it (quests.md's line is a mirror; legacy quests have none).
+				// gates it (quests.md's line is a mirror). A quest with no clock
+				// at all has seen no work — the gate holds absolutely.
 				const u = st.undertakings[slug];
 				const size = u && u.size > 0 ? u.size : quest.clock?.size ?? 0;
 				const filled = u && u.size > 0 ? u.filled : quest.clock?.filled ?? 0;
-				if (size > 0 && filled < size) {
+				if (size === 0) {
+					throw new Error(
+						`No work on "${quest.title}" is recorded at all — honest effort first (attempt_quest); words alone do not finish a task.`,
+					);
+				}
+				if (filled < size) {
 					throw new Error(
 						`The deed is not done — the work stands at ${filled}/${size}. Honest effort advances it (attempt_quest); words alone do not.`,
 					);
@@ -2137,6 +2770,60 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
+		name: "shelve_quest",
+		label: "Set a matter aside",
+		description:
+			"Shelve an OPEN quest at the seeker's word — it leaves the four open slots, disabled but not dead. Use ONLY when the seeker chooses to set it aside (usually to make room for a fifth matter). A shelved quest may never be offered again by any soul or board; only the seeker can take it up (/quest accept, at the place it was granted).",
+		parameters: Type.Object({
+			title: Type.String({ description: "The open quest to set aside" }),
+			note: Type.String({ description: "One line: why the seeker set it aside (recorded)" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
+			const files = worldFiles();
+			const slug = slugify(params.title);
+			const quest = questBySlug(files, slug);
+			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
+			if (quest.status !== "open") throw new Error(`"${quest.title}" stands [${quest.status}] — only open work can be shelved.`);
+			if (st.pendingChoice?.slug === slug || st.pendingRoll?.slug === slug) {
+				throw new Error(`A choice or die stands unresolved on "${quest.title}" — it must be answered, not shelved.`);
+			}
+			setQuestStatus(files, slug, "shelved", params.note.trim() || "set aside by the seeker");
+			appendEvents(ctx, [{ ev: "quest", action: "shelved", title: quest.title }]);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `"${quest.title}" is shelved — a slot stands free. Only the seeker may take it up again (the engine shows them how); never offer it anew yourself.`,
+					},
+				],
+				details: { slug },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "heal_wounds",
+		label: "Tend a wound",
+		description:
+			"Record ONE wound tended — only when the fiction truly earns it: a healer's care, real rest, a remedy paid for. Never in the same breath as the hurt, never cheaply. The engine refuses when the seeker is unhurt.",
+		parameters: Type.Object({
+			reason: Type.String({ description: "One line: what care earned this healing (recorded)" }),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
+			if (st.wounds === 0) throw new Error("The seeker is unhurt — there is nothing to tend.");
+			const reason = params.reason.trim();
+			if (!reason) throw new Error("Healing needs its story — say what care earned it.");
+			appendEvents(ctx, [{ ev: "heal", reason }]);
+			return {
+				content: [{ type: "text", text: `A wound is tended (${st.wounds}/${MAX_WOUNDS} remain). Let the relief show in the telling.` }],
+				details: { wounds: st.wounds },
+			};
+		},
+	});
+
+	pi.registerTool({
 		name: "redeem_quest",
 		label: "Collect the reward",
 		description:
@@ -2145,7 +2832,7 @@ export default function (pi: ExtensionAPI) {
 			title: Type.String({ description: "The quest's title" }),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			if (!st.place) throw new Error("The party stands nowhere yet — set_place first.");
+			if (!st.place) throw new Error("The party stands nowhere yet — set_place FIRST (invent it from the story’s cues; never ask the seeker), then redeem.");
 			const files = worldFiles();
 			const slug = slugify(params.title);
 			const quest = questBySlug(files, slug);

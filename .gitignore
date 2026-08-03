@@ -30,3 +30,7 @@ dist/
 .idea/
 *.swp
 .DS_Store
+
+# --- Playtest telemetry ----------------------------------------------------
+# Testers' session drops are private play data; reports stay tracked.
+IA/analysis/sessions-in/

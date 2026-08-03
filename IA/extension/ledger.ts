@@ -84,13 +84,24 @@ export type GameEvent =
 	| { ev: "place_chronicled"; slug: string; title: string }
 	/** A notable soul recorded or moved in the world files. */
 	| { ev: "persona"; name: string; place: string; note?: string }
-	/** Quest lifecycle mirror of quests.md. */
-	| { ev: "quest"; action: "granted" | "done" | "rewarded" | "failed"; title: string }
+	/** Quest lifecycle mirror of quests.md. "shelved" = set aside to free one of
+	 * the four slots (only the seeker may take it up again); "revived" undoes it. */
+	| { ev: "quest"; action: "granted" | "done" | "rewarded" | "failed" | "shelved" | "revived"; title: string }
 	/** Loot, pay or gifts mirrored from items.md. */
 	| { ev: "item"; text: string }
-	/** A granted quest's drawn shape: clock size, (hidden) twist beat and
-	 * (hidden) trial beat — 0 = none. Older entries lack `check`. */
-	| { ev: "quest_shape"; slug: string; clock: number; twist: number; check?: number }
+	/** A granted quest's drawn shape: clock size, (hidden) twist beat — 0 = none —
+	 * and the finale flag. `mids` are (hidden) mid-quest checkpoint-trial beats
+	 * (the ≤1-autoresolve rule); `selfSet` marks the seeker's own tasks (the
+	 * scripted-opening rule needs to know). Older entries lack the new fields. */
+	| {
+			ev: "quest_shape";
+			slug: string;
+			clock: number;
+			twist: number;
+			check?: number;
+			mids?: number[];
+			selfSet?: boolean;
+	  }
 	/** One beat of real work on a quest; add is the segment delta. */
 	| { ev: "quest_tick"; slug: string; add: number; filled: number; size: number; note?: string }
 	/** The sealed fate plan for a quest's twist (hidden answer sheet; veiled in /ledger). */
@@ -102,21 +113,28 @@ export type GameEvent =
 	/** The seeker's pick (option id from the presented list; slug "" = an open offer). */
 	| { ev: "pick"; slug: string; option: number; label: string; extra?: string }
 	/** Open alternatives laid before the seeker (a task board, a fork in the
-	 * road) — no hidden outcomes; purely a clean way to point at a course. */
-	| { ev: "offer"; text: string; options: PresentedOption[] }
+	 * road) — no hidden outcomes; purely a clean way to point at a course.
+	 * `place` (the party's place slug at laying) anchors untaken courses: only
+	 * there may the seeker later take one up via /quest accept. */
+	| { ev: "offer"; text: string; options: PresentedOption[]; place?: string }
 	/** The seeker spoke past an open offer — it lapses (offers never bind). */
 	| { ev: "offer_dropped" }
+	/** A formerly offered, untaken course was taken up via /quest accept
+	 * (n = the offer's ordinal on this branch, option = the course's id). */
+	| { ev: "offer_taken"; n: number; option: number }
 	/** A trial bars a stretch of work: the stakes contract, announced openly
 	 * (tier and DC public before the die is cast — only the die is unknown).
 	 * kind "finale" (default) contests the completing stroke and fires once;
-	 * kind "hazard" contests a hindered attempt and may recur. */
+	 * kind "hazard" contests a hindered attempt and may recur; kind
+	 * "checkpoint" contests a drawn mid-quest beat (the ≤1-autoresolve rule);
+	 * kind "peril" is a world interruption — slug "" (bound to no quest). */
 	| {
 			ev: "check";
 			slug: string;
 			tier: string;
 			dc: number;
 			trial: string;
-			kind?: "finale" | "hazard";
+			kind?: "finale" | "hazard" | "checkpoint" | "peril";
 			edge?: "favored" | "hindered";
 			edgeReason?: string;
 	  }
@@ -124,48 +142,171 @@ export type GameEvent =
 	 * kept face, and the band the margin earned. Engine-rolled, never narrated. */
 	| { ev: "roll"; slug: string; dice: number[]; kept: number; dc: number; band: string; grit: boolean }
 	/** The engine's resolution of a pick or a roll: band is public once resolved. */
-	| { ev: "outcome"; slug: string; band: string; add: number; text: string };
+	| { ev: "outcome"; slug: string; band: string; add: number; text: string }
+	/** A woven or presented twist dissolves without a pick — a GM-table repair
+	 * for records the played story outran (a crash, a lost presentation, the
+	 * fiction moving past the garden). The plan opens like any resolved fate. */
+	| { ev: "twist_dropped"; slug: string; reason: string }
+	/** The fates wind a hidden spring: after `turns` more player messages past
+	 * `at`, the world itself strikes. Veiled in /ledger (A4). */
+	| { ev: "peril_fuse"; at: number; turns: number }
+	/** The world strikes — a code-drawn interruption, open stakes (its trial
+	 * follows as a check with slug ""). */
+	| { ev: "peril"; kind: string; tier: string; dc: number; text: string }
+	/** Harm taken (perils wound; three wounds end the tale). */
+	| { ev: "wound"; add: number; reason: string }
+	/** A wound tended — earned in the fiction, recorded by the engine. */
+	| { ev: "heal"; reason: string }
+	/** The seeker's tale ends. */
+	| { ev: "death"; reason: string };
 
-/** A quest's drawn structure: clock size, twist beat, trial beat (0 = none). */
+/** A quest's drawn structure: clock size, twist beat (0 = none), finale flag,
+ * and mid-quest checkpoint beats (the ≤1-autoresolve rule). */
 export interface QuestShape {
 	clock: number;
 	twist: number;
 	check: number;
+	mids?: number[];
+	selfSet?: boolean;
+}
+
+/** Renown: how far the seeker's deeds have carried them. Score grows with
+ * closed quests (won OR lost — losses teach, the Kenshi lesson), places
+ * walked and souls met; the level (1–5) steers difficulty and perils. */
+export function renown(tally: {
+	rewarded: number;
+	failed: number;
+	placesVisited: number;
+	personasMet: number;
+}): { score: number; level: number } {
+	const score =
+		3 * (tally.rewarded + tally.failed) + tally.placesVisited + tally.personasMet;
+	return { score, level: Math.min(5, 1 + Math.floor(score / 10)) };
+}
+
+/** Difficulty weights per renown level: % chance of an easy(4) / middling(6)
+ * / hard(8) clock. Early tales lean easy with a real chance of worse; by the
+ * end most work is hard. (The keeper may also NAME a weight when the fiction
+ * plainly signals scale — a dragon's head is never an easy clock.) */
+export const DIFFICULTY_BY_LEVEL: readonly [number, number, number][] = [
+	[55, 35, 10],
+	[45, 35, 20],
+	[30, 40, 30],
+	[20, 35, 45],
+	[10, 30, 60],
+];
+
+const CLOCK_BY_WEIGHT = { easy: 4, middling: 6, hard: 8 } as const;
+
+/** Pick 4/6/8 from the level's weights with one rand(100) throw. */
+function drawClock(level: number, rand: (n: number) => number): number {
+	const [easy, middling] = DIFFICULTY_BY_LEVEL[Math.max(0, Math.min(4, level - 1))];
+	const throwv = rand(100);
+	return throwv < easy ? 4 : throwv < easy + middling ? 6 : 8;
 }
 
 /**
- * Draw a quest's shape — the code-owned pacing rules (goals P2/P3/P5).
- * Since the playtest round, every pool shape arms a FINALE trial (check > 0):
- * the completing stroke of any quest is always contested. The rules left to
- * the draw:
- *  - self-set tasks carry no twist (the seeker's own goals stay simple —
- *    their finale is still a trial);
- *  - the OPENING is scripted: a story's first given quest carries a twist
- *    (RimWorld's lesson — show the game's whole machinery, then breathe);
- *  - no twist right after a twisted quest (P2's breather);
- *  - never the identical shape twice when another is available.
+ * Draw a quest's shape — the code-owned pacing rules (goals P2/P3/P5, G13).
+ * Every shape arms a FINALE (check 1): the completing stroke is always
+ * contested. Difficulty comes first (renown weights, or the keeper's named
+ * weight), then the twist, then the checkpoint map:
+ *  - self-set tasks carry no twist (their finale still stands);
+ *  - the OPENING is scripted: a story's first GIVEN quest carries a twist
+ *    (RimWorld's lesson) — its clock is at least 6 (4-clocks are too short
+ *    to twist);
+ *  - no twist right after a twisted quest (P2's breather); otherwise a
+ *    6/8-clock twists 2 in 3;
+ *  - never the identical (clock, twist) shape twice when avoidable;
+ *  - ≤1 AUTORESOLVE per quest: at most one beat may pass as a plain
+ *    uncontested tick — every other beat carries a twist, a clue weave or a
+ *    drawn CHECKPOINT trial; the soft beat's position varies with the draw.
  * `rand(n)` returns an integer in [0, n) — injected so tests are exact.
  */
-export function drawQuestShape(
-	shapes: readonly QuestShape[],
-	last: QuestShape | undefined,
-	selfSet: boolean,
-	rand: (n: number) => number,
-): QuestShape {
-	let pool = shapes.filter((shape) => {
-		if (selfSet) return shape.twist === 0;
-		if (!last) return shape.twist > 0; // the scripted opening
-		if (last.twist > 0 && shape.twist > 0) return false;
-		return true;
-	});
-	if (pool.length === 0) pool = [...shapes];
-	const unlike = pool.filter(
-		(shape) =>
-			!(last && shape.clock === last.clock && shape.twist === last.twist && shape.check === last.check),
-	);
-	const from = unlike.length > 0 ? unlike : pool;
-	return from[rand(from.length)];
+export function drawQuestShape(opts: {
+	level: number;
+	last: QuestShape | undefined;
+	selfSet: boolean;
+	/** True until a story's first GIVEN quest is granted. */
+	opening: boolean;
+	/** The keeper's named difficulty, when the fiction plainly signals scale. */
+	weight?: "easy" | "middling" | "hard";
+	rand: (n: number) => number;
+}): QuestShape {
+	const { last, selfSet, opening, rand } = opts;
+	let clock = opts.weight ? CLOCK_BY_WEIGHT[opts.weight] : drawClock(opts.level, rand);
+	// The twist: forced open on the scripted opening, barred after a twisted
+	// quest and on self-set tasks, else a 2-in-3 draw on twist-able clocks.
+	let twist = 0;
+	if (!selfSet) {
+		if (opening && !opts.weight && clock < 6) clock = 6; // the opening must be able to twist
+		const barred = (last?.twist ?? 0) > 0;
+		if (clock >= 6 && !barred) {
+			twist = opening || rand(3) < 2 ? (clock === 6 ? 2 : 3) : 0;
+		}
+	}
+	// Never the identical (clock, twist) twice when another size can serve —
+	// unless the keeper NAMED the weight (the fiction's scale outranks variety).
+	if (!opts.weight && last && last.clock === clock && (last.twist > 0) === (twist > 0)) {
+		const alternatives = twist > 0 ? [6, 8] : [4, 6, 8];
+		const others = alternatives.filter((size) => size !== clock);
+		clock = others[rand(others.length)];
+		if (twist > 0) twist = clock === 6 ? 2 : 3;
+	}
+	// The checkpoint map — one soft beat at most, its place drawn:
+	//   4/0 → [] (beat 1 soft, finale ends it)   6/0 → one of beats 1|2
+	//   6@2 → [] (the clue beat is the soft one)  8@3 → [1] (clues at 2)
+	//   8/0 → two of beats 1..3 (one stays soft)
+	let mids: number[] = [];
+	if (twist === 0) {
+		if (clock === 6) mids = [1 + rand(2)];
+		else if (clock === 8) {
+			const first = 1 + rand(3);
+			const rest = [1, 2, 3].filter((beat) => beat !== first);
+			mids = [first, rest[rand(2)]].sort((a, b) => a - b);
+		}
+	} else if (clock === 8) {
+		mids = [1];
+	}
+	return { clock, twist, check: 1, mids, selfSet };
 }
+
+/** The perils a fuse may spring — code-drawn kind, keeper-narrated flesh. */
+export const PERILS = [
+	"a thief's quick hand",
+	"a beast off its usual ground",
+	"a sudden sickness",
+	"foul weather turning fast",
+	"a stranger spoiling for trouble",
+	"an old debt resurfacing",
+	"a rival moving first",
+	"ground giving way",
+] as const;
+
+/** Peril severity weights per renown level: % easy / middling / hard. Even a
+ * young tale can meet a hard peril — the world owes no one safety. */
+export const PERIL_SEVERITY_BY_LEVEL: readonly [number, number, number][] = [
+	[60, 30, 10],
+	[50, 35, 15],
+	[40, 40, 20],
+	[30, 40, 30],
+	[20, 40, 40],
+];
+
+export function drawPerilTier(level: number, rand: (n: number) => number): 4 | 6 | 8 {
+	const [easy, middling] = PERIL_SEVERITY_BY_LEVEL[Math.max(0, Math.min(4, level - 1))];
+	const throwv = rand(100);
+	return throwv < easy ? 4 : throwv < easy + middling ? 6 : 8;
+}
+
+/** How many player messages until the world strikes again — shorter as the
+ * tale grows (base 8 at level 1 down to 4 at level 5, plus 0–4 of slack). */
+export function drawFuseTurns(level: number, rand: (n: number) => number): number {
+	const base = Math.max(4, 9 - Math.max(1, Math.min(5, level)));
+	return base + rand(5);
+}
+
+/** Three wounds end the tale. */
+export const MAX_WOUNDS = 3;
 
 /** Named difficulty tiers (bounded accuracy: the words stay meaningful). */
 export const TIERS: Record<number, { tier: string; dc: number }> = {
@@ -197,22 +338,58 @@ export interface Undertaking {
 	filled: number;
 	/** Twist beat (1-based), 0 = plain quest. Neutralized to 0 by fate_skipped. */
 	twist: number;
-	/** Trial beat (1-based), 0 = none. */
+	/** Finale armed (fires on the completing stroke, not at a counted beat). */
 	check: number;
+	/** Mid-quest checkpoint-trial beats, sorted (the ≤1-autoresolve rule). */
+	mids: number[];
+	/** How many checkpoint trials have been declared so far. */
+	checkpointsFired: number;
 	/** Beats consumed so far (ticks + complication + trial presentations). */
 	beatsDone: number;
 	/** The sealed plan, once woven. */
 	plan?: FatePlan;
 	/** True once the complication was presented (twists fire once). */
 	presented: boolean;
-	/** True once a pick resolved the complication. */
+	/** True once a pick resolved the complication (feeds the GM table's
+	 * post-resolution answer sheet and the /history stats). */
 	resolved: boolean;
-	/** True once the trial was declared (trials fire once). */
+	/** The option id the seeker picked, once resolved. */
+	pickedOption?: number;
+	/** True once the finale was declared (finales fire once). */
 	checkFired: boolean;
 	/** The one grit token: spent on a reroll, gone for this quest. */
 	gritUsed: boolean;
 	/** Consecutive setbacks — at two, the fates relent (open advantage). */
 	coldStreak: number;
+}
+
+/** Counters of everything the tale keeps track of — /history's achievements
+ * and the renown score both read from here. */
+export interface Tally {
+	granted: number;
+	done: number;
+	rewarded: number;
+	failed: number;
+	shelved: number;
+	revived: number;
+	placesVisited: number;
+	placesChronicled: number;
+	personasMet: number;
+	items: number;
+	picks: number;
+	rolls: number;
+	perils: number;
+	truthsBound: number;
+}
+
+/** A course once laid before the seeker and not taken — reachable again only
+ * through /quest accept at the place where it was laid, never through play. */
+export interface UntakenOffer {
+	/** The offer's ordinal on this branch (1-based). */
+	n: number;
+	text: string;
+	place?: string;
+	options: PresentedOption[];
 }
 
 export interface DerivedState {
@@ -237,18 +414,33 @@ export interface DerivedState {
 	 * binds (its quest holds until picked); an "offer" lapses when the seeker
 	 * simply speaks on. */
 	pendingChoice?: { kind: "twist" | "offer"; slug: string; text: string; options: PresentedOption[] };
-	/** The one trial awaiting the seeker's die, if any (max one, like picks). */
+	/** The one trial awaiting the seeker's die, if any (max one, like picks).
+	 * slug "" = a peril (the world's own interruption, bound to no quest). */
 	pendingRoll?: {
 		slug: string;
 		tier: string;
 		dc: number;
 		trial: string;
+		kind?: "finale" | "hazard" | "checkpoint" | "peril";
 		edge?: "favored" | "hindered";
 	};
 	/** Shapes of recently granted quests, oldest first (variety guard). */
-	recentShapes: { clock: number; twist: number; check: number }[];
+	recentShapes: QuestShape[];
 	/** Trouble kinds of recent fate plans, oldest first (variety guard). */
 	recentSuits: string[];
+	/** Wounds borne (MAX_WOUNDS ends the tale). */
+	wounds: number;
+	/** True once the seeker's tale has ended. */
+	dead: boolean;
+	/** The wound peril fuse, if wound and not yet sprung. */
+	fuse?: { at: number; turns: number };
+	/** Courses laid and not taken, oldest first. */
+	untakenOffers: UntakenOffer[];
+	/** Everything counted (achievements + renown inputs). */
+	tally: Tally;
+	/** Renown score and level (1–5), computed from the tally. */
+	score: number;
+	level: number;
 }
 
 /** Structural subset of pi's SessionEntry that derive() needs. */
@@ -285,6 +477,27 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 		undertakings: {},
 		recentShapes: [],
 		recentSuits: [],
+		wounds: 0,
+		dead: false,
+		untakenOffers: [],
+		tally: {
+			granted: 0,
+			done: 0,
+			rewarded: 0,
+			failed: 0,
+			shelved: 0,
+			revived: 0,
+			placesVisited: 0,
+			placesChronicled: 0,
+			personasMet: 0,
+			items: 0,
+			picks: 0,
+			rolls: 0,
+			perils: 0,
+			truthsBound: 0,
+		},
+		score: 0,
+		level: 1,
 	};
 	const undertaking = (slug: string): Undertaking =>
 		(state.undertakings[slug] ??= {
@@ -293,6 +506,8 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 			filled: 0,
 			twist: 0,
 			check: 0,
+			mids: [],
+			checkpointsFired: 0,
 			beatsDone: 0,
 			presented: false,
 			resolved: false,
@@ -300,6 +515,11 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 			gritUsed: false,
 			coldStreak: 0,
 		});
+	const placesSeen = new Set<string>();
+	const placesAfar = new Set<string>();
+	const personasSeen = new Set<string>();
+	let offersLaid = 0;
+	let currentOfferN = 0;
 	for (const entry of entries) {
 		if (entry.timestamp) state.lastEntryAt = entry.timestamp;
 		if (entry.type === "message" && entry.message?.role === "user") {
@@ -332,12 +552,35 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				break;
 			case "truth":
 				if (!state.truths.includes(event.text)) state.truths.push(event.text);
+				state.tally.truthsBound++;
 				break;
 			case "truth_retracted":
 				state.truths = state.truths.filter((truth) => truth !== event.text);
 				break;
 			case "place":
 				state.place = { slug: event.slug, title: event.title };
+				if (!placesSeen.has(event.slug)) {
+					placesSeen.add(event.slug);
+					state.tally.placesVisited++;
+				}
+				break;
+			case "place_chronicled":
+				if (!placesAfar.has(event.slug) && !placesSeen.has(event.slug)) {
+					placesAfar.add(event.slug);
+					state.tally.placesChronicled++;
+				}
+				break;
+			case "persona":
+				if (!personasSeen.has(event.name)) {
+					personasSeen.add(event.name);
+					state.tally.personasMet++;
+				}
+				break;
+			case "quest":
+				if (event.action in state.tally) state.tally[event.action as keyof Tally]++;
+				break;
+			case "item":
+				state.tally.items++;
 				break;
 			case "chronicle":
 				state.chronicle = event.key;
@@ -347,7 +590,15 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				u.size = event.clock;
 				u.twist = event.twist;
 				u.check = event.check ?? 0;
-				state.recentShapes.push({ clock: event.clock, twist: event.twist, check: event.check ?? 0 });
+				u.mids = [...(event.mids ?? [])].sort((a, b) => a - b);
+				const shape: QuestShape = {
+					clock: event.clock,
+					twist: event.twist,
+					check: event.check ?? 0,
+					mids: event.mids ?? [],
+					selfSet: event.selfSet,
+				};
+				state.recentShapes.push(shape);
 				if (state.recentShapes.length > 4) state.recentShapes.shift();
 				break;
 			}
@@ -376,47 +627,127 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				break;
 			}
 			case "offer":
+				offersLaid++;
+				currentOfferN = offersLaid;
 				state.pendingChoice = { kind: "offer", slug: "", text: event.text, options: event.options };
 				break;
 			case "offer_dropped":
-				if (state.pendingChoice?.kind === "offer") state.pendingChoice = undefined;
+				if (state.pendingChoice?.kind === "offer") {
+					// Untaken courses wait at the place they were laid (/quest accept).
+					state.untakenOffers.push({
+						n: currentOfferN,
+						text: state.pendingChoice.text,
+						place: offerPlace(entries, currentOfferN),
+						options: state.pendingChoice.options,
+					});
+					state.pendingChoice = undefined;
+				}
+				break;
+			case "offer_taken":
+				state.untakenOffers = state.untakenOffers
+					.map((offer) =>
+						offer.n === event.n
+							? { ...offer, options: offer.options.filter((option) => option.id !== event.option) }
+							: offer,
+					)
+					.filter((offer) => offer.options.length > 0);
 				break;
 			case "pick":
+				state.tally.picks++;
+				if (event.slug) {
+					const u = undertaking(event.slug);
+					u.resolved = true;
+					u.pickedOption = event.option;
+				} else if (state.pendingChoice?.kind === "offer") {
+					// The picked course is taken; its siblings become untaken.
+					const rest = state.pendingChoice.options.filter((option) => option.id !== event.option);
+					if (rest.length > 0) {
+						state.untakenOffers.push({
+							n: currentOfferN,
+							text: state.pendingChoice.text,
+							place: offerPlace(entries, currentOfferN),
+							options: rest,
+						});
+					}
+				}
 				if (state.pendingChoice?.slug === event.slug) state.pendingChoice = undefined;
 				break;
 			case "check": {
-				const u = undertaking(event.slug);
-				if (event.kind !== "hazard") u.checkFired = true; // finales fire once; hazards may recur
-				u.beatsDone++; // the trial consumes the beat
+				if (event.slug) {
+					const u = undertaking(event.slug);
+					if (event.kind === "checkpoint") u.checkpointsFired++;
+					else if (event.kind !== "hazard") u.checkFired = true; // finales fire once
+					u.beatsDone++; // the trial consumes the beat
+				}
 				state.pendingRoll = {
 					slug: event.slug,
 					tier: event.tier,
 					dc: event.dc,
 					trial: event.trial,
+					kind: event.kind,
 					edge: event.edge,
 				};
 				break;
 			}
 			case "roll": {
-				const u = undertaking(event.slug);
+				state.tally.rolls++;
 				if (state.pendingRoll?.slug === event.slug) state.pendingRoll = undefined;
-				if (event.grit) u.gritUsed = true;
+				if (event.slug && event.grit) undertaking(event.slug).gritUsed = true;
 				break;
 			}
 			case "outcome": {
-				const u = undertaking(event.slug);
-				u.filled = Math.min(u.size, Math.max(0, u.filled + event.add));
-				u.resolved = true;
-				// Two straight setbacks and the fates relent (open advantage on
-				// the next trial); any brighter band breaks the streak.
-				u.coldStreak = event.band === "setback" ? u.coldStreak + 1 : 0;
+				if (event.slug) {
+					const u = undertaking(event.slug);
+					u.filled = Math.min(u.size, Math.max(0, u.filled + event.add));
+					// Two straight setbacks and the fates relent (open advantage on
+					// the next trial); any brighter band breaks the streak.
+					u.coldStreak = event.band === "setback" ? u.coldStreak + 1 : 0;
+				}
 				break;
 			}
+			case "twist_dropped": {
+				const u = undertaking(event.slug);
+				u.twist = 0; // the quest continues plain; the finale still stands
+				u.resolved = true; // the sealed plan opens (A4 — overtaken, not veiled)
+				if (state.pendingChoice?.kind === "twist" && state.pendingChoice.slug === event.slug) {
+					state.pendingChoice = undefined;
+				}
+				break;
+			}
+			case "peril_fuse":
+				state.fuse = { at: event.at, turns: event.turns };
+				break;
+			case "peril":
+				state.fuse = undefined; // the spring is spent
+				state.tally.perils++;
+				break;
+			case "wound":
+				state.wounds = Math.min(MAX_WOUNDS, state.wounds + Math.max(1, event.add));
+				break;
+			case "heal":
+				state.wounds = Math.max(0, state.wounds - 1);
+				break;
+			case "death":
+				state.dead = true;
+				break;
 			default:
 				break; // search_requested / search_failed carry no derived state
 		}
 	}
+	const standing = renown(state.tally);
+	state.score = standing.score;
+	state.level = standing.level;
 	return state;
+}
+
+/** The place slug an offer was laid at: the n-th offer event on the branch. */
+function offerPlace(entries: EntryLike[], n: number): string | undefined {
+	let seen = 0;
+	for (const entry of entries) {
+		const event = asGameEvent(entry);
+		if (event?.ev === "offer" && ++seen === n) return event.place;
+	}
+	return undefined;
 }
 
 /**
@@ -481,7 +812,11 @@ export function describeEvent(event: GameEvent): string {
 		case "persona":
 			return `soul recorded: ${event.name} at ${event.place}${event.note ? ` (${event.note})` : ""}`;
 		case "quest":
-			return `quest ${event.action}: "${event.title}"`;
+			return event.action === "shelved"
+				? `quest shelved: "${event.title}" — set aside to free a slot (only the seeker may take it up again)`
+				: event.action === "revived"
+					? `quest revived: "${event.title}" — taken up again`
+					: `quest ${event.action}: "${event.title}"`;
 		case "item":
 			return `item gained: ${event.text}`;
 		case "quest_shape":
@@ -505,15 +840,30 @@ export function describeEvent(event: GameEvent): string {
 				.join(" · ")}`;
 		case "offer_dropped":
 			return "the choices pass unchosen — the seeker speaks their own course";
+		case "offer_taken":
+			return `a formerly offered course is taken up (offer ${event.n}, course ${event.option})`;
 		case "check":
-			return `a trial bars "${event.slug}": ${event.tier} (DC ${event.dc})${
-				event.edge ? ` · ${event.edge}${event.edgeReason ? ` (${event.edgeReason})` : ""}` : ""
-			} — ${event.trial}`;
+			return `a trial bars ${event.slug ? `"${event.slug}"` : "the seeker's path"}: ${event.tier} (DC ${event.dc})${
+				event.kind && event.kind !== "finale" ? ` [${event.kind}]` : ""
+			}${event.edge ? ` · ${event.edge}${event.edgeReason ? ` (${event.edgeReason})` : ""}` : ""} — ${event.trial}`;
 		case "roll":
-			return `the die falls for "${event.slug}": ${event.kept} against DC ${event.dc} — ${event.band}${
+			return `the die falls${event.slug ? ` for "${event.slug}"` : ""}: ${event.kept} against DC ${event.dc} — ${event.band}${
 				event.grit ? " (grit spent)" : ""
 			} [threw ${event.dice.join(", ")}]`;
 		case "outcome":
 			return `the fates answer (${event.band}): ${event.text}`;
+		case "twist_dropped":
+			return `the twist over "${event.slug}" dissolves — overtaken by events (${event.reason})`;
+		case "peril_fuse":
+			// The countdown stays unspoken — veiled, never lied about (A4).
+			return "the fates wind a hidden spring";
+		case "peril":
+			return `the world strikes: ${event.kind} — ${event.tier} (DC ${event.dc}): ${event.text}`;
+		case "wound":
+			return `the seeker is wounded (+${event.add}) — ${event.reason}`;
+		case "heal":
+			return `a wound is tended — ${event.reason}`;
+		case "death":
+			return `☠ the seeker's tale ends — ${event.reason}`;
 	}
 }

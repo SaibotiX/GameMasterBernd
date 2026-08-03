@@ -24,9 +24,14 @@ undertakings-research.md, progress in undertakings-build.md.)
 - **G6 — The world routes the journey.** Finished chains end in breadcrumbs to
   named people/places elsewhere; several stay live so the route is the
   player's. Completion visibly dents the world.
-- **G7 — Choice UI never blocks talk.** Picking a fix is explicit and
-  effortless (panel + hotkeys + /pick with optional extra words), but plain
-  conversation always flows; nothing is auto-picked.
+- **G7 — Choice UI never blocks talk — but a gate holds all work** (revised
+  2026-08-03, audit round). Picking a fix is explicit and effortless (the
+  four-slot board + hotkeys + /pick with optional extra words), plain
+  conversation always flows, and nothing is auto-picked. But a sealed twist
+  or a declared die is UNSKIPPABLE: while one stands, no work on ANY quest
+  advances — the engine refuses every attempt, the panel burns red, the bell
+  rings once. The seeker must decide; they cannot out-wait or out-errand the
+  moment.
 - **G8 — Dice are ceremony, not bookkeeping.** When a roll happens it is an
   unmissable on-screen moment with visible arithmetic and one post-roll lever;
   rolls only where outcomes are uncertain AND failure costs something.
@@ -41,7 +46,28 @@ undertakings-research.md, progress in undertakings-build.md.)
 - **G11 — Choosing is the seeker's pleasure.** When a scene presents real
   alternatives (task boards, forks, rival requests), the engine lays them out
   as a clean pickable offer — dismissible by simply speaking on; only a
-  twist's sealed paths bind.
+  twist's sealed paths bind. A course once offered and not taken is never
+  re-offered by any soul or board; only the seeker may take it up later
+  (/quest accept, standing where it was laid).
+- **G12 — Effort is the price** (2026-08-03, user decree). A cheaply stated
+  move — no method, no care, no detail — is a careless one, and the world
+  punishes carelessness: the keeper declares it hindered or lets the scene's
+  watchers seize the advantage. Real intention earns clean attempts; nothing
+  is given to the idle. The game is a challenge to be tried, not a prompt to
+  be filled.
+- **G13 — The world levels with the seeker.** Renown (quests seen through —
+  won or lost — places walked, souls met) sets the weight of new work: early
+  tales lean easy with a real chance of worse; by the end most work is hard.
+  A hard task offered early is the seeker's to accept — and theirs to lose.
+  No beat of a quest is idle: at most ONE beat per quest passes as a plain
+  tick (the ≤1-autoresolve rule); every other beat carries a twist, a clue
+  weave, or a drawn trial.
+- **G14 — The world is alive and owes no one safety** (the Kenshi lesson).
+  On a hidden fuse the world itself strikes — a thief, a beast, a sickness —
+  quest or no quest, harder as renown grows, never impossible even for the
+  young. Perils wound; three wounds end the tale. Death is real: the game
+  never denies it to those who seek it, and never fully shields those who
+  don't. Losses are situations, not endings — until the last one.
 
 ## Fairness invariants (from the research — see research doc "fair" list)
 
@@ -58,20 +84,27 @@ undertakings-research.md, progress in undertakings-build.md.)
   ranger warned the rope was frayed"). Every backfire also pays something:
   information, a new option, a windfall elsewhere.
 - **F5 — Bounded damage, hand on the wheel.** Costs land in bounded meters
-  (clock segments, grit); at most one active complication; complications
-  converge on the quest's own finale, never spawn new quests; hard failure is
-  possible but only at the end of an escalation ladder, and every outcome text
-  ends with an open move for the player.
+  (clock segments, grit, wounds 0–3); at most one active complication;
+  complications converge on the quest's own finale, never spawn new quests;
+  hard failure is possible but only at the end of an escalation ladder
+  (quests: desperate twist paths only; the seeker's life: the visible wound
+  meter, never a single bare die from full health), and every outcome text
+  ends with an open move for the player — save the last.
 
 ## Pacing invariants
 
 - **P1** — max one major complication per quest.
-- **P2** — no complications in two consecutive quests; a breather after any
-  disaster.
+- **P2** — no complications in two consecutive quests. The breather is a
+  cooldown, never an alternation: a twist-free quest still twists only 2 in 3
+  — strict twisted-plain-twisted patterns are themselves a bug (G5). Perils
+  keep their own breather: a fresh fuse (several quiet turns) winds after
+  every strike.
 - **P3** — the twist lands after commitment (~50–70% of the clock), never at
   grant, never as a bolted-on errand.
-- **P4** — at most ~4 open quests (Christmas-tree cap); the task itself is
-  stated in one clear sentence — mystery lives in the story, not the objective.
+- **P4** — at most 4 open quests, hard (the four-slot board; a fifth requires
+  the seeker to shelve one — their choice, never the engine's). The task
+  itself is stated in one clear sentence — mystery lives in the story, not
+  the objective.
 - **P5** — variety is enforced by draw-without-replacement (shuffle-bags),
   branch-aware like everything else, not by hoping the model varies.
 

@@ -109,6 +109,119 @@ names the goals/invariants it serves (undertakings-goals.md).
       quest facts itself; second try: attempt_quest at once, the unplayed
       twist presented, /pick resolved clean against the sealed plan
 
+## Phase 2.8 — the challenge round (2026-08-03: audit resolutions + the living world)
+
+The full-stop audit (design/design-code-audit.md) found 12 discrepancies; the
+user ruled on every one and decreed three new systems. All built this round:
+
+- [x] D1 · ONE GATE HOLDS ALL WORK: attempt_quest refuses while any choice or
+      die stands anywhere (another quest, an offer, a peril) — the finale can
+      no longer be dodged via a side errand; the standing layer names the
+      gate so the keeper steers back; twist/finale/peril panels burn error-red
+      and ring the bell once — G7 revised, G9/G10 sealed
+- [x] D2 · the no-drought rule REBUILT as ≤1 AUTORESOLVE PER QUEST: shapes
+      carry drawn checkpoint-trial beats (mids; 6/0 → one of beats 1|2, 8/0 →
+      two of 1..3, 8@3 → [1]); at most one beat of any quest is a plain tick
+      and its position varies; twist chance decoupled (2-in-3 on 6/8 clocks),
+      strict alternation deliberately rejected (G5)
+- [x] D3 · fate plans bounded 2–4 options total (the four-slot board), ≤1 blue
+- [x] D4 · citation floor: citesGrounding — every hidden reason must share
+      words with the laws/world text or the plan is rejected (retry once,
+      then fate_skipped)
+- [x] D5 · the planner receives the place's PAGE (clipped) — twists grow from
+      the record, not thin air
+- [x] D6 · the 4-cap binds everywhere (GM repairs too); the fifth-slot ask
+      routes through the seeker: offer the four → shelve_quest the named one
+      → grant anew
+- [x] D7 · hindered beats the karmic clamp — recklessness rolls worst-of-two
+      even mid-cold-streak; the fates relent only on honest trials
+- [x] D8 · done-gate unconditional: no recorded work ⇒ update_quest(done)
+      refused (legacy leniency removed per user)
+- [x] D9 · resolved fates' FULL answer sheets feed the GM table (every path's
+      band/reveal/reason, the pick marked) — "I told you we should have…"
+      gets real answers; `resolved` now set by the pick itself
+- [x] D10 · stale texts swept (ledger.ts check-flag comments, README events)
+- [x] D11 → G13 · RENOWN: score = 3×closed quests (won or lost) + places +
+      souls; level 1–5 caps; DIFFICULTY_BY_LEVEL weights the clock draw
+      (L1 55/35/10 → L5 10/30/60); grant_quest gains keeper-named `weight`
+      for fiction-signaled scale (outranks the no-repeat nudge)
+- [x] D12 · untaken courses: offers record their place; lapsed/unpicked
+      courses wait in untakenOffers, reachable ONLY via /quest accept <n.m>
+      at that place (offer_taken removes them); never re-offered in play
+- [x] G12 · EFFORT IS THE PRICE: protocol law — careless moves ("I go there")
+      are declared hindered or hand the watchers the advantage; detail earns
+      clean attempts
+- [x] G14 · PERILS, WOUNDS & DEATH: veiled peril_fuse (8→4 turns by level,
+      +0–4 slack; 3-turn opening grace; re-winds after each strike); 8 peril
+      kinds; severity by level (even L1: 10% hard); check slug "" holds all
+      work; setback wounds (+1, +2 hard), 3 wounds = death; heal_wounds
+      keeper tool (earned, one at a time); death = epilogue prompt layer +
+      tools of the living refused + ☠ footer; /new for a new tale
+- [x] The four-slot board: ui.ts gridBox (pure, tested) renders the 2×2 grid
+      for the choice widget (urgent red for twists/finales/perils, calm for
+      offers) AND the /quest window (dice-ceremony dress)
+- [x] Commands: /quest [accept <id>] · /place [name] · /persons [name] ·
+      /history [long] (deterministic majors-timeline + achievements tally;
+      long = gmChronicle side call, record-grounded saga, plain-timeline
+      fallback)
+- [x] Verified: 64/64 unit (new: draw/difficulty/mids exhaustives, renown &
+      peril bounds, checkpoint/wound/death/untaken/tally folding, gridBox
+      widths, citation floor, shelve/revive, page lists) + 18/18 headless
+      RPC smoke against real pi (crafted session with fuse/peril/wound/
+      offer_taken/shelved: /ledger /quest /history /place /persons /roll +
+      both /quest accept flows mutate session and quests.md correctly).
+      TUI-only paths (board rendering, bell, red urgency, /quest window):
+      verify in manual play as ever.
+
+### Playtest 4 — the apple stranding (user's knight sitting, 2026-08-03)
+
+Session 019fc7c7…: the seeker fetched Schnuri's apple; the story said
+delivered, the engine said 2/6 with a twist pending; the keeper grew
+confused, the seeker bound three "set the quest finished" truths, and /dm
+threw "content is not a function". Root causes found in the session record
+and ALL fixed + verified:
+
+- [x] **The widget crash (root of everything):** pi's setWidget takes a
+      FACTORY `(ui, theme) => Component` for non-array content — we passed a
+      component object, so EVERY widget refresh threw "content is not a
+      function". It fired exactly at twist presentation (u45/46): the
+      complication event landed, the tool RESULT became the error, the
+      keeper never saw "voice these paths and wait" and improvised the apple
+      delivery while the engine held the gate. It also ate the /dm truth
+      confirmations (hence three retried imperative truths) and hid the pick
+      panel entirely. Fixed: proper factory (theme from pi's own hand) AND
+      updateWidgets is now hard-wrapped — a broken panel can never again
+      poison a tool result or a command. Verified by a real pseudo-TTY
+      probe: the four-slot board renders over the user's exact crafted
+      state, zero errors.
+- [x] **Stuck-quest repairs at the GM table** (pulled forward from Phase 3):
+      fix kinds "untwist" (twist_dropped event — dissolve a twist the story
+      overtook; sealed plan opens, A4) and "clock" (set the branch clock to
+      what the record shows; refused mid-gate — chain untwist first). Both
+      demand *uN* evidence and are forbidden as escape hatches from live
+      machinery.
+- [x] **Truths are not levers:** the guardian's new form duty refuses
+      commands dressed as facts ("set the quest as finished") and points the
+      seeker to the table's repairs instead.
+- [x] **Reveals never deliver the goal:** the fate planner's contract now
+      forbids outcomes that finish the task or hand over its object (u52's
+      setback reveal had narrated "the apple reaches Schnuri" while ticking
+      the clock BACKWARD — fiction and engine torn apart in one line).
+- [x] **Never ask where — name the world:** the keeper asked "Name the
+      castle—what do men call it?" after a party-stands-nowhere refusal
+      (u15/16). Protocol now: the party is somewhere from the first scene;
+      invent the place from the story's cues, never ask; every NAMED place
+      and soul gets its page at once (the steward and the dismissed gardener
+      of u45 had none); agreed work is granted in the same reply.
+- [x] **Refusals are course corrections:** new protocol law (read the
+      refusal, do the named thing in the same reply, never repeat a failing
+      call unchanged, never read engine errors aloud) — and the
+      party-stands-nowhere errors themselves now carry the invent-don't-ask
+      guidance. (The u50 offer_choices refusal already steered the keeper
+      back to the pick — that pattern is now the rule everywhere.)
+- [x] Verified: 65/65 unit (twist_dropped folding, repair-kind parsing, new
+      protocol lines) + 18/18 headless RPC smoke + the TTY widget probe.
+
 ## Phase 3 — the long game
 
 - [ ] Shuffle-bags as ledger draw events (shape / suit / decision-shape)
@@ -117,7 +230,8 @@ names the goals/invariants it serves (undertakings-goals.md).
 - [ ] Hook bundles per place (2–4 sharing a pocket)
 - [ ] Consequence-echo callbacks (resurface-later flags; name the past choice)
 - [ ] Travel micro-events (one per leg, never zero, never two)
-- [ ] GM-table repair kinds for clocks/plans
+- [→] GM-table repair kinds for clocks/plans — clocks + twist-dissolving
+      PULLED FORWARD (built in playtest 4); plan-rewriting stays Phase 3
 - [ ] Pacing fingerprints per chronicle feeding the planner
 - [ ] Tests + smoke
 
@@ -145,9 +259,15 @@ names the goals/invariants it serves (undertakings-goals.md).
 - 2026-08-03 · Playthrough finding (user's first real sitting): the only quest
   drew the plain 6-clock — /pick and /roll correctly never fired, but a first
   quest showing no machinery is a pacing bug, not luck to accept. Fix: the
-  scripted opening (first given quest never plain) + the no-drought rule
-  (plain never follows plain); draw logic extracted to drawQuestShape (pure,
-  exhaustively unit-tested). Long-run plain share stays ≈ ⅓.
+  scripted opening (first given quest never plain); draw logic extracted to
+  drawQuestShape (pure, exhaustively unit-tested). [CORRECTED by the audit,
+  same day: the "no-drought rule (plain never follows plain)" this entry once
+  claimed was never implemented, and the "plain share ≈ ⅓" figure was wrong —
+  the realized stream was ≈ 40% twisted / 60% twist-free. The audit round
+  rebuilt the intent as the ≤1-AUTORESOLVE rule (checkpoint trials inside
+  twist-free quests) instead of cross-quest alternation, which the user
+  rejected as a pattern (G5): "the game is designed to not follow strict
+  patterns".]
 - 2026-08-03 · Second playthrough (user): (a) climax fell flat — the trial
   fired a beat early and the completing stroke was a plain tick ⇒ finales now
   trigger on COMPLETION, plain shapes deleted, "plain" redefined as
@@ -171,3 +291,29 @@ names the goals/invariants it serves (undertakings-goals.md).
   keeper via a nonce-marked message (route through attempt_quest; never
   announce undeclared dice) and the true moment follows; with a choice
   pending it points at /pick. Theater now costs one turn, not the sitting.
+- 2026-08-03 · Audit round (design/design-code-audit.md, user's rulings):
+  gates are UNSKIPPABLE and global (one gate holds all work — flash red, ring
+  the bell, refuse every attempt) rather than per-quest; hindered outranks
+  the karmic clamp (challenge over mercy); the 4-cap is absolute but the
+  seeker chooses what to shelve; quests may be shelved/revived and untaken
+  offers taken up — but ONLY by the seeker's own command at the anchoring
+  place, never re-offered in play; the fate planner is grounded harder
+  (place page in, citation floor on reasons, 2–4 options); resolved answer
+  sheets open at the GM table; legacy done-gate leniency removed.
+- 2026-08-03 · The living world (user's decree, Kenshi research): the game is
+  a CHALLENGE — effort is priced (careless moves are hindered), difficulty
+  ladders with renown (score counts losses as much as wins), the world
+  strikes on a hidden fuse quest-or-no-quest, wounds are a public 0–3 meter,
+  and DEATH IS A FEATURE: sought or unsought, it ends the tale (epilogue
+  layer; /new). Guaranteed success is the enemy: "If he puts in no effort,
+  nothing will be given to him."
+- 2026-08-03 · Playtest 4 (the apple stranding): UI failures must never
+  poison engine answers — every widget path is hard-wrapped, and any
+  non-array setWidget content must be a `(ui, theme) => Component` FACTORY
+  (pi contract; a bare object throws "content is not a function" into
+  whatever tool call triggered the refresh). Repairing a story the record
+  lost is table work, not truth work: truths refuse imperatives; the table
+  gained untwist + clock hands, evidence-bound. Naming the world is the
+  keeper's job — invented from cues, never asked; named places and souls are
+  paged the moment they exist. Refusal texts are steering, part of the
+  design surface: every engine refusal must name the correction it wants.

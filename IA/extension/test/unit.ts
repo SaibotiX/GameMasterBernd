@@ -16,10 +16,12 @@ const BASE = join(EXT, ".."); // the IA folder: config/, data/, tools/ live here
 const {
 	derive, describeEvent, planSetMood, planRedemption, asGameEvent,
 	rollBand, BAND_TICKS, TIERS, drawQuestShape, LEDGER_TYPE, LEGACY_MOOD_TYPE,
+	renown, drawPerilTier, drawFuseTurns, MAX_WOUNDS,
 } = await import(join(EXT, "ledger.ts"));
 const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
+const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
 
 let passed = 0;
 function ok(name: string, fn: () => void) {
@@ -53,6 +55,16 @@ ok("derive: empty branch → defaults", () => {
 		undertakings: {},
 		recentShapes: [],
 		recentSuits: [],
+		wounds: 0,
+		dead: false,
+		untakenOffers: [],
+		tally: {
+			granted: 0, done: 0, rewarded: 0, failed: 0, shelved: 0, revived: 0,
+			placesVisited: 0, placesChronicled: 0, personasMet: 0, items: 0,
+			picks: 0, rolls: 0, perils: 0, truthsBound: 0,
+		},
+		score: 0,
+		level: 1,
 	});
 });
 
@@ -160,7 +172,7 @@ ok("derive: an undertaking folds shape → ticks → fate → twist → pick →
 	assert.equal(mid.undertakings.wagon.twist, 2);
 	assert.ok(mid.undertakings.wagon.plan, "plan folds into state");
 	assert.equal(mid.pendingChoice?.slug, "wagon");
-	assert.deepEqual(mid.recentShapes, [{ clock: 6, twist: 2, check: 0 }]);
+	assert.deepEqual(mid.recentShapes, [{ clock: 6, twist: 2, check: 0, mids: [], selfSet: undefined }]);
 	assert.deepEqual(mid.recentSuits, ["material failure"]);
 
 	const done = derive(
@@ -179,33 +191,62 @@ ok("derive: an undertaking folds shape → ticks → fate → twist → pick →
 	assert.equal(done.undertakings.wagon.resolved, true);
 });
 
-ok("drawQuestShape: every shape has a finale; opening carries a twist; cooldowns hold", () => {
-	const SHAPES = [
-		{ clock: 4, twist: 0, check: 1 },
-		{ clock: 6, twist: 0, check: 1 },
-		{ clock: 6, twist: 2, check: 1 },
-		{ clock: 8, twist: 3, check: 1 },
-	];
+ok("drawQuestShape: finale always armed; opening twists; difficulty, cooldowns and the ≤1-autoresolve map hold", () => {
+	// Exhaustive-ish rand functions: every constant residue pattern.
 	const every = (n: number) => Array.from({ length: n }, (_, i) => (k: number) => i % k);
-	// Every draw arms a finale — the completing stroke is always contested.
-	for (const rand of every(8)) assert.ok(drawQuestShape(SHAPES, undefined, false, rand).check > 0);
-	// The opening is scripted: the first given quest carries a twist.
-	for (const rand of every(8)) assert.ok(drawQuestShape(SHAPES, undefined, false, rand).twist > 0, "opening twistless");
-	// Self-set tasks carry no twist (their finale still stands).
-	for (const rand of every(8)) {
-		const drawn = drawQuestShape(SHAPES, undefined, true, rand);
-		assert.equal(drawn.twist, 0);
-		assert.ok(drawn.check > 0);
+	const draw = (
+		opts: Partial<Parameters<typeof drawQuestShape>[0]>,
+		rand: (n: number) => number,
+	) => drawQuestShape({ level: 1, last: undefined, selfSet: false, opening: false, rand, ...opts });
+	for (const rand of every(12)) {
+		// Every draw arms a finale — the completing stroke is always contested.
+		assert.ok(draw({ opening: true }, rand).check > 0);
+		// The opening is scripted: the first GIVEN quest carries a twist on a 6+ clock.
+		const opening = draw({ opening: true }, rand);
+		assert.ok(opening.twist > 0, "opening twistless");
+		assert.ok(opening.clock >= 6, "opening clock too small to twist");
+		// Self-set tasks carry no twist (their finale still stands).
+		const selfSet = draw({ selfSet: true }, rand);
+		assert.equal(selfSet.twist, 0);
+		assert.ok(selfSet.check > 0);
+		// Cooldown: no twist right after a twisted quest.
+		assert.equal(draw({ last: { clock: 6, twist: 2, check: 1 } }, rand).twist, 0);
+		// Never the identical (clock, twistiness) twice.
+		const afterSmall = draw({ last: { clock: 4, twist: 0, check: 1 } }, rand);
+		assert.ok(!(afterSmall.clock === 4 && afterSmall.twist === 0), "identical shape repeated");
+		// The keeper's named weight pins the clock.
+		assert.equal(draw({ weight: "hard" }, rand).clock, 8);
+		assert.equal(draw({ weight: "easy", last: { clock: 6, twist: 2, check: 1 } }, rand).clock, 4);
+		// The ≤1-autoresolve map: twist-free clocks carry drawn checkpoints.
+		assert.deepEqual(draw({ selfSet: true, weight: "easy" }, rand).mids, []);
+		const m6 = draw({ selfSet: true, weight: "middling" }, rand);
+		assert.ok(m6.mids!.length === 1 && [1, 2].includes(m6.mids![0]), `6-clock mids ${m6.mids}`);
+		const m8 = draw({ selfSet: true, weight: "hard" }, rand);
+		assert.equal(m8.mids!.length, 2, "an 8-clock without twist needs two checkpoints");
+		assert.ok(m8.mids![0] < m8.mids![1] && m8.mids!.every((beat: number) => beat >= 1 && beat <= 3));
+		// Twisted 8-clocks keep one checkpoint (beat 1; clues at 2, twist at 3).
+		const hardTwist = draw({ opening: true, weight: "hard" }, rand);
+		assert.equal(hardTwist.clock, 8);
+		assert.equal(hardTwist.twist, 3);
+		assert.deepEqual(hardTwist.mids, [1]);
 	}
-	// Cooldown: no twist right after a twisted quest.
-	const afterTwist = { clock: 6, twist: 2, check: 1 };
-	for (const rand of every(8)) assert.equal(drawQuestShape(SHAPES, afterTwist, false, rand).twist, 0);
-	// Never the identical shape twice while another is available.
-	const afterSmall = { clock: 4, twist: 0, check: 1 };
-	for (const rand of every(8)) {
-		const drawn = drawQuestShape(SHAPES, afterSmall, false, rand);
-		assert.ok(!(drawn.clock === 4 && drawn.twist === 0));
+	// Difficulty follows renown: at level 5 a rand that lands past easy+middling draws hard.
+	assert.equal(draw({ level: 5 }, () => 99).clock, 8);
+	assert.equal(draw({ level: 1 }, () => 0).clock, 4);
+});
+
+ok("renown & perils: score/level math, severity and fuse draws stay in bounds", () => {
+	assert.deepEqual(renown({ rewarded: 0, failed: 0, placesVisited: 0, personasMet: 0 }), { score: 0, level: 1 });
+	assert.deepEqual(renown({ rewarded: 2, failed: 1, placesVisited: 3, personasMet: 2 }), { score: 14, level: 2 });
+	assert.equal(renown({ rewarded: 20, failed: 5, placesVisited: 30, personasMet: 30 }).level, 5, "level caps at 5");
+	for (const level of [1, 3, 5]) {
+		for (const rand of [() => 0, () => 50, () => 99, (n: number) => n - 1]) {
+			assert.ok([4, 6, 8].includes(drawPerilTier(level, rand)));
+			const turns = drawFuseTurns(level, (n: number) => rand(n) % n || 0);
+			assert.ok(turns >= 4 && turns <= 12, `fuse ${turns} out of bounds`);
+		}
 	}
+	assert.equal(MAX_WOUNDS, 3);
 });
 
 ok("derive: offers lapse, twists bind; hazard trials never spend the finale", () => {
@@ -319,6 +360,177 @@ ok("derive: setback clamps at zero; fate_skipped neutralizes the twist", () => {
 	);
 	assert.equal(st.undertakings.q.filled, 0, "never below zero");
 	assert.equal(st.undertakings.q.twist, 0, "skipped fate means a plain quest");
+});
+
+ok("derive: twist_dropped dissolves a standing twist, opens the sheet, frees the gate", () => {
+	const plan = {
+		suit: "material failure",
+		complication: "The orchard is warded.",
+		clues: ["c1", "c2"],
+		options: [
+			{ id: 1, label: "A", risk: "risky", promise: "p", band: "clean", reveal: "r", reason: "law" },
+			{ id: 2, label: "B", risk: "safe", promise: "p", band: "cost", reveal: "r", reason: "law" },
+		],
+	};
+	const st = derive(
+		[
+			ev({ ev: "quest_shape", slug: "apple", clock: 6, twist: 2, check: 1 }),
+			ev({ ev: "quest_tick", slug: "apple", add: 2, filled: 2, size: 6 }),
+			ev({ ev: "fate", slug: "apple", plan }),
+			ev({ ev: "complication", slug: "apple", text: plan.complication, options: [] }),
+			ev({ ev: "twist_dropped", slug: "apple", reason: "the invasion overtook the garden" }),
+		],
+		"neutral",
+	);
+	assert.equal(st.pendingChoice, undefined, "the dropped twist frees the gate");
+	assert.equal(st.undertakings.apple.twist, 0, "the quest continues twist-free");
+	assert.equal(st.undertakings.apple.resolved, true, "the sealed plan opens (A4)");
+	assert.ok(st.undertakings.apple.plan, "the plan stays on record");
+	assert.match(describeEvent({ ev: "twist_dropped", slug: "apple", reason: "r" }), /dissolves — overtaken/);
+});
+
+ok("derive: checkpoints fold and fire in order; the finale flag stays untouched", () => {
+	const st = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 8, twist: 0, check: 1, mids: [3, 1] }),
+			ev({ ev: "check", slug: "q", tier: "a hard trial", dc: 20, trial: "the first stretch", kind: "checkpoint" }),
+			ev({ ev: "roll", slug: "q", dice: [15], kept: 15, dc: 20, band: "cost", grit: false }),
+			ev({ ev: "outcome", slug: "q", band: "cost", add: 2, text: "t" }),
+		],
+		"neutral",
+	);
+	assert.deepEqual(st.undertakings.q.mids, [1, 3], "mids sort on fold");
+	assert.equal(st.undertakings.q.checkpointsFired, 1);
+	assert.equal(st.undertakings.q.checkFired, false, "a checkpoint never spends the finale");
+	assert.equal(st.undertakings.q.beatsDone, 1, "the checkpoint consumes the beat");
+});
+
+ok("derive: wounds, healing, death and the peril fuse", () => {
+	const hurt = derive(
+		[
+			ev({ ev: "peril_fuse", at: 0, turns: 5 }),
+			ev({ ev: "peril", kind: "a thief's quick hand", tier: "an easy trial", dc: 10, text: "t" }),
+			ev({ ev: "check", slug: "", tier: "an easy trial", dc: 10, trial: "t", kind: "peril" }),
+			ev({ ev: "roll", slug: "", dice: [2], kept: 2, dc: 10, band: "setback", grit: false }),
+			ev({ ev: "outcome", slug: "", band: "setback", add: 0, text: "t" }),
+			ev({ ev: "wound", add: 1, reason: "the thief's knife" }),
+			ev({ ev: "peril_fuse", at: 6, turns: 7 }),
+		],
+		"neutral",
+	);
+	assert.equal(hurt.wounds, 1);
+	assert.equal(hurt.tally.perils, 1);
+	assert.deepEqual(hurt.fuse, { at: 6, turns: 7 }, "a new fuse winds after the strike");
+	assert.equal(hurt.pendingRoll, undefined, "the peril's die resolved");
+	assert.equal(Object.keys(hurt.undertakings).length, 0, "a peril binds no quest");
+	const healed = derive([ev({ ev: "wound", add: 2, reason: "r" }), ev({ ev: "heal", reason: "a healer's care" })], "n");
+	assert.equal(healed.wounds, 1);
+	const dead = derive(
+		[ev({ ev: "wound", add: 2, reason: "r" }), ev({ ev: "wound", add: 1, reason: "r" }), ev({ ev: "death", reason: "the beast" })],
+		"n",
+	);
+	assert.equal(dead.wounds, MAX_WOUNDS);
+	assert.equal(dead.dead, true);
+	assert.match(describeEvent({ ev: "death", reason: "the beast" }), /tale ends/);
+});
+
+ok("derive: untaken offers accumulate, anchor to their place, and /quest accept removes them", () => {
+	const options = [
+		{ id: 1, label: "The wolf hunt", risk: "", promise: "" },
+		{ id: 2, label: "The flooded cellar", risk: "", promise: "" },
+		{ id: 3, label: "The stolen bell", risk: "", promise: "" },
+	];
+	const lapsed = derive(
+		[ev({ ev: "offer", text: "Which task calls?", options, place: "millbrook" }), ev({ ev: "offer_dropped" })],
+		"n",
+	);
+	assert.equal(lapsed.untakenOffers.length, 1);
+	assert.equal(lapsed.untakenOffers[0].n, 1);
+	assert.equal(lapsed.untakenOffers[0].place, "millbrook");
+	assert.equal(lapsed.untakenOffers[0].options.length, 3, "all courses untaken on a lapse");
+	const picked = derive(
+		[
+			ev({ ev: "offer", text: "Which task calls?", options, place: "millbrook" }),
+			ev({ ev: "pick", slug: "", option: 2, label: "The flooded cellar" }),
+		],
+		"n",
+	);
+	assert.equal(picked.untakenOffers[0].options.length, 2, "the picked course is not untaken");
+	assert.ok(!picked.untakenOffers[0].options.some((o: { id: number }) => o.id === 2));
+	const taken = derive(
+		[
+			ev({ ev: "offer", text: "Which task calls?", options, place: "millbrook" }),
+			ev({ ev: "offer_dropped" }),
+			ev({ ev: "offer_taken", n: 1, option: 1 }),
+			ev({ ev: "offer_taken", n: 1, option: 3 }),
+		],
+		"n",
+	);
+	assert.deepEqual(
+		taken.untakenOffers[0].options.map((o: { id: number }) => o.id),
+		[2],
+		"accepted courses leave the untaken list",
+	);
+});
+
+ok("derive: the tally counts everything and renown follows it", () => {
+	const st = derive(
+		[
+			ev({ ev: "quest", action: "granted", title: "A" }),
+			ev({ ev: "quest", action: "done", title: "A" }),
+			ev({ ev: "quest", action: "rewarded", title: "A" }),
+			ev({ ev: "quest", action: "granted", title: "B" }),
+			ev({ ev: "quest", action: "failed", title: "B" }),
+			ev({ ev: "quest", action: "shelved", title: "C" }),
+			ev({ ev: "quest", action: "revived", title: "C" }),
+			ev({ ev: "place", slug: "p1", title: "P1" }),
+			ev({ ev: "place", slug: "p2", title: "P2" }),
+			ev({ ev: "place", slug: "p1", title: "P1" }), // a return is not a new place
+			ev({ ev: "place_chronicled", slug: "afar", title: "Afar" }),
+			ev({ ev: "persona", name: "Marta", place: "p1" }),
+			ev({ ev: "persona", name: "Marta", place: "p1" }),
+			ev({ ev: "item", text: "a rope" }),
+			ev({ ev: "pick", slug: "x", option: 1, label: "l" }),
+			ev({ ev: "roll", slug: "x", dice: [9], kept: 9, dc: 10, band: "cost", grit: false }),
+			ev({ ev: "truth", text: "T.", source: "decree" }),
+		],
+		"n",
+	);
+	assert.equal(st.tally.granted, 2);
+	assert.equal(st.tally.rewarded, 1);
+	assert.equal(st.tally.failed, 1);
+	assert.equal(st.tally.shelved, 1);
+	assert.equal(st.tally.revived, 1);
+	assert.equal(st.tally.placesVisited, 2);
+	assert.equal(st.tally.placesChronicled, 1);
+	assert.equal(st.tally.personasMet, 1);
+	assert.equal(st.tally.items, 1);
+	assert.equal(st.tally.picks, 1);
+	assert.equal(st.tally.rolls, 1);
+	assert.equal(st.tally.truthsBound, 1);
+	// score = 3*(1 rewarded + 1 failed) + 2 places + 1 persona = 9 → level 1.
+	assert.equal(st.score, 9);
+	assert.equal(st.level, 1);
+	assert.equal(st.undertakings.x.resolved, true, "a pick resolves its twist");
+	assert.equal(st.undertakings.x.pickedOption, 1);
+});
+
+ok("ui: wrapText and the four-slot board keep honest widths", () => {
+	assert.deepEqual(wrapText("a quick brown fox", 7), ["a quick", "brown", "fox"]);
+	assert.deepEqual(wrapText("overlongword", 5), ["overl", "ongwo", "rd"]);
+	assert.deepEqual(wrapText("", 10), []);
+	const box = gridBox(
+		[{ lines: ["[1] Rope", "risky · quick"] }, { lines: ["[2] Smith"] }, { lines: ["[3] Ford the stream unaided now"] }],
+		33,
+	);
+	assert.equal(box[0].length, 33, "top border spans the width");
+	assert.ok(box.every((line: string) => line.length === 33), "every line spans the width");
+	assert.match(box[0], /^╭─+┬─+╮$/);
+	assert.match(box.at(-1)!, /^╰─+┴─+╯$/);
+	assert.ok(box.some((line: string) => line.includes("[1] Rope")));
+	assert.ok(box.some((line: string) => line.includes("├")), "the middle bar divides the rows");
+	const height = box.filter((line: string) => line.startsWith("│")).length;
+	assert.ok(height >= 3, "cells wrap to multiple rows");
 });
 
 ok("derive: legacy milestone mood entries honored", () => {
@@ -466,6 +678,7 @@ ok("config: angriest mood is last in severity order", () => {
 			"set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name",
 			"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 			"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item", "offer_choices",
+			"shelve_quest", "heal_wounds",
 		]) {
 			assert.match(p, new RegExp(tool));
 		}
@@ -476,6 +689,11 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /Never roll for them/);
 		assert.match(p, /COMPLETING stroke of every task/);
 		assert.match(p, /LOGIC OVER BOLDNESS/);
+		assert.match(p, /EFFORT IS THE PRICE/);
+		assert.match(p, /Nothing is given to the idle/);
+		assert.match(p, /the WORLD ITSELF strikes/);
+		assert.match(p, /at three wounds the seeker DIES/);
+		assert.match(p, /at most FOUR open matters/);
 		assert.match(p, /the offer lapses/);
 		assert.match(p, /WORK ADVANCED ON A TASK, A TRIAL, OR DICE/);
 		assert.match(p, /dice you announce in words are dice nobody can cast/);
@@ -484,6 +702,45 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.doesNotMatch(p, /Messages beginning with \[engine\] /); // the unmarked form must be gone
 		assert.match(p, /story's author/);
 		assert.match(p, /invent the tale at once/);
+		assert.match(p, /renown: level 1 of 5/);
+		assert.match(p, /The seeker is unhurt/);
+		assert.match(p, /NEVER ask the seeker where they are/);
+		assert.match(p, /EVERY place the story NAMES gets its page/);
+		assert.match(p, /EVERY soul the story NAMES gets their page/);
+		assert.match(p, /the moment work is AGREED/);
+		assert.match(p, /Engine refusals are COURSE CORRECTIONS/);
+		assert.match(p, /never repeat the same failing call unchanged/);
+	});
+
+	ok("prompt: wounds, a standing gate and death each surface to the keeper", () => {
+		const wounded = assembleSystemPrompt(config, {
+			state: {
+				...derive([ev({ ev: "wound", add: 2, reason: "r" })], "neutral"),
+				pendingRoll: { slug: "", tier: "an easy trial", dc: 10, trial: "a thief's quick hand", kind: "peril" },
+			},
+			engineNonce: "t3stn0nc3",
+			justArrived: false,
+		});
+		assert.match(wounded, /Wounds borne: 2 of 3/);
+		assert.match(wounded, /A PERIL bars everything/);
+		const gated = assembleSystemPrompt(config, {
+			state: {
+				...derive([], "neutral"),
+				pendingChoice: { kind: "twist", slug: "wagon", text: "t", options: [] },
+			},
+			engineNonce: "t3stn0nc3",
+			justArrived: false,
+		});
+		assert.match(gated, /A CHOICE stands unresolved on "wagon"/);
+		assert.match(gated, /no work anywhere advances/);
+		const ended = assembleSystemPrompt(config, {
+			state: derive([ev({ ev: "death", reason: "the beast" })], "neutral"),
+			engineNonce: "t3stn0nc3",
+			justArrived: false,
+		});
+		assert.match(ended, /3¼ · the tale has ended/);
+		assert.match(ended, /narrate only aftermath/i);
+		assert.doesNotMatch(p, /the tale has ended/);
 	});
 	const fresh = assembleSystemPrompt(config, { state: derive([], "neutral"), engineNonce: "t3stn0nc3", justArrived: true });
 	ok("prompt: fresh sitting shows arrival note, no resume line", () => {
@@ -537,6 +794,16 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.deepEqual(
 			answer.fixes.map((fix: { kind: string }) => fix.kind),
 			["place", "chronicle_place", "quest_grant", "item"],
+		);
+		const repairs = gm.parseGmAnswer(
+			'{"say": "The story outran the record.", "bind": null, "invite": false, "fixes": [' +
+				'{"kind": "untwist", "title": "The King\'s Apple", "reason": "the invasion overtook the garden (*u45*)"},' +
+				'{"kind": "clock", "title": "The King\'s Apple", "filled": 6, "note": "the apple was delivered (*u52*)"}]}',
+		);
+		assert.deepEqual(
+			repairs.fixes.map((fix: { kind: string }) => fix.kind),
+			["untwist", "clock"],
+			"the stuck-quest repair kinds parse",
 		);
 		const plain = gm.parseGmAnswer("no json at all");
 		assert.equal(plain.say, "no json at all");
@@ -592,7 +859,36 @@ ok("config: angriest mood is last in severity order", () => {
 			null,
 			"at most one blue option",
 		);
+		assert.equal(
+			variant((c) => {
+				for (const label of ["C", "D", "E"]) {
+					c.options.push({ label, risk: "risky", promise: "p", band: "clean", reveal: "r", reason: "law" });
+				}
+			}),
+			null,
+			"five options overflow the four-slot board",
+		);
 		assert.equal(gm.parseFatePlan("no json at all", "s"), null);
+	});
+
+	ok("gmchat: a reason must come FROM the laws — citation is checked mechanically", () => {
+		const laws = "Iron rusts within a day of touching river water. Oath-magic binds spoken promises.";
+		assert.equal(gm.citesGrounding("the iron rusted overnight, as iron here does", laws), true);
+		assert.equal(gm.citesGrounding("bad luck, plain and simple", laws), false, "no shared law word");
+		assert.equal(gm.citesGrounding("", laws), false);
+		const plan = {
+			complication: "The ford's wagon-iron gives way.",
+			clues: ["red flakes on the axle", "a damp creak at each turn"],
+			options: [
+				{ label: "A", risk: "risky", promise: "p", band: "clean", reveal: "r", reason: "iron rusts fast near river water here" },
+				{ label: "B", risk: "risky", promise: "p", band: "cost", reveal: "r", reason: "an oath-magic promise still binds the smith" },
+			],
+		};
+		assert.ok(gm.parseFatePlan(JSON.stringify(plan), "s", laws), "grounded reasons pass");
+		const ungrounded = JSON.parse(JSON.stringify(plan));
+		ungrounded.options[1].reason = "sheer misfortune struck";
+		assert.equal(gm.parseFatePlan(JSON.stringify(ungrounded), "s", laws), null, "one uncited reason sinks the plan");
+		assert.ok(gm.parseFatePlan(JSON.stringify(ungrounded), "s"), "without grounding the check is off");
 	});
 
 	const archive = await import(join(EXT, "archive.ts"));
@@ -746,7 +1042,39 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.equal(quest!.giver, "the seeker");
 		assert.equal(quest!.giverSlug, "self");
 		assert.equal(quest!.status, "open");
+		assert.equal(quest!.grantedAt, "millbrook-farm", "the granting place is parsed");
 		assert.deepEqual(world.openQuestLines(files), ["[open] Return the treasure (id: return-the-treasure)"]);
+	});
+
+	ok("world: shelving frees the slot; revival reopens; shelved quests hide from the keeper", () => {
+		const openBefore = world.countOpenQuests(files);
+		assert.equal(world.setQuestStatus(files, "return-the-treasure", "shelved", "set aside for the wolf hunt"), true);
+		assert.equal(world.questBySlug(files, "return-the-treasure")!.status, "shelved");
+		assert.equal(world.countOpenQuests(files), openBefore - 1, "shelving frees an open slot");
+		assert.ok(
+			!world.openQuestLines(files).some((line: string) => line.includes("return-the-treasure")),
+			"shelved quests leave the keeper's open matters",
+		);
+		const shelved = world.shelvedQuests(files);
+		assert.equal(shelved.length, 1);
+		assert.equal(shelved[0].slug, "return-the-treasure");
+		assert.equal(world.setQuestStatus(files, "return-the-treasure", "open", "taken up again"), true);
+		assert.equal(world.questBySlug(files, "return-the-treasure")!.status, "open");
+		assert.equal(world.countOpenQuests(files), openBefore);
+		assert.deepEqual(world.shelvedQuests(files), []);
+	});
+
+	ok("world: pages list and read back for /place and /persons", () => {
+		const places = world.listPages(files, "places");
+		assert.ok(places.some((page: { slug: string }) => page.slug === "millbrook-farm"));
+		const millbrook = places.find((page: { slug: string }) => page.slug === "millbrook-farm")!;
+		assert.equal(millbrook.title, "Millbrook Farm");
+		assert.match(millbrook.firstLine, /carrot farm/);
+		assert.match(world.placePage(files, "millbrook-farm"), /## The place/);
+		assert.equal(world.placePage(files, "no-such-place"), "");
+		const personas = world.listPages(files, "personas");
+		assert.ok(personas.some((page: { title: string }) => page.title === "Farmer Aldwin"));
+		assert.match(world.personaPage(files, "farmer-aldwin"), /## Who they are/);
 	});
 }
 

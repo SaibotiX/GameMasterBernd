@@ -111,6 +111,39 @@ export function foundPlace(
 	return { created: true, slug, title: name.trim() };
 }
 
+/** The full page of a place by SLUG ("" when none exists) — for the fate
+ * planner's grounding and the /place command. */
+export function placePage(world: WorldFiles, slug: string): string {
+	return read(placeFile(world, slug));
+}
+
+/** The full page of a persona by SLUG ("" when none exists) — for /persons. */
+export function personaPage(world: WorldFiles, slug: string): string {
+	return read(personaFile(world, slug));
+}
+
+/** All place pages: slug + title + first body line, for the /place list. */
+export function listPages(
+	world: WorldFiles,
+	kind: "places" | "personas",
+): { slug: string; title: string; firstLine: string }[] {
+	const dir = join(world.root, kind);
+	if (!existsSync(dir)) return [];
+	const pages: { slug: string; title: string; firstLine: string }[] = [];
+	for (const entry of readdirSync(dir).sort()) {
+		if (!entry.endsWith(".md")) continue;
+		const content = read(join(dir, entry));
+		const title = content.match(/^# (.+)$/m)?.[1]?.trim() ?? entry.replace(/\.md$/, "");
+		const bodyAt = content.indexOf(kind === "places" ? "## The place" : "## Who they are");
+		const firstLine =
+			bodyAt === -1
+				? ""
+				: (content.slice(bodyAt).split("\n")[1] ?? "").trim();
+		pages.push({ slug: entry.replace(/\.md$/, ""), title, firstLine });
+	}
+	return pages;
+}
+
 /** Extend the page of an existing place with new details (never deletes). */
 export function extendPlace(world: WorldFiles, name: string, details: string): boolean {
 	const file = placeFile(world, slugify(name));
@@ -200,15 +233,21 @@ const questsFile = (world: WorldFiles) => join(world.root, "quests.md");
 export interface Quest {
 	slug: string;
 	title: string;
-	status: "open" | "done" | "rewarded" | "failed";
+	/** "shelved" = set aside by the seeker to free one of the four slots;
+	 * only /quest accept (at the granting place) reopens it. */
+	status: "open" | "done" | "rewarded" | "failed" | "shelved";
 	giver: string;
 	giverSlug: string;
 	task: string;
 	reward: string;
+	/** Where the quest was granted (place slug) — revival happens only there. */
+	grantedAt: string | null;
 	/** Readable mirror of the undertaking clock; the branch-derived ledger is
 	 * authoritative (files never rewind with /tree). Null on legacy quests. */
 	clock: { filled: number; size: number } | null;
 }
+
+const STATUSES = "open|done|rewarded|failed|shelved";
 
 export function grantQuest(
 	world: WorldFiles,
@@ -240,7 +279,7 @@ export function grantQuest(
 
 export function questBySlug(world: WorldFiles, slug: string): Quest | null {
 	const content = read(questsFile(world));
-	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"));
+	const heading = content.match(new RegExp(`^## \\[(${STATUSES})\\] (.+) \\(id: ${slug}\\)$`, "m"));
 	if (!heading) return null;
 	const section = content.slice(content.indexOf(heading[0]));
 	const body = section.slice(0, section.indexOf("\n## ", 1) === -1 ? undefined : section.indexOf("\n## ", 1));
@@ -254,15 +293,27 @@ export function questBySlug(world: WorldFiles, slug: string): Quest | null {
 		giverSlug: giverLine?.[2]?.trim() ?? "unknown",
 		task: body.match(/^- task: (.+)$/m)?.[1]?.trim() ?? "(task unrecorded)",
 		reward: body.match(/^- reward: (.+)$/m)?.[1]?.trim() ?? "nothing",
+		grantedAt: body.match(/^- granted at: ([^,]+),/m)?.[1]?.trim() ?? null,
 		clock: clockLine ? { filled: Number(clockLine[1]), size: Number(clockLine[2]) } : null,
 	};
+}
+
+/** Every quest currently standing [shelved] — for /quest's set-aside list. */
+export function shelvedQuests(world: WorldFiles): Quest[] {
+	const content = read(questsFile(world));
+	const quests: Quest[] = [];
+	for (const match of content.matchAll(/^## \[shelved\] .+ \(id: (.+)\)$/gm)) {
+		const quest = questBySlug(world, match[1]);
+		if (quest) quests.push(quest);
+	}
+	return quests;
 }
 
 /** Rewrite (or insert) the quest's readable clock-mirror line. */
 export function setQuestClock(world: WorldFiles, slug: string, filled: number, size: number): boolean {
 	const file = questsFile(world);
 	let content = read(file);
-	const heading = content.match(new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"));
+	const heading = content.match(new RegExp(`^## \\[(${STATUSES})\\] (.+) \\(id: ${slug}\\)$`, "m"));
 	if (!heading) return false;
 	const sectionStart = content.indexOf(heading[0]);
 	const nextHeading = content.indexOf("\n## ", sectionStart + 1);
@@ -289,11 +340,13 @@ export function countOpenQuests(world: WorldFiles): number {
 		.filter((line) => line.startsWith("## [open] ")).length;
 }
 
-/** Advance a quest (open → done → rewarded, or → failed); notes always append. */
+/** Advance a quest (open → done → rewarded, or → failed), shelve it, or
+ * revive it ("open" from shelved); notes always append. The CALLER owns the
+ * transition rules — this writes what it is told. */
 export function setQuestStatus(
 	world: WorldFiles,
 	slug: string,
-	status: "done" | "rewarded" | "failed" | null,
+	status: "open" | "done" | "rewarded" | "failed" | "shelved" | null,
 	note: string,
 ): boolean {
 	const quest = questBySlug(world, slug);
@@ -302,7 +355,7 @@ export function setQuestStatus(
 	let content = read(file);
 	if (status) {
 		content = content.replace(
-			new RegExp(`^## \\[(open|done|rewarded|failed)\\] (.+) \\(id: ${slug}\\)$`, "m"),
+			new RegExp(`^## \\[(${STATUSES})\\] (.+) \\(id: ${slug}\\)$`, "m"),
 			`## [${status}] $2 (id: ${slug})`,
 		);
 	}

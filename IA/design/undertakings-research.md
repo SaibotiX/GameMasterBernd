@@ -118,6 +118,37 @@ design argument starts, this is the receipts file.
 4. Withhold one fact; pay off one memory (~every third quest calls back).
 5. Completion must dent the world — observable state later scenes reference.
 
+## Kenshi — the challenge doctrine (added 2026-08-03, user-supplied research)
+
+The reference for the living-world round (G12–G14): difficulty, indifference
+and death as features, not failures of kindness.
+
+- **"You are not the chosen one."** The player obeys the same rules as every
+  NPC; no main quest, no level scaling; dangerous places STAY dangerous.
+  Motivation is self-set: survive, then stop being prey. The developer
+  designs *against* guaranteed success — "too many games let their players
+  succeed… that's mind-numbingly boring" (Chris Hunt, PC Gamer 2025).
+  ([Steam page](https://store.steampowered.com/app/233860/Kenshi/),
+  [PC Gamer interview](https://www.pcgamer.com/games/survival-crafting/too-many-games-let-their-players-succeed-says-developer-of-notoriously-tough-survival-rpg-kenshi-and-thats-mind-numbingly-boring-to-me/))
+- **Skill-by-doing with failure-weighted XP**: every stat trains only through
+  use; Toughness scales XP with how OUTCLASSED you were (up to 6× when the
+  beating far exceeds your level) — losing to stronger enemies is optimal
+  training; "get enslaved early" is a recognized build.
+  ([Toughness wiki](https://kenshi.fandom.com/wiki/Toughness))
+  → our renown counts FAILED quests equal to rewarded ones: closures teach.
+- **Failure is a situation, not an ending**: defeat branches into playable
+  states (unconscious, enslaved, imprisoned, robbed, eaten) each with exits;
+  permanent losses (limbs) pair with different-sometimes-better replacements.
+  Losses open doors. → our wound ladder: setbacks wound before they kill;
+  every non-final outcome leaves an open move (F5). Only the LAST loss ends
+  the tale — and it truly ends it.
+- **Emergent stories as the payoff**: the most-loved player stories are
+  tragedies and sacrifices; the game's reputation grew for years on them
+  (1M copies 2020 → 3M by 2026, ~95% positive).
+  ([Lo-Fi player stories](https://lofigames.com/player-stories/),
+  [sales](https://gameworldobserver.com/2024/04/10/kenshi-sales-2-3-million-copies-lo-fi-games))
+  → death and disaster are premium content in the chronicle, never softened.
+
 ## Source pointers
 
 Tabletop: dndbeyond.com (basic rules), enworld.org (skill-challenge math),
