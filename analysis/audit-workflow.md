@@ -18,6 +18,9 @@ and walks the agent through exactly this file). Or paste the prompt from §6.
   chronicle folder, `ledger.md`, and their notes file.
 - Drop each batch under `analysis/sessions-in/<batch-name>/<tester>/…`
   (gitignored — sessions are private play).
+- AI batches arrive ready-made: the driver (`aitester/tools/ai-playtest.mjs`)
+  writes the same contract into `aitester/sessions-in/<batch>/ai-<persona>-<n>/`,
+  with the environment line already in each sitting's `meta.md`.
 - Record the environment once per batch: pi version (`pi --version`),
   extension commit (`git log -1 --format=%h`), model used. Findings without
   an environment line are unactionable later.
@@ -79,7 +82,8 @@ Pool all notes and cluster:
 ## 4. The report
 
 Write `analysis/reports/<YYYY-MM-DD>-<batch>.md` following
-`report-template.md`. The summary table is sorted by **Severity, then
+`report-template.md` (for an AI batch: `aitester/reports/<YYYY-MM-DD>-<batch>.md`,
+beside the batches it judges). The summary table is sorted by **Severity, then
 Sessions affected, then Incidents** — the top row is always the next thing
 to fix. Every class row carries its fix surface (taxonomy's map) and a
 concrete proposed change.

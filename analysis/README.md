@@ -37,12 +37,17 @@ testers play  ──►  sessions-in/<batch>/<tester>/     (jsonl + story folder
 # one command, whole batch — from the repo root in Claude Code:
 /analyze-sessions analysis/sessions-in/2026-08-xx-first-batch/
 
+# AI batches (played by aitester/) use the same kit and contract:
+/analyze-sessions aitester/sessions-in/<batch>/
+
 # or by hand, following audit-workflow.md:
 node analysis/tools/session-map.mjs analysis/sessions-in/<batch>/**/*.jsonl
 ```
 
 Reports land in `reports/` (tracked — they are the project's quality
-history). `sessions-in/` is **gitignored**: sessions are private play.
+history); reports for AI batches land in `aitester/reports/`, beside the
+batches they judge. Both `sessions-in/` folders are **gitignored**:
+sessions are private play.
 
 ## The three rules that make it work
 

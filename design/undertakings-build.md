@@ -222,17 +222,61 @@ and ALL fixed + verified:
 - [x] Verified: 65/65 unit (twist_dropped folding, repair-kind parsing, new
       protocol lines) + 18/18 headless RPC smoke + the TTY widget probe.
 
-## Phase 3 — the long game
+## Phase 2.9 — the AI playtester: test first (maintainer's ruling, 2026-08-03)
 
-- [ ] Shuffle-bags as ledger draw events (shape / suit / decision-shape)
+TEST FIRST — Phase 3 waits, and shrinks (full reasoning and the harness
+design: `aitester/ai-playtester.md`). Four human playtests, four
+stranding-class finds within the first two tasks; the newest systems
+(perils, wounds, death, renown, shelving, untaken offers) have at most one
+sitting of exposure — and Phase 3's features live beyond the current
+survival horizon. The harness multiplies exposure exactly where the bugs
+live, at an evening's cost.
+
+- [x] The harness (`aitester/`): driver spawns the REAL engine over pi RPC
+      through a wrapper extension that only ADDS `/ai-state` (headless TUI
+      parity — public state, nothing veiled); a tester LLM plays one
+      world-specific persona per sitting under a TASKS-FIRST guide; the
+      sitting boundary (2 closed / 3rd granted / 24 turns / death / stall /
+      provider error) lives in the driver, never in game code
+- [x] Batch 1 (2026-08-03, v1): harness flawless, and the record delivered —
+      zero quest ticks in 48 turns; unvoiced peril trials stranded both
+      sittings unnoticed by the testers ⇒ v2: `/ai-state` every turn +
+      TASKS-FIRST personas
+- [x] v3 (2026-08-03): harness merged into this repo as `aitester/` — the
+      separate-repo layout broke the driver's commit stamp and hid the
+      engine-import layout assumption; one commit now pins engine + harness
+      (selftest 30/30 · wrapper-smoke 9/9 · scripted batch end-to-end)
+- [ ] Batch 2 (v2 harness, both worlds) → report in `aitester/reports/` →
+      rulings → fixes → re-test the same ground (RITE)
+
+**Exit criterion to start Phase 3**: two consecutive batches in which every
+sitting closes at least two tasks (or dies honestly) with zero S1/S2
+findings, in both worlds.
+
+## Phase 3 — the long game (re-scoped 2026-08-03 with the test-first ruling)
+
+Much of the original list had shipped in spirit by Phase 2.8; the relevance
+check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
+
 - [ ] Breadcrumbs: chains end in a pointer (chronicle_place + rumor);
-      keep 2–3 live
-- [ ] Hook bundles per place (2–4 sharing a pocket)
-- [ ] Consequence-echo callbacks (resurface-later flags; name the past choice)
-- [ ] Travel micro-events (one per leg, never zero, never two)
-- [→] GM-table repair kinds for clocks/plans — clocks + twist-dissolving
-      PULLED FORWARD (built in playtest 4); plan-rewriting stays Phase 3
-- [ ] Pacing fingerprints per chronicle feeding the planner
+      keep 2–3 live — KEPT (G6 still unserved; nothing built points
+      chain-ends onward)
+- [ ] Consequence-echo callbacks (resurface-later flags; name the past
+      choice) — KEPT (cheaper than specced: D9's resolved answer sheets are
+      exactly the record an echo cites)
+- [ ] Hook bundles — MERGED into D12's anchors: "2–4 courses waiting per
+      place", not a new system
+- [ ] Travel events — RE-SCOPED to "no leg passes silently" (color, an
+      encounter, or the fuse striking); per-leg guarantees would
+      double-punish travel on top of G14
+- [ ] Shuffle-bags — SHRUNK: draw-without-replacement only where batch data
+      shows real repetition (trouble kinds, decision shapes); the
+      ≤1-autoresolve rule, no-repeat reroll, decoupled twist chance and the
+      renown-weighted draw already serve G5/P5's intent
+- [ ] Plan-rewriting repair kind (small) — untwist + clock repairs were
+      PULLED FORWARD and proven in playtest 4
+- [→] Pacing fingerprints — DEFERRED: the batch reports ARE the first
+      fingerprints; automate what they prove useful
 - [ ] Tests + smoke
 
 ## Decisions log
@@ -317,3 +361,13 @@ and ALL fixed + verified:
   keeper's job — invented from cues, never asked; named places and souls are
   paged the moment they exist. Refusal texts are steering, part of the
   design surface: every engine refusal must name the correction it wants.
+- 2026-08-03 · Test first (the AI-playtester ruling): before Phase 3, AI
+  batches multiply playtest exposure where the bugs concentrate — the
+  newest systems, inside the first two tasks. Phase 3 shrinks per the
+  relevance check (see the re-scoped list above) and starts only after two
+  consecutive clean batches (every sitting closes two tasks or dies
+  honestly, zero S1/S2) in both worlds. The harness plays the REAL engine
+  over RPC (never instrumented, `/ai-state` adds text-only TUI parity) and
+  lives in `aitester/` — merged into this repo the same day it was split
+  out, because a separate repo broke the one-commit stamp that makes a
+  batch's findings attributable to an exact engine state.

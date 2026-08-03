@@ -4,8 +4,9 @@ description: Audit World Console playtest sessions — map, classify, count, and
 
 Audit the World Console playtest sessions given as: $ARGUMENTS
 
-(If no paths were given, ask which batch under `analysis/sessions-in/` to
-audit, or take every `.jsonl` under the newest batch folder there.)
+(If no paths were given, ask which batch under `analysis/sessions-in/`
+(human play) or `aitester/sessions-in/` (AI play) to audit, or take every
+`.jsonl` under the newest batch folder there.)
 
 Follow `analysis/audit-workflow.md` EXACTLY. In short:
 
@@ -30,10 +31,12 @@ Follow `analysis/audit-workflow.md` EXACTLY. In short:
 5. **Verify**: re-open one cited span per S1/S2 class against the raw
    record; drop findings that die under verification.
 6. **Report**: write `analysis/reports/<YYYY-MM-DD>-<batch>.md` per the
-   template — summary table sorted Severity → Sessions affected →
-   Incidents; one concrete proposed fix per class with its fix surface;
-   status NEW/KNOWN/REGRESSION against earlier reports in
-   `analysis/reports/`; a short "what went right" section.
+   template (for an AI batch from `aitester/sessions-in/`, write to
+   `aitester/reports/` instead) — summary table sorted Severity →
+   Sessions affected → Incidents; one concrete proposed fix per class with
+   its fix surface; status NEW/KNOWN/REGRESSION against earlier reports in
+   `analysis/reports/` and `aitester/reports/`; a short "what went right"
+   section.
 
 Hard rules: every finding cites uN evidence; do NOT modify engine code,
 prompts, or design docs in this run — the report proposes, the maintainer

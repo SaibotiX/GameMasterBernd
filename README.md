@@ -11,6 +11,7 @@ The game running inside the stock [pi coding agent](https://github.com/earendil-
 | `config/` | constitution, worlds (+ per-world `*.laws.md`), moods, web sources — plain markdown, hot-reloaded |
 | `design/` | the undertakings design: goals & invariants, mechanics spec, research record, build progress |
 | `analysis/` | the playtest telemetry kit: session anatomy, failure taxonomy, audit workflow, report template, tester guide (`/analyze-sessions` runs it) |
+| `aitester/` | the AI playtesting service: driver + wrapper extension (`/ai-state` headless parity), world persona cards, AI batches and their reports (see `aitester/README.md`) |
 | `data/world/<world>/<chronicle>/` | one folder per STORY: places, personas, quests, items — and `ledger.md`, the readable game log |
 | `data/downloads/` | pictures and video clips the scrying glass fetched |
 | `tools/yt-dlp/` | vendored yt-dlp source (git submodule) — drives `find_video` as a subprocess |
@@ -76,12 +77,15 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
 ```bash
 node extension/test/unit.ts          # pure logic, no pi, no LLM (network: Wikipedia)
 node extension/test/integration.ts   # real pi over RPC; Part A costs no LLM tokens
+node aitester/tools/ai-playtest.mjs --selftest   # AI-harness logic, no pi, no LLM
+node aitester/tools/wrapper-smoke.mjs            # /ai-state TUI parity over crafted gates, no LLM
 ```
 
 - **unit.ts** — ledger derivation, the ban/redemption invariants, branch isolation, config-loader equivalence with `app/src/config.ts`, prompt layers, search adapter (incl. abort).
 - **integration.ts Part A** (crafted session files, no LLM) — banned-branch derivation, leaf-rewind to a pre-ban branch (the `/tree` mechanism), stamped-world-beats-`--world`.
 - **integration.ts Part B** (live LLM) — no search possible while barred, redemption flow, search after redemption, name recording, `/compact` shrinks context while the ledger survives, `new_session` starts a fresh ledger.
 - **integration.ts Part C** — `/web`: a clean session hands the request to the GM (performed entry recorded), a barred session is refused by the engine with no LLM call; `WC_VIDEO=1` adds the slow end-to-end video download. `test/demo-web.ts` is a watchable demo of the same flows.
+- **aitester** — beyond the two token-free checks above, `aitester/` runs whole AI-played sittings of the real engine over RPC to hunt bugs and exploits (a live batch costs keeper + tester tokens; see `aitester/README.md`).
 
 Known soft spot: whether the *model* ever attempts `find_text` while barred is model temperament (it is told it is barred and usually refuses in character); the code block behind it shares the exact `banned` check the unit tests cover.
 
