@@ -34,11 +34,15 @@ import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
 import { gmAsk, gmJudgeAmendment, gmJudgeTruth, gmPlanFate, type GmFix, type GmTurn } from "./gmchat.ts";
 import {
 	asGameEvent,
+	BAND_TICKS,
 	derive,
 	describeEvent,
+	drawQuestShape,
 	LEDGER_TYPE,
 	planRedemption,
 	planSetMood,
+	rollBand,
+	TIERS,
 	type DerivedState,
 	type FatePlan,
 	type GameEvent,
@@ -81,6 +85,7 @@ const GAME_TOOLS = [
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
+	"offer_choices",
 ];
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
@@ -88,14 +93,16 @@ const KIND_BY_TOOL: Record<string, string> = {
 	find_picture: "picture",
 	find_video: "video",
 };
-// Undertaking shapes: clock size / twist beat (0 = plain). Half the draws are
-// plain — tasks are discovery, not work (goals P2/P3); beats = clock/2, the
-// twist lands after commitment. Full shuffle-bags come with Phase 3.
+// Undertaking shapes: clock size / twist beat / finale flag. EVERY quest's
+// completing stroke is a trial (check > 0 arms it — the playtest verdict:
+// the peak must be contested); half additionally seal a mid-quest twist.
+// "Simple" means no mid-work interruption, never no climax. Beats = clock/2.
+// Full shuffle-bags come with Phase 3.
 const SHAPES = [
-	{ clock: 4, twist: 0 },
-	{ clock: 6, twist: 0 },
-	{ clock: 6, twist: 2 },
-	{ clock: 8, twist: 3 },
+	{ clock: 4, twist: 0, check: 1 },
+	{ clock: 6, twist: 0, check: 1 },
+	{ clock: 6, twist: 2, check: 1 },
+	{ clock: 8, twist: 3, check: 1 },
 ] as const;
 /** Trouble kinds a twist may be drawn from (the complication taxonomy). */
 const SUITS = [
@@ -245,18 +252,9 @@ export default function (pi: ExtensionAPI) {
 
 	// ---- undertakings: shape draws, choice widget, hotkeys -----------------
 
-	/**
-	 * Draw a quest's shape. Code-owned variety (goals P2/P3/P5): self-set
-	 * tasks stay plain; no twist right after a twisted quest; never the same
-	 * shape as the previous quest when another is available.
-	 */
-	function drawShape(selfSet: boolean): { clock: number; twist: number } {
-		const last = st.recentShapes.at(-1);
-		let pool = SHAPES.filter((shape) => (selfSet || last?.twist ? shape.twist === 0 : true));
-		if (pool.length === 0) pool = SHAPES.filter((shape) => shape.twist === 0);
-		const unlike = pool.filter((shape) => !(last && shape.clock === last.clock && shape.twist === last.twist));
-		const from = unlike.length > 0 ? unlike : pool;
-		return from[randomInt(from.length)];
+	/** Draw a quest's shape — pacing rules live in drawQuestShape (pure, tested). */
+	function drawShape(selfSet: boolean): { clock: number; twist: number; check: number } {
+		return drawQuestShape(SHAPES, st.recentShapes.at(-1), selfSet, (n) => randomInt(n));
 	}
 
 	/** Draw the twist's trouble kind, avoiding the most recent one. */
@@ -293,23 +291,42 @@ export default function (pi: ExtensionAPI) {
 		return visible;
 	}
 
-	/** The pending-choice panel above the editor; never blocks typing (G7). */
+	/** The pending choice/trial panel above the editor; never blocks typing (G7). */
 	function updateWidgets(ctx: ExtensionContext): void {
 		if (ctx.mode !== "tui" || typeof ctx.ui.setWidget !== "function") return;
 		const pending = st.pendingChoice;
-		if (!pending) {
-			ctx.ui.setWidget("world-console.choice", undefined);
+		if (pending) {
+			const head =
+				pending.kind === "offer"
+					? `⟡ choices before you — ${clip(pending.text, 110)}`
+					: `⟡ the task twists — ${clip(pending.text, 110)}`;
+			const foot =
+				pending.kind === "offer"
+					? `   choose: Alt+number or /pick <n> [your own words] — or simply speak on (the offer lapses)`
+					: `   choose: Alt+number or /pick <n> [your own words] — plain talk stays free`;
+			ctx.ui.setWidget("world-console.choice", [
+				head,
+				...pending.options.map(
+					(option) =>
+						`   [${option.id}] ${option.label}` +
+						(option.risk ? ` · ${option.risk}` : "") +
+						(option.promise ? ` · ${clip(option.promise, 60)}` : "") +
+						(option.unlockedBy ? ` · ⚑ ${option.unlockedBy}` : ""),
+				),
+				foot,
+			]);
 			return;
 		}
-		ctx.ui.setWidget("world-console.choice", [
-			`⟡ the task twists — ${clip(pending.text, 110)}`,
-			...pending.options.map(
-				(option) =>
-					`   [${option.id}] ${option.label} · ${option.risk} · ${clip(option.promise, 60)}` +
-					(option.unlockedBy ? ` · ⚑ ${option.unlockedBy}` : ""),
-			),
-			`   choose: Alt+number or /pick <n> [your own words] — plain talk stays free`,
-		]);
+		const trial = st.pendingRoll;
+		if (trial) {
+			ctx.ui.setWidget("world-console.choice", [
+				`⚀ a trial bars the way — ${trial.tier} (DC ${trial.dc})` +
+					(trial.edge ? ` · ${trial.edge}: two dice, ${trial.edge === "favored" ? "best" : "worst"} counts` : ""),
+				`   cast the die: /roll — plain talk stays free until it falls`,
+			]);
+			return;
+		}
+		ctx.ui.setWidget("world-console.choice", undefined);
 	}
 
 	let unsubTerminalInput: (() => void) | undefined;
@@ -511,11 +528,12 @@ export default function (pi: ExtensionAPI) {
 						);
 					}
 				}
-				// Repairs record what already happened: a plain small clock, no twist.
+				// Repairs record what already happened: a small clock, no twist —
+				// the finale stays armed like any quest.
 				const { slug } = grantQuest(files, { title, giver, task, reward, placeSlug: st.place.slug, clockSize: 4 });
 				appendEvents(ctx, [
 					{ ev: "quest", action: "granted", title },
-					{ ev: "quest_shape", slug, clock: 4, twist: 0 },
+					{ ev: "quest_shape", slug, clock: 4, twist: 0, check: 1 },
 				]);
 				return `the task "${title}" is chronicled [open]${giver ? ` — giver ${giver}` : " — set by the seeker"} (id: ${slug})`;
 			}
@@ -573,6 +591,35 @@ export default function (pi: ExtensionAPI) {
 				addItem(files, `${item} — ${String(fix.origin ?? "").trim() || "GM-table repair"}`);
 				appendEvents(ctx, [{ ev: "item", text: item }]);
 				return `the seeker's items now hold: ${item}`;
+			}
+			case "trial": {
+				const slug = slugify(String(fix.title ?? ""));
+				const quest = questBySlug(files, slug);
+				if (!quest) throw new Error(`no quest "${fix.title}" in the chronicle`);
+				if (quest.status !== "open") throw new Error(`"${quest.title}" stands [${quest.status}] — only open work can be tried`);
+				if (st.pendingChoice || st.pendingRoll) {
+					throw new Error("something already awaits the seeker's word — one gate at a time");
+				}
+				const byWeight = { easy: TIERS[4], middling: TIERS[6], hard: TIERS[8] } as const;
+				const u = st.undertakings[slug];
+				const { tier, dc } = byWeight[fix.weight as keyof typeof byWeight] ?? TIERS[u?.size ?? 6] ?? TIERS[6];
+				const trial = String(fix.reason ?? "").trim() || "the table's judgment: this moment must be earned";
+				appendEvents(ctx, [{ ev: "check", slug, tier, dc, trial, kind: "hazard" }]);
+				return `a trial now bars "${quest.title}" — ${tier} (DC ${dc}); the seeker casts the die (/roll)`;
+			}
+			case "choices": {
+				const prompt = String(fix.prompt ?? "").trim();
+				const labels = (Array.isArray(fix.options) ? fix.options : [])
+					.map((option) => String(option ?? "").trim())
+					.filter(Boolean)
+					.slice(0, 5);
+				if (!prompt || labels.length < 2) throw new Error("choices need a prompt and 2–5 courses");
+				if (st.pendingChoice || st.pendingRoll) {
+					throw new Error("something already awaits the seeker's word — one gate at a time");
+				}
+				const options: PresentedOption[] = labels.map((label, index) => ({ id: index + 1, label, risk: "", promise: "" }));
+				appendEvents(ctx, [{ ev: "offer", text: prompt, options }]);
+				return `choices now stand before the seeker: ${labels.join(" · ")} (they pick, or speak past them)`;
 			}
 			default:
 				throw new Error(`unknown repair kind "${(fix as { kind?: string }).kind}"`);
@@ -641,6 +688,9 @@ export default function (pi: ExtensionAPI) {
 		// unstamped branch, whatever moved the leaf.
 		const stamp = chronicleStamp(ctx);
 		if (stamp.length > 0) appendEvents(ctx, stamp);
+		// An open OFFER never binds: the seeker speaking past it (any turn that
+		// is not its own /pick resolution) lets it lapse. Twists stay standing.
+		if (st.pendingChoice?.kind === "offer") appendEvents(ctx, [{ ev: "offer_dropped" }]);
 		// In-game archive recall: search the sitting's FULL record (compaction
 		// notwithstanding — getBranch keeps every entry) for this turn's words
 		// and hand the hits to the keeper through a prompt layer. Pure code,
@@ -775,6 +825,24 @@ export default function (pi: ExtensionAPI) {
 				);
 				return;
 			}
+			if (pending.kind === "offer") {
+				// An open offer: no sealed outcomes — the pick simply becomes the
+				// seeker's declared course, handed to the keeper to play onward.
+				appendEvents(ctx, [{ ev: "pick", slug: "", option: id, label: chosen.label, extra }]);
+				pi.sendMessage(
+					{
+						customType: "world-console.pick",
+						content:
+							`[engine:${ENGINE_NONCE}] From the choices laid out ("${pending.text}") the seeker points at ` +
+							`[${id}] "${chosen.label}"${extra ? ` and speaks: "${extra}"` : ""}. This is their chosen course — ` +
+							`carry the story onward from it in your voice.`,
+						display: true,
+						details: { id, label: chosen.label, extra },
+					},
+					{ triggerTurn: true },
+				);
+				return;
+			}
 			const hidden = st.undertakings[pending.slug]?.plan?.options.find((option) => option.id === id);
 			const files = worldFiles();
 			const quest = questBySlug(files, pending.slug);
@@ -817,15 +885,277 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
+	// The pick stays visible in the transcript — a colored, permanent record
+	// of where the seeker committed (not a dim aside).
 	pi.registerMessageRenderer<{ id?: number; label?: string; extra?: string }>(
 		"world-console.pick",
 		(message, options, theme) => {
 			const { id, label, extra } = message.details ?? {};
 			const line =
 				id && label
-					? `· the seeker takes path [${id}] ${label}${extra ? ` — "${extra}"` : ""}`
-					: "· the seeker commits to a path";
-			return new Text(theme.fg("dim", line), options.outputPad, 0);
+					? theme.fg("accent", `⟡ path taken — [${id}] ${label}`) + (extra ? theme.fg("dim", ` · "${extra}"`) : "")
+					: theme.fg("accent", "⟡ the seeker commits to a path");
+			return new Text(line, options.outputPad, 0);
+		},
+	);
+
+	/**
+	 * The dice ceremony (TUI): a focused overlay — the roll cannot be missed,
+	 * but it is summoned only at the moment of casting. Space casts; on a miss
+	 * with grit in hand, the seeker may spend it for one reroll AFTER seeing
+	 * the die (the BG3 moment). Escape before casting leaves the trial
+	 * standing (the gate holds); once cast, the die is law.
+	 */
+	function rollCeremony(
+		ctx: ExtensionContext,
+		trial: { tier: string; dc: number; edge?: "favored" | "hindered" },
+		gritAvailable: boolean,
+	): Promise<{ dice: number[]; kept: number; grit: boolean } | null> {
+		const throwDice = () => {
+			const count = trial.edge ? 2 : 1;
+			const dice = Array.from({ length: count }, () => randomInt(1, 21));
+			const kept =
+				trial.edge === "favored" ? Math.max(...dice) : trial.edge === "hindered" ? Math.min(...dice) : dice[0];
+			return { dice, kept };
+		};
+		return ctx.ui.custom<{ dice: number[]; kept: number; grit: boolean } | null>(
+			(tui, theme, _keybindings, done) => {
+				let phase: "ready" | "rolling" | "offer" | "landed" = "ready";
+				let shown: number[] = [];
+				let dice: number[] = [];
+				let thrown: number[] = [];
+				let kept = 0;
+				let grit = false;
+				let timer: ReturnType<typeof setInterval> | undefined;
+				const cast = () => {
+					phase = "rolling";
+					let ticks = 0;
+					timer = setInterval(() => {
+						shown = Array.from({ length: trial.edge ? 2 : 1 }, () => randomInt(1, 21));
+						ticks++;
+						tui.requestRender();
+						if (ticks >= 9) {
+							if (timer) clearInterval(timer);
+							const landed = throwDice();
+							dice = landed.dice;
+							thrown = [...thrown, ...landed.dice];
+							kept = landed.kept;
+							shown = dice;
+							phase = !grit && gritAvailable && kept < trial.dc ? "offer" : "landed";
+							tui.requestRender();
+						}
+					}, 75);
+				};
+				const face = (value: number) =>
+					value === 20 ? theme.fg("success", String(value).padStart(2)) : value === 1 ? theme.fg("error", String(value).padStart(2)) : String(value).padStart(2);
+				const bandColor = (band: string) =>
+					band === "great" || band === "success" ? "success" : band === "cost" ? "warning" : "error";
+				return {
+					render(width: number): string[] {
+						// The ceremony wears its own frame and color — never mistakable
+						// for the transcript behind it. (Left-edge frame only: padding a
+						// right edge against ANSI-colored strings miscounts widths.)
+						const inner = Math.min(width - 2, 52);
+						const frame = (line: string) => theme.fg("borderAccent", "│ ") + truncateToWidth(line, inner - 4, "…");
+						const head = theme.fg("accent", `⚀ THE FATES ROLL — ${trial.tier} · DC ${trial.dc}`);
+						const edgeLine = trial.edge
+							? theme.fg("warning", `${trial.edge}: two dice, ${trial.edge === "favored" ? "the best" : "the worst"} counts`)
+							: "";
+						const dieFaces =
+							phase === "ready"
+								? "┌────┐  \n│ ?? │  \n└────┘  "
+								: shown
+										.map(() => "┌────┐")
+										.join("  ") +
+									"\n" +
+									shown.map((v) => `│ ${phase === "rolling" ? String(v).padStart(2) : face(v)} │`).join("  ") +
+									"\n" +
+									shown.map(() => "└────┘").join("  ");
+						const verdict =
+							phase === "landed" || phase === "offer"
+								? theme.fg(
+										bandColor(rollBand(kept, trial.dc)),
+										`→ ${kept} against DC ${trial.dc} — ${rollBand(kept, trial.dc)}${grit ? " (grit spent)" : ""}`,
+									)
+								: "";
+						const hint = theme.fg(
+							"dim",
+							phase === "ready"
+								? "[space] cast the die · [esc] not yet (the trial stands)"
+								: phase === "rolling"
+									? "the die tumbles…"
+									: phase === "offer"
+										? "fallen short — [g] spend grit, reroll once · [enter] let it stand"
+										: "[enter] so it stands",
+						);
+						const body = [head, edgeLine, "", ...dieFaces.split("\n"), verdict, "", hint].filter(
+							(line, index) => !(line === "" && index === 1),
+						);
+						return [
+							theme.fg("borderAccent", "╭" + "─".repeat(inner - 2)),
+							...body.map(frame),
+							theme.fg("borderAccent", "╰" + "─".repeat(inner - 2)),
+						];
+					},
+					handleInput(data: string) {
+						if (phase === "ready") {
+							if (data === " " || data === "\r") cast();
+							else if (data === "\x1b") done(null); // the trial remains pending
+						} else if (phase === "offer") {
+							if (data === "g" || data === "G") {
+								grit = true;
+								cast();
+							} else if (data === "\r" || data === " " || data === "\x1b") {
+								phase = "landed";
+								done({ dice: thrown, kept, grit });
+							}
+						} else if (phase === "landed") {
+							if (data === "\r" || data === " " || data === "\x1b") done({ dice: thrown, kept, grit });
+						}
+					},
+					dispose() {
+						if (timer) clearInterval(timer);
+					},
+				};
+			},
+			{
+				overlay: true,
+				// Anchored just above the editor, clear of the transcript — and
+				// small: the ceremony floats, it does not cover the story.
+				overlayOptions: { anchor: "bottom-center", offsetY: -3, width: 54, maxHeight: 12 },
+			},
+		);
+	}
+
+	// /roll — the seeker casts the die of a standing trial. The engine rolls
+	// (crypto), records, resolves the band, and hands the keeper the result to
+	// narrate — a roll that never happened can never be narrated.
+	pi.registerCommand("roll", {
+		description: "World Console: cast the die when a trial bars the work — /roll",
+		handler: async (_args, ctx) => {
+			const trial = st.pendingRoll;
+			if (!trial) {
+				// A choice, not a die, may be what actually stands.
+				if (st.pendingChoice) {
+					ctx.ui.notify(
+						st.pendingChoice.kind === "twist"
+							? "No die stands — a CHOICE does: pick a path with /pick <n> (the panel shows them)."
+							: "No die stands — open choices do: /pick <n>, or simply speak on and they lapse.",
+						"info",
+					);
+					return;
+				}
+				// The keeper may have promised dice in words alone (theater). If
+				// open work exists, the engine corrects the keeper itself — with
+				// the facts in hand, so it can act at once: the contested effort
+				// must route through attempt_quest, which then declares what the
+				// moment truly holds. The seeker's cast becomes a one-step
+				// recovery instead of a dead end.
+				const files = worldFiles();
+				const openWork = openQuestLines(files)
+					.map((line) => line.replace(/^\[(open|done)\] /, "").replace(/ \(id: .+\)$/, ""))
+					.map((title) => {
+						const u = st.undertakings[slugify(title)];
+						return u && u.size > 0 ? `"${title}" (${u.filled}/${u.size})` : `"${title}"`;
+					});
+				if (openWork.length > 0) {
+					ctx.ui.notify(
+						"No trial stands — if dice were spoken of, the engine never declared them. The engine now calls the keeper to order; the true moment will follow.",
+						"info",
+					);
+					pi.sendMessage(
+						{
+							customType: "world-console.nudge",
+							content:
+								`[engine:${ENGINE_NONCE}] The seeker just cast a die — but NO trial stands. If your last words ` +
+								`spoke of rolls or stakes, you promised dice the engine never declared: that must never happen. ` +
+								`Open work: ${openWork.join(" · ")}. Recover NOW in one stroke: call attempt_quest for the quest ` +
+								`the scene is about, with the approach your own last telling described (declare edge "hindered" ` +
+								`with your reason if the fiction stacks against them). The engine will declare what the moment ` +
+								`truly holds — a twist's paths or a trial's die — and you voice THAT. Do not ask the seeker ` +
+								`anything first. Say NOTHING of this correction, of engines, dice or rules: your reply is story ` +
+								`alone, resuming mid-scene as if the pause never was.`,
+							display: true,
+							details: { reason: "roll-without-trial" },
+						},
+						{ triggerTurn: true },
+					);
+					return;
+				}
+				ctx.ui.notify("No trial stands — there is nothing to roll.", "info");
+				return;
+			}
+			const u = st.undertakings[trial.slug];
+			const files = worldFiles();
+			const quest = questBySlug(files, trial.slug);
+			if (!u || !quest) {
+				ctx.ui.notify("The trial's quest is missing from the chronicle — raise it at the GM table (/gm).", "error");
+				return;
+			}
+			let result: { dice: number[]; kept: number; grit: boolean } | null;
+			if (ctx.mode === "tui" && typeof ctx.ui.custom === "function") {
+				result = await rollCeremony(ctx, trial, !u.gritUsed);
+				if (!result) return; // escaped before casting — the trial stands
+			} else {
+				// Headless (RPC/tests): cast plainly, no ceremony, no grit moment.
+				const count = trial.edge ? 2 : 1;
+				const dice = Array.from({ length: count }, () => randomInt(1, 21));
+				const kept =
+					trial.edge === "favored" ? Math.max(...dice) : trial.edge === "hindered" ? Math.min(...dice) : dice[0];
+				result = { dice, kept, grit: false };
+			}
+			const band = rollBand(result.kept, trial.dc);
+			const add = BAND_TICKS[band] ?? 0;
+			appendEvents(ctx, [
+				{ ev: "roll", slug: trial.slug, dice: result.dice, kept: result.kept, dc: trial.dc, band, grit: result.grit },
+				{ ev: "outcome", slug: trial.slug, band, add, text: `the trial "${trial.trial}" — ${band}` },
+			]);
+			const after = st.undertakings[trial.slug];
+			if (after) setQuestClock(files, trial.slug, after.filled, after.size);
+			const guidance =
+				band === "great"
+					? `a triumph — the work leaps ahead (${after?.filled}/${after?.size}); grant a small perk in the telling, something earned`
+					: band === "success"
+						? `success — the work advances (${after?.filled}/${after?.size})`
+						: band === "cost"
+							? `success at a price — the work advances (${after?.filled}/${after?.size}), but name a visible cost in this scene (bounded; no new tasks)`
+							: `a setback — the work slips (${after?.filled}/${after?.size}); the situation worsens, yet the path stays open (no new tasks, never a dead end)`;
+			pi.sendMessage(
+				{
+					customType: "world-console.roll",
+					content:
+						`[engine:${ENGINE_NONCE}] The die fell for "${quest.title}": kept ${result.kept} against DC ${trial.dc}` +
+						`${trial.edge ? ` (${trial.edge}, threw ${result.dice.join(" and ")})` : ""}` +
+						`${result.grit ? ", grit spent on a reroll" : ""} — ${band}. ` +
+						`Narrate: ${guidance}. Diegetically, never the mechanics; end with an open move for the seeker.`,
+					display: true,
+					details: { kept: result.kept, dc: trial.dc, band, dice: result.dice, grit: result.grit },
+				},
+				{ triggerTurn: true },
+			);
+		},
+	});
+
+	// The engine's mid-game corrections show as a quiet line, not raw text.
+	pi.registerMessageRenderer<{ reason?: string }>("world-console.nudge", (message, options, theme) => {
+		return new Text(theme.fg("dim", "⚙ the engine steadies the keeper"), options.outputPad, 0);
+	});
+
+	// The roll stays visible in the transcript — every face thrown, colored by
+	// how the fates answered, a permanent record among the story's lines.
+	pi.registerMessageRenderer<{ kept?: number; dc?: number; band?: string; dice?: number[]; grit?: boolean }>(
+		"world-console.roll",
+		(message, options, theme) => {
+			const { kept, dc, band, dice, grit } = message.details ?? {};
+			if (!kept || !dc || !band) return new Text(theme.fg("dim", "⚀ the die falls"), options.outputPad, 0);
+			const color = band === "great" || band === "success" ? "success" : band === "cost" ? "warning" : "error";
+			const line =
+				theme.fg(color, `⚀ the die falls: ${kept} against DC ${dc} — ${band}`) +
+				theme.fg(
+					"dim",
+					`${dice && dice.length > 1 ? ` · threw ${dice.join(", ")}` : ""}${grit ? " · grit spent" : ""}`,
+				);
+			return new Text(line, options.outputPad, 0);
 		},
 	);
 
@@ -1489,7 +1819,7 @@ export default function (pi: ExtensionAPI) {
 			});
 			appendEvents(ctx, [
 				{ ev: "quest", action: "granted", title },
-				{ ev: "quest_shape", slug, clock: shape.clock, twist: shape.twist },
+				{ ev: "quest_shape", slug, clock: shape.clock, twist: shape.twist, check: shape.check },
 			]);
 			return {
 				content: [
@@ -1513,6 +1843,15 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({
 			title: Type.String({ description: "The quest's title" }),
 			approach: Type.String({ description: "What the seeker actually does this scene, one plain line" }),
+			edge: Type.Optional(
+				StringEnum(["favored", "hindered"], {
+					description:
+						"ONLY when the seeker's preparation or position plainly favors or hinders this stretch — the engine honors it as a second die if a trial comes",
+				}),
+			),
+			edge_reason: Type.Optional(
+				Type.String({ description: "One line: why the seeker stands favored or hindered (recorded)" }),
+			),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const approach = params.approach.trim();
@@ -1527,8 +1866,9 @@ export default function (pi: ExtensionAPI) {
 
 			let u = st.undertakings[slug];
 			if (!u || u.size === 0) {
-				// A quest from before undertakings existed: a plain small clock joins it.
-				appendEvents(ctx, [{ ev: "quest_shape", slug, clock: 4, twist: 0 }]);
+				// A quest from before undertakings existed: a small clock joins it,
+				// finale armed like every modern quest.
+				appendEvents(ctx, [{ ev: "quest_shape", slug, clock: 4, twist: 0, check: 1 }]);
 				setQuestClock(files, slug, 0, 4);
 				u = st.undertakings[slug];
 			}
@@ -1543,6 +1883,17 @@ export default function (pi: ExtensionAPI) {
 					details: { slug, pending: true },
 				};
 			}
+			if (st.pendingRoll?.slug === slug) {
+				return {
+					content: [
+						{
+							type: "text",
+							text: "The trial stands — the die must fall first. The seeker casts it themselves (/roll); hold the scene at the brink until then.",
+						},
+					],
+					details: { slug, rollPending: true },
+				};
+			}
 			if (u.filled >= u.size) {
 				return {
 					content: [
@@ -1553,10 +1904,44 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const nextBeat = u.beatsDone + 1;
+			const gatesOpen = !st.pendingChoice && !st.pendingRoll;
+
+			/** Declare a trial on this beat — the stakes contract, then the die. */
+			const declareTrial = (kind: "finale" | "hazard") => {
+				const { tier, dc } = TIERS[u.size] ?? TIERS[6];
+				let edge: "favored" | "hindered" | undefined;
+				let edgeReason: string | undefined;
+				if (u.coldStreak >= 2) {
+					edge = "favored"; // the karmic clamp: two straight setbacks
+					edgeReason = "the fates relent after the run of misfortune";
+				} else if (params.edge === "favored" || params.edge === "hindered") {
+					edge = params.edge;
+					edgeReason = params.edge_reason?.trim() || "the keeper's judgment of the seeker's position";
+				}
+				appendEvents(ctx, [{ ev: "check", slug, tier, dc, trial: clip(approach, 80), kind, edge, edgeReason }]);
+				const framing =
+					kind === "finale"
+						? `The completing stroke of "${quest.title}" is a trial — the moment that decides it: ${tier} (DC ${dc})`
+						: `The seeker attempts this against the odds — the stroke must earn itself: ${tier} (DC ${dc})`;
+				return {
+					content: [
+						{
+							type: "text",
+							text:
+								`${framing}` +
+								(edge ? ` — the seeker stands ${edge} (${edgeReason}), a second die will show it` : "") +
+								`.\n\nAnnounce the stakes in your voice — what slips if the die falls ill — and end your reply ` +
+								`at the brink. The seeker casts the die themselves (a panel shows them; /roll). Never roll or ` +
+								`resolve for them.`,
+						},
+					],
+					details: { slug, trial: kind, tier, dc, edge },
+				};
+			};
 
 			// Twist beat: the plan is woven and unspent — present the paths.
-			// (Deferred while another choice is pending anywhere: one at a time.)
-			if (u.twist > 0 && u.plan && !u.presented && nextBeat >= u.twist && !st.pendingChoice) {
+			// (Deferred while another choice or die is pending: one at a time.)
+			if (u.twist > 0 && u.plan && !u.presented && nextBeat >= u.twist && gatesOpen) {
 				const options = presentableOptions(u.plan, files);
 				appendEvents(ctx, [{ ev: "complication", slug, text: u.plan.complication, options }]);
 				const lines = options.map(
@@ -1630,6 +2015,19 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
+			// The finale: whatever attempt would COMPLETE the work is a trial —
+			// the peak is always contested, never a flat tick (playtest verdict).
+			if (u.check > 0 && !u.checkFired && u.filled + TICK >= u.size && gatesOpen) {
+				return declareTrial("finale");
+			}
+
+			// A hazard: the keeper says the fiction stacks against this attempt
+			// (outnumbered, unprepared, reckless haste) — the bold stroke must
+			// earn itself. Sound tactics that remove the hindrance tick freely.
+			if (params.edge === "hindered" && gatesOpen) {
+				return declareTrial("hazard");
+			}
+
 			// A plain beat of work.
 			const filled = Math.min(u.size, u.filled + TICK);
 			appendEvents(ctx, [{ ev: "quest_tick", slug, add: TICK, filled, size: u.size, note: clip(approach, 60) }]);
@@ -1645,6 +2043,49 @@ export default function (pi: ExtensionAPI) {
 					},
 				],
 				details: { slug, filled, size: u.size },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "offer_choices",
+		label: "Lay out the choices",
+		description:
+			"Lay real alternatives cleanly before the seeker — a board of tasks, a fork in the road, rival requests, which reward to take. 2–5 short options; the seeker picks one through the panel (or simply speaks on, which lets the offer lapse — it never binds). Use when a scene genuinely presents distinct courses; never to railroad, and never for a twist's sealed paths (the engine presents those itself).",
+		parameters: Type.Object({
+			prompt: Type.String({ description: "The question before the seeker, one line, e.g. 'Which task calls to you?'" }),
+			options: Type.Array(Type.String({ description: "One course, plainly named" }), {
+				minItems: 2,
+				maxItems: 5,
+				description: "The distinct courses open to the seeker",
+			}),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const prompt = params.prompt.trim();
+			if (!prompt) throw new Error("Empty prompt — name the question before the seeker.");
+			const labels = params.options.map((option) => option.trim()).filter(Boolean);
+			if (labels.length < 2) throw new Error("An offer needs at least two real courses.");
+			if (st.pendingChoice || st.pendingRoll) {
+				throw new Error("Something already awaits the seeker's word — resolve it before laying out new choices.");
+			}
+			const options: PresentedOption[] = labels.map((label, index) => ({
+				id: index + 1,
+				label,
+				risk: "",
+				promise: "",
+			}));
+			appendEvents(ctx, [{ ev: "offer", text: prompt, options }]);
+			return {
+				content: [
+					{
+						type: "text",
+						text:
+							`The choices stand before the seeker (a panel shows them; they answer with /pick or in their own words):\n` +
+							options.map((option) => `  [${option.id}] ${option.label}`).join("\n") +
+							`\n\nVoice these in character and end your reply awaiting their word. If they simply speak past them, the offer lapses — follow their words.`,
+					},
+				],
+				details: { prompt, options },
 			};
 		},
 	});

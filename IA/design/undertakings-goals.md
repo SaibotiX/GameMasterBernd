@@ -10,9 +10,9 @@ undertakings-research.md, progress in undertakings-build.md.)
 - **G1 — No one-prompt jobs.** A granted task takes several beats of real play
   to finish; "done" is earned through the engine, never narrated into being.
 - **G2 — Tasks are discovery, not work.** Quests exist to reveal the world:
-  mundane surface, occasional hidden second layer. Roughly a third of tasks
-  stay plain — no complication at all. Complications must never feel like
-  nagging or added chores.
+  mundane surface, occasional hidden second layer. Roughly half of tasks
+  carry no mid-work twist — but no quest ends flat (see G9). Complications
+  must never feel like nagging or added chores.
 - **G3 — Complications are character moments.** A mid-task twist asks "which
   approach are you?" (rope, smith, or ford) — resolvable in the current scene
   by choice, never by a mandatory extra fetch.
@@ -30,6 +30,18 @@ undertakings-research.md, progress in undertakings-build.md.)
 - **G8 — Dice are ceremony, not bookkeeping.** When a roll happens it is an
   unmissable on-screen moment with visible arithmetic and one post-roll lever;
   rolls only where outcomes are uncertain AND failure costs something.
+- **G9 — The peak is always in the player's hands** (playtest verdict,
+  2026-08-03). The stroke that completes a task is never a flat tick: it is a
+  trial (or the twist already stood there). Whatever decides win or lose runs
+  through the seeker's own die or pick.
+- **G10 — Logic over boldness** (same playtest). A stroke the fiction stacks
+  against — outnumbered, unprepared, reckless — must earn itself through a
+  hazard trial (worst of two dice); sound tactics that remove the hindrance
+  work unrolled. Bold words never succeed where bold deeds would not.
+- **G11 — Choosing is the seeker's pleasure.** When a scene presents real
+  alternatives (task boards, forks, rival requests), the engine lays them out
+  as a clean pickable offer — dismissible by simply speaking on; only a
+  twist's sealed paths bind.
 
 ## Fairness invariants (from the research — see research doc "fair" list)
 

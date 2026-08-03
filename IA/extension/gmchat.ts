@@ -198,12 +198,17 @@ export type GmFix =
 	| { kind: "persona_move"; name: string; to_place: string; reason: string }
 	| { kind: "quest_grant"; title: string; giver?: string; task: string; reward: string }
 	| { kind: "quest_status"; title: string; status: "done" | "rewarded"; note: string }
-	| { kind: "item"; item: string; origin: string };
+	| { kind: "item"; item: string; origin: string }
+	/** Arm a die on an open quest where the fiction warrants one right now. */
+	| { kind: "trial"; title: string; weight?: "easy" | "middling" | "hard"; reason?: string }
+	/** Lay open alternatives before the seeker (no hidden outcomes). */
+	| { kind: "choices"; prompt: string; options: string[] };
 
 const FIX_KINDS = new Set([
 	"place", "chronicle_place", "place_note",
 	"persona_record", "persona_move",
 	"quest_grant", "quest_status", "item",
+	"trial", "choices",
 ]);
 
 export interface GmAnswer {
@@ -275,7 +280,9 @@ function tableSystemPrompt(deps: GmDeps): string {
 				.filter((u) => u.size > 0)
 				.map(
 					(u) =>
-						`${u.slug} ${u.filled}/${u.size}${state.pendingChoice?.slug === u.slug ? " (twist pending — seeker must pick)" : ""}`,
+						`${u.slug} ${u.filled}/${u.size}${state.pendingChoice?.slug === u.slug ? " (twist pending — seeker must pick)" : ""}${
+							state.pendingRoll?.slug === u.slug ? " (trial pending — seeker must roll)" : ""
+						}`,
 				)
 				.join(" · ") || "(none)"
 		}`,
@@ -318,6 +325,8 @@ function tableSystemPrompt(deps: GmDeps): string {
 		`    {"kind":"quest_grant","title":"...","giver":"a recorded soul — OMIT for a task the seeker set themselves","task":"...","reward":"..."} — chronicle a task the record shows was agreed or self-proclaimed; a named giver must be recorded AND dwell at the party's current place (chain persona_record / persona_move fixes first when the record shows otherwise)`,
 		`    {"kind":"quest_status","title":"...","status":"done"|"rewarded","note":"..."} — forward only; rewarded also grants the recorded reward`,
 		`    {"kind":"item","item":"...","origin":"..."} — record a gain the story granted but the engine missed`,
+		`    {"kind":"trial","title":"an open quest","weight":"easy"|"middling"|"hard","reason":"..."} — arm a die NOW where the fiction warrants one (the seeker asked, or the moment plainly demands it); refused while another choice or die is pending`,
+		`    {"kind":"choices","prompt":"...","options":["...","..."]} — lay 2–5 open alternatives before the seeker (no hidden outcomes; lapses if they speak past it)`,
 		`- Fixes execute IN THE ORDER GIVEN — chain prerequisites first: chronicle_place before persona_record at that place, persona_record before quest_grant naming that giver.`,
 		`- Repairs happen ONLY through "fixes": never claim in words that something is now marked, moved or recorded — the engine executes and announces every repair itself, and it validates each one (unknown pages, backward quest moves and reasonless relocations are refused).`,
 		``,

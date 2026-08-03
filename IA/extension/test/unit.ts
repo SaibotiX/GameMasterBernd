@@ -13,8 +13,10 @@ import { fileURLToPath } from "node:url";
 const EXT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = join(EXT, ".."); // the IA folder: config/, data/, tools/ live here
 
-const { derive, describeEvent, planSetMood, planRedemption, asGameEvent, LEDGER_TYPE, LEGACY_MOOD_TYPE } =
-	await import(join(EXT, "ledger.ts"));
+const {
+	derive, describeEvent, planSetMood, planRedemption, asGameEvent,
+	rollBand, BAND_TICKS, TIERS, drawQuestShape, LEDGER_TYPE, LEGACY_MOOD_TYPE,
+} = await import(join(EXT, "ledger.ts"));
 const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
@@ -158,7 +160,7 @@ ok("derive: an undertaking folds shape → ticks → fate → twist → pick →
 	assert.equal(mid.undertakings.wagon.twist, 2);
 	assert.ok(mid.undertakings.wagon.plan, "plan folds into state");
 	assert.equal(mid.pendingChoice?.slug, "wagon");
-	assert.deepEqual(mid.recentShapes, [{ clock: 6, twist: 2 }]);
+	assert.deepEqual(mid.recentShapes, [{ clock: 6, twist: 2, check: 0 }]);
 	assert.deepEqual(mid.recentSuits, ["material failure"]);
 
 	const done = derive(
@@ -175,6 +177,135 @@ ok("derive: an undertaking folds shape → ticks → fate → twist → pick →
 	assert.equal(done.pendingChoice, undefined, "a pick clears the pending choice");
 	assert.equal(done.undertakings.wagon.filled, 4);
 	assert.equal(done.undertakings.wagon.resolved, true);
+});
+
+ok("drawQuestShape: every shape has a finale; opening carries a twist; cooldowns hold", () => {
+	const SHAPES = [
+		{ clock: 4, twist: 0, check: 1 },
+		{ clock: 6, twist: 0, check: 1 },
+		{ clock: 6, twist: 2, check: 1 },
+		{ clock: 8, twist: 3, check: 1 },
+	];
+	const every = (n: number) => Array.from({ length: n }, (_, i) => (k: number) => i % k);
+	// Every draw arms a finale — the completing stroke is always contested.
+	for (const rand of every(8)) assert.ok(drawQuestShape(SHAPES, undefined, false, rand).check > 0);
+	// The opening is scripted: the first given quest carries a twist.
+	for (const rand of every(8)) assert.ok(drawQuestShape(SHAPES, undefined, false, rand).twist > 0, "opening twistless");
+	// Self-set tasks carry no twist (their finale still stands).
+	for (const rand of every(8)) {
+		const drawn = drawQuestShape(SHAPES, undefined, true, rand);
+		assert.equal(drawn.twist, 0);
+		assert.ok(drawn.check > 0);
+	}
+	// Cooldown: no twist right after a twisted quest.
+	const afterTwist = { clock: 6, twist: 2, check: 1 };
+	for (const rand of every(8)) assert.equal(drawQuestShape(SHAPES, afterTwist, false, rand).twist, 0);
+	// Never the identical shape twice while another is available.
+	const afterSmall = { clock: 4, twist: 0, check: 1 };
+	for (const rand of every(8)) {
+		const drawn = drawQuestShape(SHAPES, afterSmall, false, rand);
+		assert.ok(!(drawn.clock === 4 && drawn.twist === 0));
+	}
+});
+
+ok("derive: offers lapse, twists bind; hazard trials never spend the finale", () => {
+	const options = [
+		{ id: 1, label: "The wolf hunt", risk: "", promise: "" },
+		{ id: 2, label: "The flooded cellar", risk: "", promise: "" },
+	];
+	const open = derive([ev({ ev: "offer", text: "Which task calls to you?", options })], "neutral");
+	assert.equal(open.pendingChoice?.kind, "offer");
+	assert.equal(open.pendingChoice?.options.length, 2);
+	const lapsed = derive(
+		[ev({ ev: "offer", text: "Which task calls to you?", options }), ev({ ev: "offer_dropped" })],
+		"neutral",
+	);
+	assert.equal(lapsed.pendingChoice, undefined, "speaking past an offer drops it");
+	const picked = derive(
+		[
+			ev({ ev: "offer", text: "Which task calls to you?", options }),
+			ev({ ev: "pick", slug: "", option: 1, label: "The wolf hunt" }),
+		],
+		"neutral",
+	);
+	assert.equal(picked.pendingChoice, undefined, "a pick resolves an offer");
+
+	const hazarded = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 6, twist: 0, check: 1 }),
+			ev({ ev: "check", slug: "q", tier: "a middling trial", dc: 15, trial: "a reckless charge", kind: "hazard", edge: "hindered" }),
+			ev({ ev: "roll", slug: "q", dice: [12, 4], kept: 4, dc: 15, band: "setback", grit: false }),
+			ev({ ev: "outcome", slug: "q", band: "setback", add: -1, text: "thrown back" }),
+		],
+		"neutral",
+	);
+	assert.equal(hazarded.undertakings.q.checkFired, false, "a hazard never spends the finale");
+	assert.equal(hazarded.pendingRoll, undefined);
+	const finale = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 6, twist: 0, check: 1 }),
+			ev({ ev: "check", slug: "q", tier: "a middling trial", dc: 15, trial: "the last stroke", kind: "finale" }),
+		],
+		"neutral",
+	);
+	assert.equal(finale.undertakings.q.checkFired, true, "a finale fires once");
+});
+
+ok("rollBand: margin bands with natural overrides; ticks bounded", () => {
+	assert.equal(rollBand(20, 25), "great", "a natural 20 is always a triumph");
+	assert.equal(rollBand(1, 5), "setback", "a natural 1 always stumbles");
+	assert.equal(rollBand(19, 15), "success");
+	assert.equal(rollBand(20, 15), "great");
+	assert.equal(rollBand(15, 15), "success");
+	assert.equal(rollBand(14, 15), "cost");
+	assert.equal(rollBand(11, 15), "cost");
+	assert.equal(rollBand(10, 15), "setback");
+	assert.deepEqual(
+		[BAND_TICKS.great, BAND_TICKS.success, BAND_TICKS.cost, BAND_TICKS.setback],
+		[3, 2, 2, -1],
+	);
+	assert.deepEqual(TIERS[4], { tier: "an easy trial", dc: 10 });
+	assert.equal(TIERS[8].dc, 20);
+});
+
+ok("derive: a trial folds check → pendingRoll → roll clears it; grit and cold streaks tracked", () => {
+	const pending = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 4, twist: 0, check: 2 }),
+			ev({ ev: "quest_tick", slug: "q", add: 2, filled: 2, size: 4 }),
+			ev({ ev: "check", slug: "q", tier: "an easy trial", dc: 10, trial: "truing the wheel", edge: "favored", edgeReason: "good tools" }),
+		],
+		"neutral",
+	);
+	assert.equal(pending.undertakings.q.check, 2);
+	assert.equal(pending.undertakings.q.checkFired, true);
+	assert.equal(pending.undertakings.q.beatsDone, 2, "the trial consumes the beat");
+	assert.equal(pending.pendingRoll?.slug, "q");
+	assert.equal(pending.pendingRoll?.dc, 10);
+	assert.equal(pending.pendingRoll?.edge, "favored");
+
+	const rolled = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 4, twist: 0, check: 2 }),
+			ev({ ev: "check", slug: "q", tier: "an easy trial", dc: 10, trial: "t" }),
+			ev({ ev: "roll", slug: "q", dice: [7, 3], kept: 7, dc: 10, band: "setback", grit: true }),
+			ev({ ev: "outcome", slug: "q", band: "setback", add: -1, text: "slips" }),
+			ev({ ev: "outcome", slug: "q", band: "setback", add: -1, text: "slips again" }),
+		],
+		"neutral",
+	);
+	assert.equal(rolled.pendingRoll, undefined, "the roll clears the trial");
+	assert.equal(rolled.undertakings.q.gritUsed, true);
+	assert.equal(rolled.undertakings.q.coldStreak, 2, "two straight setbacks — the fates should relent");
+	const warmed = derive(
+		[
+			ev({ ev: "quest_shape", slug: "q", clock: 4, twist: 0, check: 2 }),
+			ev({ ev: "outcome", slug: "q", band: "setback", add: -1, text: "s" }),
+			ev({ ev: "outcome", slug: "q", band: "cost", add: 2, text: "c" }),
+		],
+		"neutral",
+	);
+	assert.equal(warmed.undertakings.q.coldStreak, 0, "any brighter band breaks the streak");
 });
 
 ok("derive: setback clamps at zero; fate_skipped neutralizes the twist", () => {
@@ -334,13 +465,22 @@ ok("config: angriest mood is last in severity order", () => {
 		for (const tool of [
 			"set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name",
 			"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
-			"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
+			"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item", "offer_choices",
 		]) {
 			assert.match(p, new RegExp(tool));
 		}
 		assert.match(p, /it has NOT happened/);
 		assert.match(p, /set_mood\("angry"\)/);
 		assert.match(p, /\[engine:t3stn0nc3\]/);
+		assert.match(p, /a stretch of work is a TRIAL/);
+		assert.match(p, /Never roll for them/);
+		assert.match(p, /COMPLETING stroke of every task/);
+		assert.match(p, /LOGIC OVER BOLDNESS/);
+		assert.match(p, /the offer lapses/);
+		assert.match(p, /WORK ADVANCED ON A TASK, A TRIAL, OR DICE/);
+		assert.match(p, /dice you announce in words are dice nobody can cast/);
+		assert.match(p, /A list of courses in prose alone is NOT a choice/);
+		assert.match(p, /that reply MUST include attempt_quest/);
 		assert.doesNotMatch(p, /Messages beginning with \[engine\] /); // the unmarked form must be gone
 		assert.match(p, /story's author/);
 		assert.match(p, /invent the tale at once/);

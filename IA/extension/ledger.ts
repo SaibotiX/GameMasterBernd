@@ -88,8 +88,9 @@ export type GameEvent =
 	| { ev: "quest"; action: "granted" | "done" | "rewarded" | "failed"; title: string }
 	/** Loot, pay or gifts mirrored from items.md. */
 	| { ev: "item"; text: string }
-	/** A granted quest's drawn shape: clock size and (hidden) twist beat, 0 = plain. */
-	| { ev: "quest_shape"; slug: string; clock: number; twist: number }
+	/** A granted quest's drawn shape: clock size, (hidden) twist beat and
+	 * (hidden) trial beat — 0 = none. Older entries lack `check`. */
+	| { ev: "quest_shape"; slug: string; clock: number; twist: number; check?: number }
 	/** One beat of real work on a quest; add is the segment delta. */
 	| { ev: "quest_tick"; slug: string; add: number; filled: number; size: number; note?: string }
 	/** The sealed fate plan for a quest's twist (hidden answer sheet; veiled in /ledger). */
@@ -98,10 +99,95 @@ export type GameEvent =
 	| { ev: "fate_skipped"; slug: string }
 	/** A twist presented to the seeker: the visible options only. */
 	| { ev: "complication"; slug: string; text: string; options: PresentedOption[] }
-	/** The seeker's pick (option id from the presented list). */
+	/** The seeker's pick (option id from the presented list; slug "" = an open offer). */
 	| { ev: "pick"; slug: string; option: number; label: string; extra?: string }
-	/** The engine's resolution of a pick: band is public once resolved. */
+	/** Open alternatives laid before the seeker (a task board, a fork in the
+	 * road) — no hidden outcomes; purely a clean way to point at a course. */
+	| { ev: "offer"; text: string; options: PresentedOption[] }
+	/** The seeker spoke past an open offer — it lapses (offers never bind). */
+	| { ev: "offer_dropped" }
+	/** A trial bars a stretch of work: the stakes contract, announced openly
+	 * (tier and DC public before the die is cast — only the die is unknown).
+	 * kind "finale" (default) contests the completing stroke and fires once;
+	 * kind "hazard" contests a hindered attempt and may recur. */
+	| {
+			ev: "check";
+			slug: string;
+			tier: string;
+			dc: number;
+			trial: string;
+			kind?: "finale" | "hazard";
+			edge?: "favored" | "hindered";
+			edgeReason?: string;
+	  }
+	/** The die falls: every die thrown (edge shows two, grit rethrows), the
+	 * kept face, and the band the margin earned. Engine-rolled, never narrated. */
+	| { ev: "roll"; slug: string; dice: number[]; kept: number; dc: number; band: string; grit: boolean }
+	/** The engine's resolution of a pick or a roll: band is public once resolved. */
 	| { ev: "outcome"; slug: string; band: string; add: number; text: string };
+
+/** A quest's drawn structure: clock size, twist beat, trial beat (0 = none). */
+export interface QuestShape {
+	clock: number;
+	twist: number;
+	check: number;
+}
+
+/**
+ * Draw a quest's shape — the code-owned pacing rules (goals P2/P3/P5).
+ * Since the playtest round, every pool shape arms a FINALE trial (check > 0):
+ * the completing stroke of any quest is always contested. The rules left to
+ * the draw:
+ *  - self-set tasks carry no twist (the seeker's own goals stay simple —
+ *    their finale is still a trial);
+ *  - the OPENING is scripted: a story's first given quest carries a twist
+ *    (RimWorld's lesson — show the game's whole machinery, then breathe);
+ *  - no twist right after a twisted quest (P2's breather);
+ *  - never the identical shape twice when another is available.
+ * `rand(n)` returns an integer in [0, n) — injected so tests are exact.
+ */
+export function drawQuestShape(
+	shapes: readonly QuestShape[],
+	last: QuestShape | undefined,
+	selfSet: boolean,
+	rand: (n: number) => number,
+): QuestShape {
+	let pool = shapes.filter((shape) => {
+		if (selfSet) return shape.twist === 0;
+		if (!last) return shape.twist > 0; // the scripted opening
+		if (last.twist > 0 && shape.twist > 0) return false;
+		return true;
+	});
+	if (pool.length === 0) pool = [...shapes];
+	const unlike = pool.filter(
+		(shape) =>
+			!(last && shape.clock === last.clock && shape.twist === last.twist && shape.check === last.check),
+	);
+	const from = unlike.length > 0 ? unlike : pool;
+	return from[rand(from.length)];
+}
+
+/** Named difficulty tiers (bounded accuracy: the words stay meaningful). */
+export const TIERS: Record<number, { tier: string; dc: number }> = {
+	4: { tier: "an easy trial", dc: 10 },
+	6: { tier: "a middling trial", dc: 15 },
+	8: { tier: "a hard trial", dc: 20 },
+};
+
+/** Margin bands for a kept d20 face against a DC. Naturals override:
+ * a 20 is always a triumph, a 1 always a stumble. No numeric modifiers
+ * exist in this game — edge is a second die, never arithmetic. */
+export function rollBand(kept: number, dc: number): "great" | "success" | "cost" | "setback" {
+	if (kept === 20) return "great";
+	if (kept === 1) return "setback";
+	if (kept >= dc + 5) return "great";
+	if (kept >= dc) return "success";
+	if (kept >= dc - 4) return "cost";
+	return "setback";
+}
+
+/** Clock segments each band earns (setback slips backwards, bounded). */
+export const BAND_TICKS: Record<string, number> = { great: 3, success: 2, cost: 2, setback: -1 };
 
 /** Branch-derived state of one quest's undertaking (clock + twist machinery).
  * The ledger is authoritative; the clock line in quests.md is a mirror. */
@@ -111,7 +197,9 @@ export interface Undertaking {
 	filled: number;
 	/** Twist beat (1-based), 0 = plain quest. Neutralized to 0 by fate_skipped. */
 	twist: number;
-	/** Beats consumed so far (ticks + the complication presentation). */
+	/** Trial beat (1-based), 0 = none. */
+	check: number;
+	/** Beats consumed so far (ticks + complication + trial presentations). */
 	beatsDone: number;
 	/** The sealed plan, once woven. */
 	plan?: FatePlan;
@@ -119,6 +207,12 @@ export interface Undertaking {
 	presented: boolean;
 	/** True once a pick resolved the complication. */
 	resolved: boolean;
+	/** True once the trial was declared (trials fire once). */
+	checkFired: boolean;
+	/** The one grit token: spent on a reroll, gone for this quest. */
+	gritUsed: boolean;
+	/** Consecutive setbacks — at two, the fates relent (open advantage). */
+	coldStreak: number;
 }
 
 export interface DerivedState {
@@ -139,10 +233,20 @@ export interface DerivedState {
 	lastEntryAt?: string;
 	/** Per-quest undertaking state, keyed by quest slug. */
 	undertakings: Record<string, Undertaking>;
-	/** The one complication awaiting the seeker's pick, if any (P1: max one). */
-	pendingChoice?: { slug: string; text: string; options: PresentedOption[] };
+	/** The one choice awaiting the seeker, if any (P1: max one). A "twist"
+	 * binds (its quest holds until picked); an "offer" lapses when the seeker
+	 * simply speaks on. */
+	pendingChoice?: { kind: "twist" | "offer"; slug: string; text: string; options: PresentedOption[] };
+	/** The one trial awaiting the seeker's die, if any (max one, like picks). */
+	pendingRoll?: {
+		slug: string;
+		tier: string;
+		dc: number;
+		trial: string;
+		edge?: "favored" | "hindered";
+	};
 	/** Shapes of recently granted quests, oldest first (variety guard). */
-	recentShapes: { clock: number; twist: number }[];
+	recentShapes: { clock: number; twist: number; check: number }[];
 	/** Trouble kinds of recent fate plans, oldest first (variety guard). */
 	recentSuits: string[];
 }
@@ -188,9 +292,13 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 			size: 0,
 			filled: 0,
 			twist: 0,
+			check: 0,
 			beatsDone: 0,
 			presented: false,
 			resolved: false,
+			checkFired: false,
+			gritUsed: false,
+			coldStreak: 0,
 		});
 	for (const entry of entries) {
 		if (entry.timestamp) state.lastEntryAt = entry.timestamp;
@@ -238,7 +346,8 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				const u = undertaking(event.slug);
 				u.size = event.clock;
 				u.twist = event.twist;
-				state.recentShapes.push({ clock: event.clock, twist: event.twist });
+				u.check = event.check ?? 0;
+				state.recentShapes.push({ clock: event.clock, twist: event.twist, check: event.check ?? 0 });
 				if (state.recentShapes.length > 4) state.recentShapes.shift();
 				break;
 			}
@@ -263,16 +372,44 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 				const u = undertaking(event.slug);
 				u.presented = true;
 				u.beatsDone++; // the twist consumes the beat
-				state.pendingChoice = { slug: event.slug, text: event.text, options: event.options };
+				state.pendingChoice = { kind: "twist", slug: event.slug, text: event.text, options: event.options };
 				break;
 			}
+			case "offer":
+				state.pendingChoice = { kind: "offer", slug: "", text: event.text, options: event.options };
+				break;
+			case "offer_dropped":
+				if (state.pendingChoice?.kind === "offer") state.pendingChoice = undefined;
+				break;
 			case "pick":
 				if (state.pendingChoice?.slug === event.slug) state.pendingChoice = undefined;
 				break;
+			case "check": {
+				const u = undertaking(event.slug);
+				if (event.kind !== "hazard") u.checkFired = true; // finales fire once; hazards may recur
+				u.beatsDone++; // the trial consumes the beat
+				state.pendingRoll = {
+					slug: event.slug,
+					tier: event.tier,
+					dc: event.dc,
+					trial: event.trial,
+					edge: event.edge,
+				};
+				break;
+			}
+			case "roll": {
+				const u = undertaking(event.slug);
+				if (state.pendingRoll?.slug === event.slug) state.pendingRoll = undefined;
+				if (event.grit) u.gritUsed = true;
+				break;
+			}
 			case "outcome": {
 				const u = undertaking(event.slug);
 				u.filled = Math.min(u.size, Math.max(0, u.filled + event.add));
 				u.resolved = true;
+				// Two straight setbacks and the fates relent (open advantage on
+				// the next trial); any brighter band breaks the streak.
+				u.coldStreak = event.band === "setback" ? u.coldStreak + 1 : 0;
 				break;
 			}
 			default:
@@ -362,6 +499,20 @@ export function describeEvent(event: GameEvent): string {
 				.join(" · ")}`;
 		case "pick":
 			return `the seeker chooses [${event.option}] ${event.label}${event.extra ? ` — "${event.extra}"` : ""}`;
+		case "offer":
+			return `choices laid before the seeker: ${event.text} · ${event.options
+				.map((option) => `${option.id}) ${option.label}`)
+				.join(" · ")}`;
+		case "offer_dropped":
+			return "the choices pass unchosen — the seeker speaks their own course";
+		case "check":
+			return `a trial bars "${event.slug}": ${event.tier} (DC ${event.dc})${
+				event.edge ? ` · ${event.edge}${event.edgeReason ? ` (${event.edgeReason})` : ""}` : ""
+			} — ${event.trial}`;
+		case "roll":
+			return `the die falls for "${event.slug}": ${event.kept} against DC ${event.dc} — ${event.band}${
+				event.grit ? " (grit spent)" : ""
+			} [threw ${event.dice.join(", ")}]`;
 		case "outcome":
 			return `the fates answer (${event.band}): ${event.text}`;
 	}

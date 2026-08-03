@@ -6,12 +6,19 @@ quest's *clock* has `size` segments and fills by ticks.
 
 ## 1. Clocks (Phase 1)
 
-- Every granted quest draws a shape: `{ clock: 4|6|8, twistBeat: 0|n }`
-  (0 = plain). Beats = clock/2 (standard tick = 2 segments).
-- Shape pool (Phase 1): `4/0`, `6/0`, `6/2`, `8/3` — half plain, half twisted;
-  self-set tasks draw only plain shapes. Anti-repeat (Phase 1 minimum): reroll
-  once if the draw equals the previous quest's shape; no twist if the previous
-  quest had one (P2). Full shuffle-bags land in Phase 3.
+- Every granted quest draws a shape: `{ clock: 4|6|8, twist: 0|n, check: 0|n }`
+  (twist = complication beat, check = trial beat; a shape carries at most one).
+  Beats = clock/2 (standard tick = 2 segments).
+- Shape pool (as of Phase 2): plain `4`, plain `6`, twist `6@2`, twist `8@3`,
+  trial `4@2`, trial `6@3` — trials guard the FINAL beat (the climax), twists
+  land mid-quest. Long-run mix ≈ ⅓ plain.
+- Draw rules (drawQuestShape, pure + unit-tested): self-set tasks stay plain;
+  **the opening is scripted** — a story's first given quest never draws plain
+  (RimWorld's lesson; added 2026-08-03 after a playthrough whose only quest
+  drew plain); no twist right after a twisted quest, no trial right after a
+  trialed one (P2); **no droughts** — two plain quests never follow each
+  other; never the identical shape twice when another is available. Full
+  shuffle-bags still land in Phase 3.
 - `twistBeat` from `ceil(beats * 0.6)` keeps the twist at 50–75% (P3); clues
   land at `twistBeat - 1`.
 - The clock is mirrored as a `- clock: n/m` line in quests.md for readability,
