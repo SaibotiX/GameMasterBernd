@@ -81,17 +81,17 @@ node aitester/tools/ai-playtest.mjs --selftest   # AI-harness logic, no pi, no L
 node aitester/tools/wrapper-smoke.mjs            # /ai-state TUI parity over crafted gates, no LLM
 ```
 
-- **unit.ts** — ledger derivation, the ban/redemption invariants, branch isolation, config-loader equivalence with `app/src/config.ts`, prompt layers, search adapter (incl. abort).
+- **unit.ts** — ledger derivation, the ban/redemption invariants, branch isolation, config-loader equivalence with the retired app's original loader, prompt layers, search adapter (incl. abort).
 - **integration.ts Part A** (crafted session files, no LLM) — banned-branch derivation, leaf-rewind to a pre-ban branch (the `/tree` mechanism), stamped-world-beats-`--world`.
 - **integration.ts Part B** (live LLM) — no search possible while barred, redemption flow, search after redemption, name recording, `/compact` shrinks context while the ledger survives, `new_session` starts a fresh ledger.
-- **integration.ts Part C** — `/web`: a clean session hands the request to the GM (performed entry recorded), a barred session is refused by the engine with no LLM call; `WC_VIDEO=1` adds the slow end-to-end video download. `test/demo-web.ts` is a watchable demo of the same flows.
+- **integration.ts Part C** — `/web`: a clean session hands the request to the GM (performed entry recorded), a barred session is refused by the engine with no LLM call; `WC_VIDEO=1` adds the slow end-to-end video download. `extension/test/demo-web.ts` is a watchable demo of the same flows.
 - **aitester** — beyond the two token-free checks above, `aitester/` runs whole AI-played sittings of the real engine over RPC to hunt bugs and exploits (a live batch costs keeper + tester tokens; see `aitester/README.md`).
 
 Known soft spot: whether the *model* ever attempts `find_text` while barred is model temperament (it is told it is barred and usually refuses in character); the code block behind it shares the exact `banned` check the unit tests cover.
 
 ## Notes
 
-- Mood is per session (branch-aware), not global like `data/ledger.jsonl` — a punishment ends with `/new`. If cross-session grudges are ever wanted, add a small global profile file.
+- Mood is per session (branch-aware), not global like the retired app's `data/ledger.jsonl` — a punishment ends with `/new`. If cross-session grudges are ever wanted, add a small global profile file.
 - Adding a mood file mid-session updates prompts on the next turn, but the `set_mood` enum refreshes only on restart or `/reload`.
 - YouTube sometimes meets `find_video` with a "Sign in to confirm you're not a bot" wall (IP-level — it hits every yt-dlp player client). The engine escalates least-invasive first: **1.** your own Netscape export at `config/youtube-cookies.txt`, if present — you decide exactly which cookies it contains; **2.** otherwise a bare attempt — installing the identity-free [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin (a yt-dlp plugin plus its token server/script; more setup) makes this rung pass without any cookies at all; **3.** only if YouTube still refuses: cookies borrowed **live** from an installed browser (auto-detected; `WORLD_CONSOLE_YT_BROWSER=<browser>` names one), kept for the rest of the run — and every scrying that borrowed them says so in a notification. yt-dlp reads the whole browser cookie store locally but sends only the youtube/google-scoped cookies. If even browser cookies are refused, open youtube.com in that browser once (signing in helps most) and try again.
 - `.pi/extensions/usage-limits.ts` is a separate small extension: `/limits` shows which Anthropic usage bucket your requests draw from (plan-limit windows vs. the extra-usage overage lane), read from the `anthropic-ratelimit-*` response headers.

@@ -538,6 +538,9 @@ async function runSitting({ batchDir, persona, ordinal, flags, guide, cards, cat
 	const sitDir = join(batchDir, name);
 	const sessionDir = join(sitDir, "_session");
 	const worldData = join(sitDir, "_worlddata");
+	// A killed earlier run leaves dead .jsonl files here, and findSession()
+	// would track one of THOSE as ground truth — fresh-per-sitting includes dirs.
+	rmSync(sitDir, { recursive: true, force: true });
 	mkdirSync(sessionDir, { recursive: true });
 	mkdirSync(worldData, { recursive: true });
 
