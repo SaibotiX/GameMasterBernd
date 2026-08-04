@@ -42,7 +42,9 @@ for (const rep of reports) {
 		const sev = cells[3].match(/S[1-4]/)?.[0];
 		if (!sev) continue; // header/legend lines
 		const sessions = cells[4].match(/(\d+)\s*\/\s*(\d+)/);
-		const incidents = Number.parseInt(cells[5].match(/\d+/)?.[0] ?? "", 10);
+		// Only a LEADING count parses ("27 (21 work-beats…)", "~60") — digits
+		// deeper in prose ("Yes (WC-34 suggested)") must never count.
+		const incidents = Number.parseInt(cells[5].match(/^~?(\d+)/)?.[1] ?? "", 10);
 		// Only true summary rows carry counts — this skips the report's
 		// "New classes discovered" table, which repeats the NEW-n ids.
 		if (!sessions && !Number.isFinite(incidents)) continue;
