@@ -149,7 +149,51 @@ and death as features, not failures of kindness.
   [sales](https://gameworldobserver.com/2024/04/10/kenshi-sales-2-3-million-copies-lo-fi-games))
   → death and disaster are premium content in the chronicle, never softened.
 
-## Source pointers
+## The chronicler round (added 2026-08-04, maintainer's rulings on AI batch 2)
+
+**Create-then-narrate: analyzed, adopted in its sound form.** The proposal —
+every entity (soul, place, quest, item) is *generated first* and only then
+handed to Bernd for the telling — was checked against the architecture:
+
+- The two-step loop ALREADY IS create-then-narrate for entities the keeper
+  thinks to record: a reply runs tool calls first (page founded, engine
+  answers), then the prose — the map of any sitting shows `[set_place] →
+  toolResult → narration`. The gap (AI batch 2, WC-15: 0/9 spoken-of names
+  paged) is entities invented *inside* the prose — briefing names, quest
+  targets, destinations. No pre-generation pass can anticipate those: the
+  names do not exist until the telling writes them, so "generate everything
+  first" would demand a full planning side-call before every reply —
+  double generation, doubled latency and cost per turn, and the planner
+  still could not know what the keeper's prose will improvise. Rejected as
+  a hard pipeline.
+- The sound form is the ORDER LAW plus a FAIL-SAFE: (a) protocol — pages
+  are founded before the prose that names them, in the same reply; (b) the
+  engine sweeps every finished reply for proper names with no page, founds
+  honest STUBS itself (marked first-mentioned, enriched on meeting), and
+  hands the keeper one course-correction naming what it recorded — the
+  same post-reply nudge machinery that killed theater. From the next turn
+  the keeper *reads the generated page back* (pages feed the context), which
+  is exactly the "AI reads the already generated file" fail-safe — reached
+  without a second generation pass. Quests and items already live behind
+  engine gates (grant/redeem refusals), so the sweep completes the set.
+
+**The keeper never asks: analyzed, adopted as register + one carve-out
+mechanic.** "Bernd knows the future" cannot mean pre-picking: choices are
+the seeker's whole pleasure (G11), pre-empting a pick is option tampering
+(WC-27), and a keeper who *actually* knew the sealed fates would break A2
+(the answer-sheet wall). But the game's own architecture makes the
+prophetic REGISTER truthful: fates are pre-decided (G4) and the keeper
+provably does not know them — so Bernd may speak as the witness of pages
+not yet written ("three paths stand; the record waits to see which is
+walked") without ever lying or steering. This is standard PbtA craft the
+prompt already leans on — GM moves are declarative statements, never
+questions ("never speak the name of your move"; announce future badness) —
+now hardened from craft into law (G15): interrogatives to the player are
+banned outright; the board carries every choice; souls in the fiction may
+still question the seeker's character (drama), the keeper's own voice may
+not. The one true flaw the ruling named — "which quest do you want?" —
+dissolves into the same form: the offer board lays the courses, the prose
+states them, the seeker's next word or /pick decides.
 
 Tabletop: dndbeyond.com (basic rules), enworld.org (skill-challenge math),
 dungeonworldsrd.com + Sagelt/Dungeon-World (GM principles), bladesinthedark.com

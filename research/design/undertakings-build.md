@@ -246,12 +246,79 @@ live, at an evening's cost.
       separate-repo layout broke the driver's commit stamp and hid the
       engine-import layout assumption; one commit now pins engine + harness
       (selftest 30/30 · wrapper-smoke 9/9 · scripted batch end-to-end)
-- [ ] Batch 2 (v2 harness, both worlds) → report in `aitester/reports/` →
-      rulings → fixes → re-test the same ground (RITE)
+- [x] Batch 2 (v2 harness, dragon-realm, 2 sittings) → report
+      `aitester/reports/2026-08-04-2.md` → maintainer's rulings (same day)
+      → the chronicler round below. One sitting lost to an unretried
+      tester-side connection blip (now retried, see the round).
+- [ ] Batch 3: re-test the fixed ground (WC-15 scenario: "have the giver
+      brief you with named people and places, then ask /persons for the
+      target"; the redeem scenario: "finish a task, then ask the keeper to
+      close it" — zero clarifying questions expected), both worlds.
 
 **Exit criterion to start Phase 3**: two consecutive batches in which every
 sitting closes at least two tasks (or dies honestly) with zero S1/S2
 findings, in both worlds.
+
+## Phase 2.95 — the chronicler round (2026-08-04: batch-2 rulings, built)
+
+The maintainer's rulings on `aitester/reports/2026-08-04-2.md`, all landed
+the same day. Verified: unit 72/72 (7 new) · wrapper-smoke 9/9 ·
+integration 28/28 incl. the new no-LLM Part D (ventures, /record,
+/thoughts) · aitester selftest 30/30 · pseudo-TTY probe (GM blocks render
+as permanent transcript; /thoughts gm collapses live; boot clean).
+
+- [x] **Record-on-mention sweep** (WC-15 REGRESSION, 9 unpaged names in
+      2/2 sittings): `names.ts` (pure extractor, batch-2 misses as test
+      fixtures) + a standing-layer line listing unpaged names each turn
+      until paged (cap 2 offers, then the quill rests). Laws hardened to
+      page-before-prose; the GM table now honors "add X as a person" as
+      record-COMPLETION when X was named in play (mechanics §12½).
+- [x] **The chronicler himself** (G16): special `chronicler.md` at the
+      chronicle root — crafted by a side call after 3 player turns,
+      SHAPED to the seeker (fire-and-forget, fate-planner discipline);
+      creed canonized from the GM's improvised witness-not-inhabitant
+      answer; engine-appended "Witnessed" majors; read back into keeper
+      context every turn (layer 1¾); record_persona/move_persona/table
+      fixes refuse his name in character; /persons lists him specially.
+- [x] **The keeper never asks** (G15, NEW-1→WC-28): total interrogation
+      ban in the protocol; choices presented declaratively/prophetically
+      on the board; unambiguous-redeem rule (one done quest + a close
+      request → redeem same reply). "Knowledgeable about the future" was
+      analyzed: true pre-picking = railroading (G11/WC-27, rejected);
+      the prophetic REGISTER is truthful because fates are pre-decided
+      (G4) while A2 keeps the keeper ignorant — adopted as voice.
+- [x] **Ventures** (G17): stage_trial + check kind "venture" (slug "",
+      optional flesh) + /roll branch — same dice grammar, F3 stakes
+      contract, F5 bound (setback wounds +1 only when flesh staged), no
+      grit, no fuse rewind, one-gate holds.
+- [x] **The table knows both worlds**: chronicle page index + wider
+      windows + record-model paragraph (u1/u2 = pi bookkeeping — the
+      batch-2 question answered) in the table prompt; out-of-world
+      boundary (theme-judged) outranking the transparency rule.
+- [x] **Durable table talk**: every /gm exchange = a `world-console.gm`
+      entry — permanent styled transcript block (question AND answer),
+      survives resume + /tree, rebuilds the table's thread, feeds audits
+      (session-map ⟡ lines) and `/record`; reaches no LLM prompt.
+- [x] **/record**: the complete reading record (`record.md`) compiled
+      beside the minimalist append-only `ledger.md`.
+- [x] **/thoughts bernd|gm**: keeper thinking via pi's persistent
+      Hide-thinking setting + in-register label; table blocks collapse to
+      one-liners except the trailing uninterrupted run (generic rule —
+      any entry kind ends a run); state in `world-console.json`
+      (WORLD_CONSOLE_SETTINGS_FILE overrides for tests).
+- [x] **Audit kit**: session-map uN numbering made canonical (it counted
+      the session header, +1 off every citation — batch-2's audit had to
+      hand-correct); gm entries mapped; `report-tally.mjs` aggregates all
+      shipped reports into the recurrence priority view (wired into the
+      workflow §4 and the /analyze-sessions command); WC-28/WC-33
+      promoted into the taxonomy.
+- [x] **Aitester hardening**: tester transport retries (3, backoff) — the
+      "Connection error." that killed sittings in batches 1–2 was an
+      unretried @anthropic-ai/sdk APIConnectionError (pi-ai classifies it
+      retryable, nothing retried it); startup model validation with a
+      fix-naming message (the "Gemini not defined" stumble);
+      --tester-model/--keeper-model flags + WC_TESTER_MODEL/WC_KEEPER_MODEL
+      envs; meta.md transport-retries line.
 
 ## Phase 3 — the long game (re-scoped 2026-08-03 with the test-first ruling)
 
@@ -285,6 +352,13 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   (research: randomness reads as slack; PbtA "no nothing-happens").
 - 2026-08-03 · Mouse clicks → numbered hotkeys + /pick (pi TUI idiom;
   onTerminalInput prefill gives the "select then add words" flow).
+  (revised 2026-08-04: the /thoughts ruling asked for click-to-expand —
+  ⚠ DEVIATION surfaced and settled by pi's reality: pi-tui never enables
+  terminal mouse reporting, has no click events, and off-viewport lines
+  are frozen, so click is unimplementable without owning raw escape
+  parsing. The hotkey/command idiom STANDS: /thoughts toggles + pi's own
+  expand key and persistent Hide-thinking setting deliver the ruling's
+  intent — collapse that survives sittings, with a per-block peek.)
 - 2026-08-03 · Fate plan generated at the clues beat (twistBeat−1), not at
   grant — fresher world state, telegraphs precede the choice, quests never
   pursued cost no planner call.
@@ -371,3 +445,22 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   lives in `aitester/` — merged into this repo the same day it was split
   out, because a separate repo broke the one-commit stamp that makes a
   batch's findings attributable to an exact engine state.
+- 2026-08-04 · The chronicler round (maintainer's rulings on AI batch 2 —
+  the full list and verification in Phase 2.95 above). The judgment calls
+  worth remembering: (a) "create first, then narrate" was adopted in its
+  sound form — page-before-prose in the same reply plus a code sweep that
+  lists unpaged names until founded — and REJECTED as a hard pre-generation
+  pipeline (prose improvises names no planner can foresee; double
+  generation per turn buys nothing the sweep doesn't); (b) the keeper's
+  never-ask law made choices PROPHECY, not questions — true future
+  knowledge (pre-picking) rejected as railroading (G11/WC-27), while the
+  prophetic register is honest because fates ARE pre-decided (G4) and A2
+  keeps the keeper blind to them; (c) Bernd's page is special, root-level,
+  crafted late (after 3 turns) so the witness shapes himself to the
+  player — recrafting refused, nature canonized from the GM's own
+  improvised answer the maintainer kept; (d) findings the maintainer ruled
+  "let be" (WC-16, WC-30, WC-31, WC-33) were NOT fixed — they stay tracked
+  by report-tally until recurrence argues otherwise; (e) table talk became
+  durable session entries rather than richer notifications, because
+  entries alone give persistence + /tree semantics + audit visibility in
+  one mechanism, and the entry renderer keeps them out of every prompt.

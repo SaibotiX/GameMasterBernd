@@ -127,16 +127,21 @@ export type GameEvent =
 	 * kind "finale" (default) contests the completing stroke and fires once;
 	 * kind "hazard" contests a hindered attempt and may recur; kind
 	 * "checkpoint" contests a drawn mid-quest beat (the ≤1-autoresolve rule);
-	 * kind "peril" is a world interruption — slug "" (bound to no quest). */
+	 * kind "peril" is a world interruption — slug "" (bound to no quest);
+	 * kind "venture" is the seeker's own risky deed outside granted work
+	 * (G17, 2026-08-04) — slug "", staged by the keeper via stage_trial;
+	 * `flesh` marks a venture whose declared stakes include harm (a setback
+	 * then wounds +1 — bounded, F5). */
 	| {
 			ev: "check";
 			slug: string;
 			tier: string;
 			dc: number;
 			trial: string;
-			kind?: "finale" | "hazard" | "checkpoint" | "peril";
+			kind?: "finale" | "hazard" | "checkpoint" | "peril" | "venture";
 			edge?: "favored" | "hindered";
 			edgeReason?: string;
+			flesh?: boolean;
 	  }
 	/** The die falls: every die thrown (edge shows two, grit rethrows), the
 	 * kept face, and the band the margin earned. Engine-rolled, never narrated. */
@@ -415,14 +420,15 @@ export interface DerivedState {
 	 * simply speaks on. */
 	pendingChoice?: { kind: "twist" | "offer"; slug: string; text: string; options: PresentedOption[] };
 	/** The one trial awaiting the seeker's die, if any (max one, like picks).
-	 * slug "" = a peril (the world's own interruption, bound to no quest). */
+	 * slug "" = a peril or a venture (bound to no quest). */
 	pendingRoll?: {
 		slug: string;
 		tier: string;
 		dc: number;
 		trial: string;
-		kind?: "finale" | "hazard" | "checkpoint" | "peril";
+		kind?: "finale" | "hazard" | "checkpoint" | "peril" | "venture";
 		edge?: "favored" | "hindered";
+		flesh?: boolean;
 	};
 	/** Shapes of recently granted quests, oldest first (variety guard). */
 	recentShapes: QuestShape[];
@@ -686,6 +692,7 @@ export function derive(entries: EntryLike[], defaultMood: string): DerivedState 
 					trial: event.trial,
 					kind: event.kind,
 					edge: event.edge,
+					...(event.flesh ? { flesh: true } : {}),
 				};
 				break;
 			}
@@ -843,9 +850,11 @@ export function describeEvent(event: GameEvent): string {
 		case "offer_taken":
 			return `a formerly offered course is taken up (offer ${event.n}, course ${event.option})`;
 		case "check":
-			return `a trial bars ${event.slug ? `"${event.slug}"` : "the seeker's path"}: ${event.tier} (DC ${event.dc})${
+			return `a trial bars ${event.slug ? `"${event.slug}"` : event.kind === "venture" ? "the seeker's own venture" : "the seeker's path"}: ${event.tier} (DC ${event.dc})${
 				event.kind && event.kind !== "finale" ? ` [${event.kind}]` : ""
-			}${event.edge ? ` · ${event.edge}${event.edgeReason ? ` (${event.edgeReason})` : ""}` : ""} — ${event.trial}`;
+			}${event.edge ? ` · ${event.edge}${event.edgeReason ? ` (${event.edgeReason})` : ""}` : ""}${
+				event.flesh ? " · flesh at stake" : ""
+			} — ${event.trial}`;
 		case "roll":
 			return `the die falls${event.slug ? ` for "${event.slug}"` : ""}: ${event.kept} against DC ${event.dc} — ${event.band}${
 				event.grit ? " (grit spent)" : ""

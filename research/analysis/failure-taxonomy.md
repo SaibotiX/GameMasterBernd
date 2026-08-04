@@ -200,6 +200,20 @@ options, or rushes past an unpicked choice in narration.
   event payload.
 - **Fix surface:** prompt protocol.
 
+### WC-28 · Engine matter handed to the seeker, unprompted
+Outside any refusal, the keeper asks the player to supply what the record
+already holds (titles, ids, state) or gates a tool call behind a quiz.
+Closes the gap WC-13 leaves when no refusal is in play.
+- **Detect:** keeper-voice questions requesting identifiers or record
+  facts; a tool call that follows only after the player echoes something
+  the context already contained.
+- **Real case:** AI batch 2, vigil u89–u92 — "Speak the quest's name…
+  What is the title of the work you wish to close?" with exactly one done
+  quest standing; the player typed the slug, then `redeem_quest` fired.
+- **Fix surface:** prompt protocol (since 2026-08-04 the never-interrogate
+  law, G15 — any hit is a regression against it).
+
+
 ---
 
 ## S4 — Polish
@@ -213,6 +227,18 @@ Footer/panel lagging one event behind, resolved gates lingering a frame.
 Continuity slips the record does not contradict (eye color drift) — note,
 don't chase; they become S2 the moment the record disagrees.
 
+### WC-33 · Stock-name convergence across sittings
+The keeper reuses its favorite invented names for distinct souls across
+sittings of the same world. Chronicles are per-sitting so nothing collides
+today, but repeat play feels canned, and "the same name is the same page"
+makes it a standing hazard for any future world-level continuity.
+- **Detect:** name census across a batch's `personas/` (and places) —
+  identical names for different souls in different sittings.
+- **Real case:** AI batch 2 — both sittings independently invented a
+  "Marta" (dye-merchant / shepherd) and an "Elara" (wayhouse keeper /
+  steward's daughter).
+- **Fix surface:** prompt protocol / per-world name pools in `config/`.
+
 ---
 
 ## Class → fix surface map (for the report's "how to improve" column)
@@ -220,7 +246,8 @@ don't chase; they become S2 the moment the record disagrees.
 | Surface | What lives there | Typical classes |
 |---|---|---|
 | Engine code (`extension/*.ts`) | gates, draws, clocks, tools, commands, UI | WC-01..04, 14, 25, parts of 02/03 |
-| Keeper protocol (`prompt.ts`) | the laws of behavior | WC-10, 13, 15, 16, 20–24, 27 |
+| Keeper protocol (`prompt.ts`) | the laws of behavior | WC-10, 13, 15, 16, 20–24, 27, 28 |
+| World config (`config/worlds/*`) | per-world content pools | WC-33 (with a prompt line) |
 | Side-call prompts (`gmchat.ts`) | planner, judges, table, chronicler | WC-11, 12, 26 |
 | Refusal texts (throughout) | every error the model reads | WC-13 |
 | Design docs (`research/design/*.md`) | when reality was right and the spec wrong | any |

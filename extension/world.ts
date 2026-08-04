@@ -382,6 +382,72 @@ export function openQuestLines(world: WorldFiles): string[] {
 		.map((line) => line.replace(/^## /, ""));
 }
 
+// ---- the chronicler's own page --------------------------------------------
+// G16 (2026-08-04): the voice fronting the keeper — Bernd in the dragon
+// realm — is the realm's witness, not its inhabitant: never a soul under
+// personas/, never a dwelling, never a wound. He gets THIS page instead, at
+// the chronicle root beside the ledger: crafted by a side call only after
+// the seeker's first few turns (so he can shape himself to this player),
+// then read back into the keeper's own context every turn — the being the
+// player meets stays the being the record holds. Code appends what he
+// witnesses; the page only grows.
+
+const chroniclerFile = (world: WorldFiles) => join(world.root, "chronicler.md");
+
+export function chroniclerExists(world: WorldFiles): boolean {
+	return existsSync(chroniclerFile(world));
+}
+
+export function chroniclerPage(world: WorldFiles): string {
+	return read(chroniclerFile(world));
+}
+
+/** The fixed creed every chronicler page opens with — the canonized nature
+ * (it began as an improvised GM answer the maintainer kept). */
+export function chroniclerCreed(voiceName: string): string {
+	return (
+		`${voiceName} dwells nowhere because he dwells everywhere the quill's reach extends. ` +
+		`He is the realm's witness, not its inhabitant: no place binds him, no hour ages him, ` +
+		`no wound may find him. There is no page for him among the souls — only this one, ` +
+		`beside the ledger itself. What is written of him here, he holds to.`
+	);
+}
+
+/** Write the crafted page (once per chronicle; recrafting is refused —
+ * the witness does not change his nature mid-tale). */
+export function craftChroniclerPage(
+	world: WorldFiles,
+	voiceName: string,
+	crafted: { shows: string; noted: string },
+): boolean {
+	const file = chroniclerFile(world);
+	if (existsSync(file)) return false;
+	ensureDir(world.root);
+	writeFileSync(
+		file,
+		`# ${voiceName.trim()}\n` +
+			`- crafted: ${stamp()} — after the seeker's first steps, shaped to them\n\n` +
+			`## The witness's creed\n${chroniclerCreed(voiceName.trim())}\n\n` +
+			`## How he shows himself to this seeker\n${crafted.shows.trim()}\n\n` +
+			`## What the quill has noted of the seeker\n${crafted.noted.trim()}\n\n` +
+			`## Witnessed\n`,
+		"utf8",
+	);
+	return true;
+}
+
+/** Append one dated line of what the witness saw (quest turns, wounds,
+ * truths…). Deterministic, code-owned; never breaks a turn. */
+export function extendChronicler(world: WorldFiles, line: string): void {
+	try {
+		const file = chroniclerFile(world);
+		if (!existsSync(file)) return; // not crafted yet — the ledger holds it anyway
+		appendFileSync(file, `- ${stamp()} · ${line.trim()}\n`, "utf8");
+	} catch {
+		// the witness's page must never break a turn
+	}
+}
+
 // ---- the readable ledger log ----------------------------------------------
 
 /**

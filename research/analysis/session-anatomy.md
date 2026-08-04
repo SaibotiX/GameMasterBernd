@@ -8,7 +8,7 @@ every audit becomes archaeology instead of guesswork.
 | Artifact | Path | What it holds |
 |---|---|---|
 | **Session file** (authoritative) | `~/.pi/agent/sessions/<cwd-key>/<timestamp>_<session-id>.jsonl` | Every message, tool call, tool result, and game event, append-only. The cwd-key for this game is `--home-…-IA--` (pi keys sessions by the directory it was started in). |
-| **Chronicle folder** (world files) | `data/world/<world>/<session-id>/` | `quests.md`, `items.md`, `places/*.md`, `personas/*.md` — the permanent story record. **Never rewound by /tree**, so it can legitimately disagree with a rewound branch. |
+| **Chronicle folder** (world files) | `data/world/<world>/<session-id>/` | `quests.md`, `items.md`, `places/*.md`, `personas/*.md`, `chronicler.md` (the witness's special page, crafted after the first few turns), `record.md` (the /record compile — regenerated, not append-only) — the permanent story record. **Never rewound by /tree**, so it can legitimately disagree with a rewound branch. |
 | **Readable ledger** | `data/world/<world>/<session-id>/ledger.md` | One human line per game event with its `*uN*` number. Append-only across ALL branches — it shows events from branches the player later abandoned. |
 
 An audit wants all three: the session file is the truth, the chronicle shows
@@ -30,6 +30,12 @@ A session file is one JSON object per line:
 - `{type:"custom", customType:"world-console.ledger", data:{ev:…}}` — a game
   event. The full event catalog with payloads is
   `research/design/undertakings-mechanics.md` §6.
+- `{type:"custom", customType:"world-console.gm", data:{q,a}}` — one GM-table
+  exchange (durable since 2026-08-04; before that, table talk lived in RAM
+  and was invisible to audits). Never sent to any LLM prompt; rendered as a
+  permanent transcript block; **audit evidence** — the seeker's arguments,
+  confusion, and repair requests live here (map prints them as `⟡ table:`
+  lines).
 - `{type:"custom_message", …}` — an engine→keeper hand-off (`/pick`, `/roll`,
   `/web`, nudges, quest-accepts). Reaches the model as a user-role turn
   bearing the `[engine:<nonce>]` mark; rendered to the player as a dim line.
@@ -40,7 +46,10 @@ A session file is one JSON object per line:
 **uN numbering:** an entry's uN is its 1-based position in the append-only
 file. It never renumbers and is stable across branches — the same N the
 `/ledger` command, `ledger.md`, archive citations and `/gm amend_truth` use.
-**Every audit finding must cite its uN evidence.**
+(The map tool counted the header for one batch and ran +1 off canon — fixed
+2026-08-04 after the batch-2 audit caught it; the map now prints the header
+as an unnumbered `hdr` line.) **Every audit finding must cite its uN
+evidence.**
 
 ## 3. Branches — the /tree model
 

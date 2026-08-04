@@ -53,7 +53,12 @@ function parseFlags(argv) {
 		turns: 24,
 		world: "dragon-realm",
 		personas: ["squire"],
-		testerModel: "anthropic/claude-haiku-4-5",
+		// The tester model is switchable three ways, most specific first:
+		// --tester-model provider/id → WC_TESTER_MODEL env → this default.
+		testerModel: process.env.WC_TESTER_MODEL || "anthropic/claude-haiku-4-5",
+		// The keeper (game) model: --keeper-model provider/id → WC_KEEPER_MODEL
+		// env → pi's own settings default (flag omitted from the spawn then).
+		keeperModel: process.env.WC_KEEPER_MODEL || null,
 		script: null,
 		selftest: false,
 	};
@@ -66,6 +71,7 @@ function parseFlags(argv) {
 		else if (arg === "--world") flags.world = next();
 		else if (arg === "--personas") flags.personas = next().split(",").map((p) => p.trim()).filter(Boolean);
 		else if (arg === "--tester-model") flags.testerModel = next();
+		else if (arg === "--keeper-model") flags.keeperModel = next();
 		else if (arg === "--script") flags.script = next().split(";").map((s) => s.trim()).filter(Boolean);
 		else if (arg === "--selftest") flags.selftest = true;
 		else throw new Error(`unknown flag ${arg}`);
@@ -286,37 +292,87 @@ async function loadCatalog() {
 	return mod.builtinModels({ credentials: new PiAuthStore() });
 }
 
+/** Resolve a "provider/id" ref against pi-ai's catalog, with a message that
+ * names the fix (the old bare throw read like "AI model is not defined" and
+ * aborted sittings MID-RUN; unknown models now die at startup instead). */
+export function resolveModelRef(catalog, modelRef, who) {
+	const [provider, ...idParts] = String(modelRef).split("/");
+	const model = idParts.length > 0 ? catalog.getModel(provider, idParts.join("/")) : null;
+	if (!model) {
+		const available = (() => {
+			try {
+				return catalog
+					.getProviders()
+					.map((p) => (typeof p === "string" ? p : p.id ?? p.name))
+					.filter(Boolean)
+					.join(", ");
+			} catch {
+				return "(providers unreadable)";
+			}
+		})();
+		throw new Error(
+			`${who} model "${modelRef}" is not in pi-ai's catalog — use the form provider/id ` +
+				`(providers here: ${available}; ids: pi --list-models). A new provider also needs its ` +
+				`credential in ~/.pi/agent/auth.json (pi /login) or its env key (e.g. GEMINI_API_KEY).`,
+		);
+	}
+	return model;
+}
+
+/** Transient transport failures (the SDK's bare "Connection error.",
+ * timeouts, resets, 5xx/overloaded) deserve a retry — pi-ai itself
+ * classifies these retryable but retries nothing on this path. */
+function isTransientModelError(message) {
+	return /connection.?error|timed?.?out|timeout|ECONNRESET|ENOTFOUND|EAI_AGAIN|fetch failed|socket|overloaded|rate.?limit|429|5\d\d/i.test(
+		String(message ?? ""),
+	);
+}
+
 class Tester {
 	constructor(catalog, modelRef, systemPrompt) {
-		const [provider, ...idParts] = modelRef.split("/");
-		this.model = catalog.getModel(provider, idParts.join("/"));
-		if (!this.model) throw new Error(`tester model ${modelRef} is not in pi-ai's catalog`);
+		this.model = resolveModelRef(catalog, modelRef, "tester");
 		this.catalog = catalog;
 		this.systemPrompt = systemPrompt;
 		this.messages = [];
 		this.usage = { input: 0, output: 0 };
 		this.lapses = 0;
+		this.retries = 0;
 	}
 
+	/** One model call with retry/backoff on transient transport errors — a
+	 * single blip must not abort a whole sitting (batch 1+2 both lost
+	 * sittings to one unretried "Connection error."). */
 	async #complete() {
-		const response = await this.catalog.complete(this.model, {
-			systemPrompt: this.systemPrompt,
-			messages: this.messages,
-		});
-		if (response.errorMessage || response.stopReason === "error") {
-			throw new Error(`tester model: ${response.errorMessage ?? "call failed"}`);
+		const delays = [1500, 5000, 12000];
+		for (let attempt = 0; ; attempt++) {
+			let failure;
+			try {
+				const response = await this.catalog.complete(this.model, {
+					systemPrompt: this.systemPrompt,
+					messages: this.messages,
+				});
+				if (response.errorMessage || response.stopReason === "error") {
+					failure = new Error(`tester model: ${response.errorMessage ?? "call failed"}`);
+				} else {
+					if (response.usage) {
+						this.usage.input += response.usage.input ?? 0;
+						this.usage.output += response.usage.output ?? 0;
+					}
+					const text = response.content
+						.filter((block) => block.type === "text")
+						.map((block) => block.text ?? "")
+						.join("")
+						.trim();
+					if (text) return text;
+					failure = new Error("tester model returned an empty reply");
+				}
+			} catch (error) {
+				failure = new Error(`tester model: ${error?.message ?? error}`);
+			}
+			if (attempt >= delays.length || !isTransientModelError(failure.message)) throw failure;
+			this.retries++;
+			await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
 		}
-		if (response.usage) {
-			this.usage.input += response.usage.input ?? 0;
-			this.usage.output += response.usage.output ?? 0;
-		}
-		const text = response.content
-			.filter((block) => block.type === "text")
-			.map((block) => block.text ?? "")
-			.join("")
-			.trim();
-		if (!text) throw new Error("tester model returned an empty reply");
-		return text;
 	}
 
 	#push(role, text) {
@@ -368,6 +424,7 @@ class ScriptedTester {
 		this.at = 0;
 		this.usage = { input: 0, output: 0 };
 		this.lapses = 0;
+		this.retries = 0;
 	}
 	async turn() {
 		const say = this.says[this.at % this.says.length];
@@ -548,7 +605,10 @@ async function runSitting({ batchDir, persona, ordinal, flags, guide, cards, cat
 		? new ScriptedTester(flags.script)
 		: new Tester(catalog, flags.testerModel, buildSystemPrompt(guide, cards, persona));
 
-	const rpc = new Rpc(["--world", flags.world], {
+	// --keeper-model switches the GAME's model per run (pi accepts
+	// provider/id); without it pi's own settings default rules, as before.
+	const keeperArgs = flags.keeperModel ? ["--model", flags.keeperModel] : [];
+	const rpc = new Rpc(["--world", flags.world, ...keeperArgs], {
 		PI_CODING_AGENT_SESSION_DIR: sessionDir,
 		PI_SKIP_VERSION_CHECK: "1",
 		PI_OFFLINE: "1",
@@ -680,7 +740,7 @@ async function runSitting({ batchDir, persona, ordinal, flags, guide, cards, cat
 		`- pi: ${probe("pi", ["--version"])}`,
 		`- extension commit: ${probe("git", ["-C", ROOT, "log", "-1", "--format=%h"])} (wrapper: aitester/extension)`,
 		`- keeper model: ${keeperModels.join(", ") || "(none seen)"} · cost $${keeperCost.toFixed(4)}`,
-		`- tester: ${flags.script ? `scripted (${flags.script.join("; ")})` : flags.testerModel} · tokens in/out ${tester.usage.input}/${tester.usage.output} · invalid-JSON lapses ${tester.lapses}`,
+		`- tester: ${flags.script ? `scripted (${flags.script.join("; ")})` : flags.testerModel} · tokens in/out ${tester.usage.input}/${tester.usage.output} · invalid-JSON lapses ${tester.lapses}${tester.retries ? ` · transport retries ${tester.retries}` : ""}`,
 		`- turns played: ${turns} of ${flags.turns}`,
 		`- boundary: ${boundary.reason}`,
 		infrastructure ? `- ⚠ infrastructure: ${infrastructure}` : null,
@@ -720,6 +780,10 @@ if (!existsSync(cardsFile)) throw new Error(`no persona cards for world "${flags
 const cards = readFileSync(cardsFile, "utf8");
 for (const persona of flags.personas) buildSystemPrompt(guide, cards, persona); // fail fast on typos
 const catalog = flags.script ? null : await loadCatalog();
+// Fail fast on model refs too — an unknown tester model used to surface only
+// MID-BATCH as a dead sitting ("…is not in pi-ai's catalog", the Gemini
+// stumble); now the batch refuses to start.
+if (catalog) resolveModelRef(catalog, flags.testerModel, "tester");
 const batchDir = join(SESSIONS_IN, flags.batch);
 mkdirSync(batchDir, { recursive: true });
 

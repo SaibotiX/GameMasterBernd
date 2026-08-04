@@ -68,6 +68,37 @@ undertakings-research.md, progress in undertakings-build.md.)
   young. Perils wound; three wounds end the tale. Death is real: the game
   never denies it to those who seek it, and never fully shields those who
   don't. Losses are situations, not endings — until the last one.
+- **G15 — The keeper never interrogates** (2026-08-04, user decree; widens
+  playtest 4's "naming the world is the keeper's work" into a total ban).
+  Everything the player knows comes from Bernd; Bernd asks the player for
+  NOTHING — not world facts, not record facts, not identifiers, not "which
+  do you choose?". Choices remain wholly the seeker's (G11, P4 untouched):
+  the board carries the options and the prose presents them DECLARATIVELY,
+  in the voice of one who has already dipped the quill — the paths stand
+  named, the record waits to see which is walked. Souls in the fiction may
+  still ask the seeker's CHARACTER questions (that is drama, not
+  interrogation); the keeper's own voice never does. Asking the seeker to
+  resolve an engine matter was already outlawed at refusals; now it is
+  outlawed everywhere.
+- **G16 — Bernd is the realm's witness, not its inhabitant** (2026-08-04,
+  user decree; canonizes the improvised GM answer that named it). The
+  chronicler who fronts the keeper is a special being — everywhere the
+  quill reaches and nowhere in particular, unbound by place and time,
+  never a normal soul: no dwelling, no move_persona, no wounds, and never
+  a page under `personas/`. He gets a SPECIAL page instead, crafted only
+  after the first few player turns so he can shape himself to this seeker
+  (mood, place, hour, what they seem to care about, how they play) — and
+  from then on he reads his own page back, so the being the player meets
+  stays the being the record holds. His page grows with what he witnesses.
+- **G17 — Any risky deed is rollable** (2026-08-04, user decree). The dice
+  are not reserved for granted work and the world's perils: when the seeker
+  tries something uncertain where failure costs — picking a lock, lifting a
+  purse, charming a better price — the keeper stages an open trial and the
+  seeker casts /roll. Same grammar as every die in the game: stakes
+  contract before the cast (F3), edge only with a recorded reason, bounded
+  damage (F5 — a venture's setback never costs more than one wound, and
+  only when flesh was declared at stake). G8 still governs: no dice where
+  nothing is uncertain or nothing is at cost.
 
 ## Fairness invariants (from the research — see research doc "fair" list)
 

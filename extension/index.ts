@@ -23,15 +23,27 @@
  *    not by trusting the prompt
  */
 import { randomInt, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FooterComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { FooterComponent, SettingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
-import { gmAsk, gmChronicle, gmJudgeAmendment, gmJudgeTruth, gmPlanFate, type GmFix, type GmTurn } from "./gmchat.ts";
+import {
+	gmAsk,
+	gmChronicle,
+	gmCraftChronicler,
+	gmJudgeAmendment,
+	gmJudgeTruth,
+	gmPlanFate,
+	type GmFix,
+	type GmTurn,
+} from "./gmchat.ts";
+import { extractCandidateNames, nameKey } from "./names.ts";
 import {
 	asGameEvent,
 	BAND_TICKS,
@@ -59,7 +71,12 @@ import { searchText } from "./textsearch.ts";
 import { gridBox, type GridCell } from "./ui.ts";
 import {
 	addItem,
+	chroniclerCreed,
+	chroniclerExists,
+	chroniclerPage,
 	countOpenQuests,
+	craftChroniclerPage,
+	extendChronicler,
 	extendPlace,
 	foundPlace,
 	grantQuest,
@@ -96,8 +113,22 @@ const GAME_TOOLS = [
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
-	"offer_choices", "shelve_quest", "heal_wounds",
+	"offer_choices", "shelve_quest", "heal_wounds", "stage_trial",
 ];
+/** GM-table exchanges as durable session entries (never sent to the LLM;
+ * rendered by the entry renderer, mined by /record and the audit kit). */
+const GM_TYPE = "world-console.gm";
+/** The chronicler's page is crafted only after this many player messages —
+ * he shapes himself to the seeker, so first there must be a seeker to see. */
+const CHRONICLER_CRAFT_AFTER_CHATS = 3;
+/** A swept name is offered at most this often before the quill lets it rest. */
+const NAME_OFFER_CAP = 2;
+/** pi's agent dir — honors pi's own PI_CODING_AGENT_DIR override, so tests
+ * and sandboxes never touch the real settings. */
+const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+/** Extension settings that survive sessions and worlds (thoughts collapse).
+ * WORLD_CONSOLE_SETTINGS_FILE overrides for tests (like WORLD_CONSOLE_DATA_DIR). */
+const WC_SETTINGS_FILE = process.env.WORLD_CONSOLE_SETTINGS_FILE || join(AGENT_DIR, "world-console.json");
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
 	find_text: "text",
@@ -146,6 +177,152 @@ export default function (pi: ExtensionAPI) {
 	// adopted onto the legacy shared folder ("" key).
 	const worldFiles = (): WorldFiles => ({ root: join(DATA_ROOT, worldId, st.chronicle ?? "") });
 
+	// ---- extension settings (survive sessions and worlds) ------------------
+	interface WcSettings {
+		thoughts: { bernd: boolean; gm: boolean }; // true = collapsed
+	}
+	function loadWcSettings(): WcSettings {
+		try {
+			const parsed = JSON.parse(readFileSync(WC_SETTINGS_FILE, "utf8"));
+			return { thoughts: { bernd: !!parsed?.thoughts?.bernd, gm: !!parsed?.thoughts?.gm } };
+		} catch {
+			return { thoughts: { bernd: false, gm: false } };
+		}
+	}
+	function saveWcSettings(settings: WcSettings): void {
+		try {
+			mkdirSync(dirname(WC_SETTINGS_FILE), { recursive: true });
+			writeFileSync(WC_SETTINGS_FILE, JSON.stringify(settings, null, "\t") + "\n", "utf8");
+		} catch {
+			// settings must never break a turn
+		}
+	}
+	let wcSettings = loadWcSettings();
+
+	// ---- the chronicler's identity (G16) -----------------------------------
+	/** The voice's leading proper name — "Bernd" from "Bernd, Keeper of the
+	 * Chronicle" or "Bernd the Chronicler". */
+	function chroniclerName(): string {
+		return config.world.voice.split(/[\s,]+/)[0] ?? config.world.voice;
+	}
+	/** Does a name mean the chronicler himself? (record_persona guards, G16) */
+	function isChroniclerName(name: string): boolean {
+		const own = chroniclerName().toLowerCase();
+		const words = name.toLowerCase().split(/[\s,''-]+/).filter(Boolean);
+		return words.includes(own) || slugify(name) === slugify(config.world.voice);
+	}
+
+	// ---- the record-on-mention sweep (WC-15, 2026-08-04) -------------------
+	/** How often each unpaged name has been offered to the keeper (nameKey →
+	 * count); past NAME_OFFER_CAP the quill lets it rest. Per process — a
+	 * restart at worst re-offers a dismissed name twice more. */
+	let offeredNames = new Map<string, number>();
+	let chroniclerCrafting = false;
+
+	/** Everything already chronicled or otherwise never worth a page nag. */
+	function knownNames(files: WorldFiles): string[] {
+		const known: string[] = [config.world.title, config.world.voice, chroniclerName()];
+		if (st.playerName) known.push(st.playerName);
+		try {
+			for (const page of listPages(files, "places")) known.push(page.title);
+			for (const page of listPages(files, "personas")) known.push(page.title);
+			for (const line of openQuestLines(files)) {
+				const title = line.replace(/^\[(open|done)\] /, "").replace(/ \(id: .+\)$/, "");
+				known.push(title);
+			}
+		} catch {
+			// unreadable world files never break a turn
+		}
+		return known;
+	}
+
+	/** Proper names the LAST keeper reply spoke that still lack pages —
+	 * offered to the keeper through the standing layer, at most
+	 * NAME_OFFER_CAP times each. Pages founded meanwhile drop out on their
+	 * own (they join the known set). */
+	function unpagedNamesFromLastReply(ctx: ExtensionContext): string[] {
+		try {
+			const branch = ctx.sessionManager.getBranch();
+			let lastReply = "";
+			for (let i = branch.length - 1; i >= 0; i--) {
+				const entry = branch[i] as { type?: string; message?: { role?: string; content?: unknown } };
+				if (entry.type !== "message" || entry.message?.role !== "assistant") continue;
+				const content = entry.message.content;
+				lastReply = Array.isArray(content)
+					? (content as { type?: string; text?: string }[])
+							.filter((block) => block.type === "text")
+							.map((block) => block.text ?? "")
+							.join(" ")
+					: typeof content === "string"
+						? content
+						: "";
+				break;
+			}
+			if (!lastReply.trim()) return [];
+			const candidates = extractCandidateNames(lastReply, knownNames(worldFiles()));
+			const offered: string[] = [];
+			for (const name of candidates) {
+				const key = nameKey(name);
+				const count = offeredNames.get(key) ?? 0;
+				if (count >= NAME_OFFER_CAP) continue;
+				offeredNames.set(key, count + 1);
+				offered.push(name);
+			}
+			return offered;
+		} catch {
+			return []; // the sweep must never break a turn
+		}
+	}
+
+	/** The chronicler's page, bounded for the standing prompt: creed line,
+	 * how he shows himself, and the last few witnessed lines. */
+	function chroniclerBlock(): string | undefined {
+		try {
+			const page = chroniclerPage(worldFiles());
+			if (!page) return undefined;
+			const shows = page.match(/## How he shows himself to this seeker\n([\s\S]*?)(?:\n## |$)/)?.[1]?.trim();
+			const noted = page.match(/## What the quill has noted of the seeker\n([\s\S]*?)(?:\n## |$)/)?.[1]?.trim();
+			const witnessed = page.match(/## Witnessed\n([\s\S]*)$/)?.[1]?.trim().split("\n").filter(Boolean) ?? [];
+			const parts = [
+				chroniclerCreed(chroniclerName()),
+				shows ? `How you show yourself to this seeker: ${shows}` : "",
+				noted ? `What the quill has noted of them: ${noted}` : "",
+				witnessed.length ? `Lately witnessed:\n${witnessed.slice(-4).join("\n")}` : "",
+			].filter(Boolean);
+			return parts.join("\n\n");
+		} catch {
+			return undefined;
+		}
+	}
+
+	/** Craft the chronicler once the seeker has shown themselves (fire-and-
+	 * forget; a failure retries at the next turn boundary — play never
+	 * blocks on the witness's own page). */
+	function maybeCraftChronicler(ctx: ExtensionContext): void {
+		if (chroniclerCrafting || st.dead || st.chats < CHRONICLER_CRAFT_AFTER_CHATS) return;
+		const files = worldFiles();
+		if (st.chronicle === undefined || chroniclerExists(files)) return;
+		if (!ctx.model) return;
+		chroniclerCrafting = true;
+		const opening = archiveLinesOf(ctx)
+			.filter((line) => line.who === "seeker" || line.who === "game")
+			.slice(0, 24)
+			.map(formatArchiveLine);
+		gmCraftChronicler({
+			config,
+			model: { provider: ctx.model.provider, id: ctx.model.id },
+			opening,
+			standing: { place: st.place?.title, mood: st.mood, seeker: st.playerName },
+		})
+			.then((crafted) => {
+				craftChroniclerPage(worldFiles(), chroniclerName(), crafted);
+				chroniclerCrafting = false;
+			})
+			.catch(() => {
+				chroniclerCrafting = false; // retry at a later boundary
+			});
+	}
+
 	/** Quest headings for the standing layer; unreadable files never break a turn. */
 	function questStandings(): string[] {
 		try {
@@ -177,6 +354,7 @@ export default function (pi: ExtensionAPI) {
 	function replay(ctx: ExtensionContext): void {
 		uiCtx = ctx; // keep the footer's data source pointing at the live context
 		st = derive(ctx.sessionManager.getBranch(), config.world.defaultMood);
+		updateGmTail(ctx); // the /thoughts gm tail-run follows the live branch
 	}
 
 	/**
@@ -205,6 +383,9 @@ export default function (pi: ExtensionAPI) {
 	// byte-identical to stock pi) with the game line below it, and no cwd line.
 	let uiCtx: ExtensionContext | undefined;
 	let requestFooterRender: (() => void) | undefined;
+	/** The live TUI, captured from the footer factory — lets /thoughts gm
+	 * re-render past entries (invalidate cascades to every entry renderer). */
+	let tuiRef: { invalidate?(): void; requestRender?(): void } | undefined;
 
 	function gameFooterLine(): string {
 		if (st.dead) return `☠ the tale has ended · ${config.world.title} · a new tale begins with /new`;
@@ -218,6 +399,7 @@ export default function (pi: ExtensionAPI) {
 		if (ctx.mode !== "tui" || typeof ctx.ui.setFooter !== "function") return;
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			requestFooterRender = () => tui.requestRender();
+			tuiRef = tui as unknown as { invalidate?(): void; requestRender?(): void };
 			// FooterComponent only reads state.model/state.thinkingLevel,
 			// sessionManager, getContextUsage() and modelRuntime.isUsingOAuth()
 			// — all reachable through the extension context.
@@ -436,6 +618,18 @@ export default function (pi: ExtensionAPI) {
 		const time = new Date().toISOString().slice(0, 16).replace("T", " ");
 		events.forEach((event, index) => {
 			logEvent(files, `*u${total - events.length + index + 1}* ${time}  ${describeEvent(event)}`);
+			// The witness keeps his own account of the majors (G16) — code-
+			// appended, deterministic, only once his page exists.
+			if (
+				event.ev === "quest" ||
+				event.ev === "wound" ||
+				event.ev === "heal" ||
+				event.ev === "death" ||
+				event.ev === "truth" ||
+				event.ev === "player_named"
+			) {
+				extendChronicler(files, describeEvent(event));
+			}
 		});
 		updateFooter(ctx);
 		updateWidgets(ctx);
@@ -474,7 +668,7 @@ export default function (pi: ExtensionAPI) {
 	 * uN = the entry's 1-based position in the append-only session file, so
 	 * the numbers are stable across branches and never renumber.
 	 */
-	function archiveLinesOf(ctx: ExtensionContext): ArchiveLine[] {
+	function archiveLinesOf(ctx: ExtensionContext, options?: { table?: boolean }): ArchiveLine[] {
 		const uidByEntryId = new Map<string, number>();
 		ctx.sessionManager.getEntries().forEach((entry, index) => {
 			uidByEntryId.set((entry as { id: string }).id, index + 1);
@@ -486,6 +680,18 @@ export default function (pi: ExtensionAPI) {
 			if (event) {
 				lines.push({ uid, who: "ledger", text: describeEvent(event) });
 				continue;
+			}
+			// GM-table exchanges are durable entries, but they reach ONLY the
+			// table's own evidence and /record — never the keeper's recall
+			// (nothing said at the table enters the story, by design).
+			if (options?.table) {
+				const custom = entry as { type?: string; customType?: string; data?: { q?: string; a?: string } };
+				if (custom.type === "custom" && custom.customType === GM_TYPE && custom.data?.q) {
+					for (const chunk of chunkText(`the seeker asked: ${custom.data.q} — the table answered: ${custom.data.a ?? ""}`)) {
+						lines.push({ uid, who: "table", text: chunk });
+					}
+					continue;
+				}
 			}
 			if (entry.type !== "message") continue;
 			const message = (entry as { message?: { role?: string; content?: unknown } }).message;
@@ -645,6 +851,11 @@ export default function (pi: ExtensionAPI) {
 				const name = String(fix.name ?? "").trim();
 				const place = String(fix.place ?? "").trim();
 				if (!name || !place) throw new Error("recording a soul needs their name and place");
+				if (isChroniclerName(name)) {
+					throw new Error(
+						`${chroniclerName()} is the realm's witness, not a soul — the engine keeps his special page (chronicler.md); no persona fix may bear his name`,
+					);
+				}
 				if (!placeExists(files, place)) {
 					throw new Error(`no page exists for the place "${place}" — chain a chronicle_place fix before this one`);
 				}
@@ -656,6 +867,9 @@ export default function (pi: ExtensionAPI) {
 				const name = String(fix.name ?? "").trim();
 				const toPlace = String(fix.to_place ?? "").trim();
 				const reason = String(fix.reason ?? "").trim();
+				if (isChroniclerName(name)) {
+					throw new Error(`${chroniclerName()} moves nowhere — no place binds the realm's witness`);
+				}
 				if (!personaExists(files, name)) throw new Error(`no page exists for ${name}`);
 				if (!placeExists(files, toPlace)) throw new Error(`no page exists for the place "${toPlace}"`);
 				if (reason.length < 10) throw new Error("a move needs a real reason, plainly stated");
@@ -773,7 +987,24 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", async (event, ctx) => {
 		installFooter(ctx);
-		gmThread = []; // the GM table is per sitting
+		// The table's thread survives resume now: rebuild it from the branch's
+		// GM entries (durable since 2026-08-04); nothing else of the table
+		// crosses into the game.
+		gmThread = [];
+		try {
+			for (const entry of ctx.sessionManager.getBranch()) {
+				const custom = entry as { type?: string; customType?: string; data?: { q?: string; a?: string } };
+				if (custom.type === "custom" && custom.customType === GM_TYPE && custom.data?.q && custom.data?.a) {
+					gmThread.push({ who: "player", text: custom.data.q }, { who: "gm", text: custom.data.a });
+				}
+			}
+			if (gmThread.length > 24) gmThread = gmThread.slice(-24);
+		} catch {
+			gmThread = [];
+		}
+		offeredNames = new Map();
+		chroniclerCrafting = false;
+		wcSettings = loadWcSettings();
 
 		const flagWorld = pi.getFlag("world");
 		const requested =
@@ -862,6 +1093,14 @@ export default function (pi: ExtensionAPI) {
 				{ ev: "check", slug: "", tier, dc, trial: text, kind: "peril" },
 			]);
 		}
+		// The record-on-mention sweep (WC-15): names the LAST telling spoke
+		// that still lack pages ride the standing layer of THIS turn — the
+		// keeper founds or dismisses them in the reply it is already writing.
+		// Pure code, no extra call, self-clearing once pages exist.
+		const unpagedNames = st.dead ? [] : unpagedNamesFromLastReply(ctx);
+		// The witness shapes himself to the seeker once they have shown
+		// themselves (G16) — fire-and-forget, play never waits on it.
+		maybeCraftChronicler(ctx);
 		// In-game archive recall: search the sitting's FULL record (compaction
 		// notwithstanding — getBranch keeps every entry) for this turn's words
 		// and hand the hits to the keeper through a prompt layer. Pure code,
@@ -877,6 +1116,8 @@ export default function (pi: ExtensionAPI) {
 				justArrived: !branchHasAssistantReply(ctx),
 				openQuests: questStandings(),
 				recall,
+				unpagedNames,
+				chronicler: chroniclerBlock(),
 			}),
 		};
 	});
@@ -1263,6 +1504,59 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			const files = worldFiles();
+			// A VENTURE (slug "", kind "venture") is the seeker's own gamble
+			// outside granted work (G17): no quest, no clock, no grit, no fuse
+			// rewind. Consequences live in the narration; flesh wounds (+1)
+			// only when the staged stakes declared it (F5 bounded).
+			if (trial.kind === "venture") {
+				let result: { dice: number[]; kept: number; grit: boolean } | null;
+				if (ctx.mode === "tui" && typeof ctx.ui.custom === "function") {
+					result = await rollCeremony(ctx, trial, false); // no grit on ventures
+					if (!result) return; // escaped before casting — the venture stands
+				} else {
+					const count = trial.edge ? 2 : 1;
+					const dice = Array.from({ length: count }, () => randomInt(1, 21));
+					const kept =
+						trial.edge === "favored" ? Math.max(...dice) : trial.edge === "hindered" ? Math.min(...dice) : dice[0];
+					result = { dice, kept, grit: false };
+				}
+				const band = rollBand(result.kept, trial.dc);
+				const events: GameEvent[] = [
+					{ ev: "roll", slug: "", dice: result.dice, kept: result.kept, dc: trial.dc, band, grit: false },
+					{ ev: "outcome", slug: "", band, add: 0, text: `the venture "${trial.trial}" — ${band}` },
+				];
+				let dies = false;
+				if (band === "setback" && trial.flesh) {
+					dies = st.wounds + 1 >= MAX_WOUNDS;
+					events.push({ ev: "wound", add: 1, reason: `the venture failed: ${trial.trial}` });
+					if (dies) events.push({ ev: "death", reason: `the venture failed: ${trial.trial}` });
+				}
+				appendEvents(ctx, events);
+				const guidance = dies
+					? `the failure is MORTAL — the seeker DIES here. Narrate the end with weight and honesty; the tale is over, nothing undoes it.`
+					: band === "setback"
+						? trial.flesh
+							? `the deed fails and draws blood — the seeker is WOUNDED (${st.wounds}/${MAX_WOUNDS}; at three the tale ends). Narrate the failure and the hurt honestly; the scene stays open with a move for them.`
+							: `the deed FAILS and the declared stakes land — narrate what slips honestly (no new tasks, never a dead end); the scene stays open with a move for them.`
+						: band === "cost"
+							? `the deed succeeds AT A PRICE — it works, but name a visible cost in this scene (time, coin, noise, notice).`
+							: band === "great"
+								? `a masterstroke — the deed succeeds beautifully; let a small earned advantage show.`
+								: `the deed succeeds — narrate it cleanly; the scene carries on.`;
+				pi.sendMessage(
+					{
+						customType: "world-console.roll",
+						content:
+							`[engine:${ENGINE_NONCE}] The die fell for the seeker's venture ("${trial.trial}"): kept ${result.kept} ` +
+							`against DC ${trial.dc}${trial.edge ? ` (${trial.edge}, threw ${result.dice.join(" and ")})` : ""} — ${band}. ` +
+							`Narrate: ${guidance} Diegetically, never the mechanics.`,
+						display: true,
+						details: { kept: result.kept, dc: trial.dc, band, dice: result.dice, grit: false },
+					},
+					{ triggerTurn: true },
+				);
+				return;
+			}
 			// A PERIL (slug "") is the world's own strike: no quest, no clock —
 			// the stake is the seeker's skin. Wounds land on a bad die; three
 			// wounds end the tale. A new fuse winds once the die has fallen.
@@ -1634,6 +1928,18 @@ export default function (pi: ExtensionAPI) {
 		const files = worldFiles();
 		const name = (args ?? "").trim();
 		if (name) {
+			// The chronicler is no soul, but /persons <his name> still answers —
+			// with his special page (G16), never a personas/ one.
+			if (kind === "personas" && isChroniclerName(name)) {
+				const page = chroniclerPage(files);
+				ctx.ui.notify(
+					page
+						? clip(page, 3000)
+						: `${chroniclerName()} is the realm's witness, not its inhabitant — his page is crafted after the seeker's first steps, and this tale has not yet shaped him.`,
+					"info",
+				);
+				return;
+			}
 			const slug = slugify(name);
 			const page = kind === "places" ? placePage(files, slug) : personaPage(files, slug);
 			if (!page) {
@@ -1644,7 +1950,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 		const pages = listPages(files, kind);
-		if (pages.length === 0) {
+		if (pages.length === 0 && !(kind === "personas" && chroniclerExists(files))) {
 			ctx.ui.notify(`The chronicle holds no ${kind === "places" ? "places" : "souls"} yet.`, "info");
 			return;
 		}
@@ -1652,6 +1958,12 @@ export default function (pi: ExtensionAPI) {
 			const here = kind === "places" && st.place?.slug === page.slug ? " ← the party stands here" : "";
 			return `  ${page.title}${here}\n    ${clip(page.firstLine, 90) || "(no description recorded)"}`;
 		});
+		if (kind === "personas" && chroniclerExists(files)) {
+			lines.unshift(
+				`  ${chroniclerName()} ⟡ the realm's witness — everywhere the quill reaches, nowhere in particular\n` +
+					`    (a special page, not a soul: /persons ${chroniclerName()})`,
+			);
+		}
 		const head = kind === "places" ? `⟡ places walked or chronicled (${pages.length})` : `⟡ souls met (${pages.length})`;
 		ctx.ui.notify(`${head}\n${lines.join("\n")}\n\nDetails: /${kind === "places" ? "place" : "persons"} <name>`, "info");
 	}
@@ -1663,6 +1975,183 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("persons", {
 		description: "World Console: souls of the chronicle — /persons lists them, /persons <name> shows the page",
 		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "personas"),
+	});
+
+	// /record — the COMPLETE structured record beside the minimalist ledger
+	// (2026-08-04): everything the sitting holds, browsable as one file —
+	// header, quests, souls, places, items, then the full numbered timeline
+	// including Bernd's telling, the seeker's words, table talk and every
+	// game event. Regenerated on each call (ledger.md stays the append-only
+	// mirror; this is the reading view).
+	pi.registerCommand("record", {
+		description: "World Console: compile the complete record of this story — /record (writes record.md beside the ledger)",
+		handler: async (_args, ctx) => {
+			replay(ctx);
+			const files = worldFiles();
+			const uidByEntryId = new Map<string, number>();
+			ctx.sessionManager.getEntries().forEach((entry, index) => {
+				uidByEntryId.set((entry as { id: string }).id, index + 1);
+			});
+			const timeline: string[] = [];
+			for (const entry of ctx.sessionManager.getBranch()) {
+				const raw = entry as {
+					id?: string;
+					type?: string;
+					customType?: string;
+					data?: { q?: string; a?: string };
+					message?: { role?: string; content?: unknown };
+				};
+				const uid = uidByEntryId.get(raw.id ?? "") ?? 0;
+				const mark = `*u${uid}*`;
+				const event = asGameEvent(entry);
+				if (event) {
+					timeline.push(`${mark} · ${describeEvent(event)}`);
+					continue;
+				}
+				if (raw.type === "custom" && raw.customType === GM_TYPE && raw.data?.q) {
+					timeline.push(`${mark} ⟡ the seeker, at the table: ${raw.data.q}`);
+					timeline.push(`${mark} ⟡ the table answers: ${raw.data.a ?? ""}`);
+					continue;
+				}
+				if (raw.type === "message" && raw.message) {
+					const content = raw.message.content;
+					const text = Array.isArray(content)
+						? (content as { type?: string; text?: string }[])
+								.filter((block) => block.type === "text")
+								.map((block) => block.text ?? "")
+								.join("\n")
+						: typeof content === "string"
+							? content
+							: "";
+					if (raw.message.role === "user") {
+						// Engine hand-offs reach the model as user turns; label them
+						// without their content (the nonce stays off every page).
+						if (raw.customType) timeline.push(`${mark} · an engine hand-off (${raw.customType.replace("world-console.", "")})`);
+						else if (text.trim()) timeline.push(`${mark} — the seeker:\n${text.trim()}`);
+					} else if (raw.message.role === "assistant" && text.trim()) {
+						timeline.push(`${mark} — ${chroniclerName()}:\n${text.trim()}`);
+					}
+					continue;
+				}
+				if (raw.type === "model_change" || raw.type === "thinking_level_change" || raw.type === "session_info" || raw.type === "compaction") {
+					timeline.push(`${mark} · (pi bookkeeping: ${raw.type.replace(/_/g, " ")})`);
+				}
+			}
+			const read = (path: string): string => {
+				try {
+					return existsSync(path) ? readFileSync(path, "utf8").trim() : "";
+				} catch {
+					return "";
+				}
+			};
+			const soulsList = listPages(files, "personas");
+			const placesList = listPages(files, "places");
+			const content = [
+				`# The complete record — ${config.world.title}`,
+				`Compiled ${new Date().toISOString().slice(0, 16).replace("T", " ")} · regenerated by /record; the`,
+				`minimalist ledger.md beside it stays the append-only event mirror.`,
+				``,
+				`- seeker: ${st.playerName ?? "unnamed"} · renown level ${st.level} (score ${st.score}) · wounds ${st.wounds}/${MAX_WOUNDS}${st.dead ? " · THE TALE HAS ENDED" : ""}`,
+				`- mood: ${st.mood} · standing at: ${st.place?.title ?? "(nowhere yet)"} · truths bound: ${st.truths.length}`,
+				``,
+				`## The chronicler`,
+				read(join(files.root, "chronicler.md")) || `(${chroniclerName()}'s page is not yet crafted — it takes shape after the seeker's first steps)`,
+				``,
+				`## Quests`,
+				read(join(files.root, "quests.md")).replace(/^# Quests\n?/, "") || "(none granted yet)",
+				``,
+				`## Souls (${soulsList.length})`,
+				soulsList.map((page) => `- ${page.title} — ${page.firstLine || "(no description)"}`).join("\n") || "(none met yet)",
+				``,
+				`## Places (${placesList.length})`,
+				placesList.map((page) => `- ${page.title} — ${page.firstLine || "(no description)"}`).join("\n") || "(none walked yet)",
+				``,
+				`## Items`,
+				read(join(files.root, "items.md")).replace(/^# Items of the seeker\n?/, "") || "(none held yet)",
+				``,
+				`## The full timeline — this branch of the tale, numbered as the ledger numbers it`,
+				``,
+				timeline.join("\n\n") || "(an empty sitting)",
+				``,
+			].join("\n");
+			try {
+				mkdirSync(files.root, { recursive: true });
+				const target = join(files.root, "record.md");
+				writeFileSync(target, content, "utf8");
+				ctx.ui.notify(
+					`⟡ the complete record stands compiled: ${target}\n(${timeline.length} timeline entries · regenerate any time with /record)`,
+					"info",
+				);
+			} catch (error) {
+				ctx.ui.notify(`The record could not be written: ${(error as Error).message}`, "error");
+			}
+		},
+	});
+
+	// /thoughts — collapse the quiet machinery (2026-08-04). "bernd" drives
+	// pi's own persistent Hide-thinking setting (it retro-applies to every
+	// past reply and survives sittings and worlds); "gm" collapses past table
+	// exchanges to one line each — except the trailing uninterrupted run,
+	// which always stays open. Both toggle back with the same call.
+	pi.registerCommand("thoughts", {
+		description: "World Console: collapse/show quiet thoughts — /thoughts bernd (keeper thinking) · /thoughts gm (table talk)",
+		getArgumentCompletions: (prefix: string) => {
+			const bare = prefix.trim().toLowerCase();
+			const options = [
+				{ value: "bernd", label: `bernd — ${wcSettings.thoughts.bernd ? "show" : "collapse"} the keeper's thinking` },
+				{ value: "gm", label: `gm — ${wcSettings.thoughts.gm ? "show" : "collapse"} past table talk` },
+			].filter((option) => option.value.startsWith(bare));
+			return options.length > 0 ? options : null;
+		},
+		handler: async (args, ctx) => {
+			const target = (args ?? "").trim().toLowerCase();
+			if (target === "bernd" || target === "keeper") {
+				wcSettings.thoughts.bernd = !wcSettings.thoughts.bernd;
+				saveWcSettings(wcSettings);
+				const collapsed = wcSettings.thoughts.bernd;
+				try {
+					SettingsManager.create(ctx.cwd, AGENT_DIR).setHideThinkingBlock(collapsed);
+				} catch {
+					// the persistent setting write is best-effort; the label still applies
+				}
+				try {
+					ctx.ui.setHiddenThinkingLabel?.(
+						collapsed ? `⟡ ${chroniclerName()}'s quiet thoughts (collapsed — /thoughts bernd toggles)` : undefined,
+					);
+				} catch {
+					// older pi without the label API — the setting alone suffices
+				}
+				ctx.ui.notify(
+					collapsed
+						? `⟡ ${chroniclerName()}'s thoughts are collapsed — persisted for every coming sitting. For THIS sitting pi applies it via /settings → "Hide thinking" (the setting file is already written).`
+						: `⟡ ${chroniclerName()}'s thoughts will show again — persisted. If /settings → "Hide thinking" is on for this sitting, toggle it there too.`,
+					"info",
+				);
+				return;
+			}
+			if (target === "gm" || target === "dm" || target === "table") {
+				wcSettings.thoughts.gm = !wcSettings.thoughts.gm;
+				saveWcSettings(wcSettings);
+				updateGmTail(ctx);
+				try {
+					tuiRef?.invalidate?.();
+					tuiRef?.requestRender?.();
+				} catch {
+					// past lines repaint on the next natural render
+				}
+				ctx.ui.notify(
+					wcSettings.thoughts.gm
+						? "⟡ past table talk is collapsed to one line each (the latest unbroken run stays open; the expand key or /thoughts gm reopens the rest) — persisted."
+						: "⟡ table talk shows in full again — persisted.",
+					"info",
+				);
+				return;
+			}
+			ctx.ui.notify(
+				"Quiet thoughts:\n/thoughts bernd · collapse/show the keeper's thinking (persists across sittings)\n/thoughts gm · collapse/show past table talk (the latest unbroken run always stays open)",
+				"info",
+			);
+		},
 	});
 
 	/** The events worth a timeline line (ticks and machinery stay out). */
@@ -1878,6 +2367,25 @@ export default function (pi: ExtensionAPI) {
 
 		let answer;
 		try {
+			const files = worldFiles();
+			// The table knows both worlds (2026-08-04): the whole page index,
+			// a wider play window, its own past exchanges (searchable), and
+			// the record's shape — while the keeper keeps seeing none of it.
+			const chronicleIndex = (() => {
+				try {
+					return [
+						...listPages(files, "personas").map((page) => `soul: ${page.title} — ${page.firstLine}`),
+						...listPages(files, "places").map((page) => `place: ${page.title} — ${page.firstLine}`),
+						...openQuestLines(files).map((line) => `quest: ${line}`),
+						...(chroniclerExists(files)
+							? [`the chronicler: ${chroniclerName()} — special page (chronicler.md), the realm's witness, no soul`]
+							: [`the chronicler: ${chroniclerName()} — special page not yet crafted (after the seeker's first steps)`]),
+					];
+				} catch {
+					return [];
+				}
+			})();
+			const totalEntries = ctx.sessionManager.getEntries().length;
 			answer = await gmAsk(
 				{
 					config,
@@ -1891,11 +2399,16 @@ export default function (pi: ExtensionAPI) {
 						resumedFrom,
 						justArrived: !branchHasAssistantReply(ctx),
 						openQuests: questStandings(),
+						chronicler: chroniclerBlock(),
 					}),
-					recentPlay: branchPlayLines(ctx),
-					ledgerLines: branchLedgerLines(ctx),
-					excerpts: searchArchive(archiveLinesOf(ctx), extractKeywords(trimmed)).map(formatArchiveLine),
+					recentPlay: branchPlayLines(ctx, 40),
+					ledgerLines: branchLedgerLines(ctx, 60),
+					excerpts: searchArchive(archiveLinesOf(ctx, { table: true }), extractKeywords(trimmed)).map(
+						formatArchiveLine,
+					),
 					answerSheets: resolvedAnswerSheets(),
+					chronicleIndex,
+					entryCensus: `${totalEntries} entries so far (u1–u${totalEntries}); game events and spoken turns are the numbered minority among them.`,
 					model,
 				},
 				gmThread,
@@ -1943,8 +2456,66 @@ export default function (pi: ExtensionAPI) {
 		}
 		gmThread.push({ who: "player", text: trimmed }, { who: "gm", text: answer.say });
 		if (gmThread.length > 24) gmThread = gmThread.slice(-24);
-		ctx.ui.notify(out, "info");
+		// The exchange becomes a durable session entry (2026-08-04): it stays
+		// in the transcript as a permanent rendered block (question AND
+		// answer — nothing vanishes with the next notification), survives
+		// resume, rides /tree branches, and the audit kit can finally see
+		// table talk. It is NOT sent to the LLM — table isolation holds.
+		try {
+			pi.appendEntry(GM_TYPE, { q: trimmed, a: out.replace(/^⟡ game master, out of character:\n/, "") });
+			updateGmTail(ctx);
+			// The TUI renders the appended entry as a permanent block itself;
+			// headless modes (RPC — the AI playtester scrapes notifications)
+			// still need the notify channel.
+			if (ctx.mode !== "tui") ctx.ui.notify(out, "info");
+		} catch {
+			ctx.ui.notify(out, "info"); // storage failed — at least show it once
+		}
 	}
+
+	/** Ids of the TRAILING uninterrupted run of table exchanges on the live
+	 * branch — these stay fully visible even when /thoughts gm collapses the
+	 * rest. Any other entry kind between table turns ends the run (nothing
+	 * hardcoded about WHAT interrupted). */
+	let gmTailIds = new Set<string>();
+	function updateGmTail(ctx: ExtensionContext): void {
+		try {
+			const tail = new Set<string>();
+			const branch = ctx.sessionManager.getBranch();
+			for (let i = branch.length - 1; i >= 0; i--) {
+				const entry = branch[i] as { id?: string; type?: string; customType?: string };
+				if (entry.type === "custom" && entry.customType === GM_TYPE) {
+					if (entry.id) tail.add(entry.id);
+				} else break;
+			}
+			gmTailIds = tail;
+		} catch {
+			gmTailIds = new Set();
+		}
+	}
+
+	// GM-table exchanges render as permanent transcript blocks — the seeker's
+	// question and the table's answer in ONE style (the meta color), never
+	// replaced by the next notification. /thoughts gm collapses all but the
+	// trailing uninterrupted run to a single line each; pi's expand toggle
+	// (and /thoughts gm again) opens them back up.
+	pi.registerEntryRenderer<{ q?: string; a?: string }>(GM_TYPE, (entry, options, theme) => {
+		const { q, a } = entry.data ?? {};
+		if (!q) return undefined;
+		const meta = (text: string) => {
+			try {
+				return theme.fg("thinkingText", text);
+			} catch {
+				return text;
+			}
+		};
+		const inTail = gmTailIds.has((entry as { id?: string }).id ?? "");
+		if (wcSettings.thoughts.gm && !inTail && !options.expanded) {
+			return new Text(meta(`⟡ table talk (collapsed) · "${clip(q, 60)}" — /thoughts gm or the expand key shows it`), 1, 0);
+		}
+		const block = [`⟡ the seeker, at the table: ${q}`, `⟡ game master, out of character: ${a ?? ""}`].join("\n");
+		return new Text(meta(block), 1, 0);
+	});
 
 	pi.registerCommand("gm", {
 		description: "World Console: the GM table — /gm <question|argument>, /gm truth <fact>",
@@ -2283,6 +2854,13 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const name = params.name.trim();
 			if (!name) throw new Error("Empty name.");
+			if (isChroniclerName(name)) {
+				throw new Error(
+					`${chroniclerName()} is no soul of the world — he is the realm's witness, not its inhabitant: ` +
+						`he dwells nowhere because he dwells everywhere the quill's reach extends. The engine keeps his ` +
+						`special page itself; never record_persona him. Speak on.`,
+				);
+			}
 			const role = params.role.trim();
 			if (!role) throw new Error("Empty role — say in a line or two who they are.");
 			const dealings = params.dealings.trim();
@@ -2323,6 +2901,11 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const files = worldFiles();
 			const name = params.name.trim();
+			if (isChroniclerName(name)) {
+				throw new Error(
+					`${chroniclerName()} moves nowhere — no place binds the realm's witness. Speak on.`,
+				);
+			}
 			if (!personaExists(files, name)) throw new Error(`No page exists for ${name} — record_persona first.`);
 			if (!placeExists(files, params.to_place)) {
 				throw new Error(`No page exists for the place "${params.to_place}" — souls move only between chronicled places.`);
@@ -2819,6 +3402,79 @@ export default function (pi: ExtensionAPI) {
 			return {
 				content: [{ type: "text", text: `A wound is tended (${st.wounds}/${MAX_WOUNDS} remain). Let the relief show in the telling.` }],
 				details: { wounds: st.wounds },
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "stage_trial",
+		label: "Stage a venture",
+		description:
+			"Stage an open trial on the seeker's OWN risky deed outside granted work (G17): picking a lock, lifting a purse, charming a better price. Only when the outcome is uncertain AND failure costs something real. The engine declares the stakes contract; the seeker casts /roll. Never for granted work (attempt_quest owns that); never while another choice or die stands.",
+		parameters: Type.Object({
+			trial: Type.String({ description: "The deed being tried, one plain line (public — the stakes contract)" }),
+			weight: StringEnum(["easy", "middling", "hard"], {
+				description: "How hard the fiction makes it: easy DC 10 / middling DC 15 / hard DC 20",
+			}),
+			stakes: Type.String({ description: "What slips if the die falls ill, one line (voice it to the seeker)" }),
+			edge: Type.Optional(
+				StringEnum(["favored", "hindered"], {
+					description: "A second die when the fiction stacks for or against them — reason required",
+				}),
+			),
+			edge_reason: Type.Optional(Type.String({ description: "One line: why the edge (recorded)" })),
+			flesh: Type.Optional(
+				Type.Boolean({
+					description: "True ONLY when harm is plainly among the stakes — a setback then wounds (+1)",
+				}),
+			),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			ensureAlive();
+			if (st.pendingChoice) {
+				throw new Error("A choice already stands — it must be answered before any new trial is staged.");
+			}
+			if (st.pendingRoll) {
+				throw new Error("A die already stands — one trial at a time; the seeker must cast /roll first.");
+			}
+			const trial = clip(params.trial.trim(), 120);
+			if (!trial) throw new Error("A venture needs its deed, plainly named.");
+			const stakes = params.stakes.trim();
+			if (!stakes) throw new Error("A venture needs its stakes — what slips if the die falls ill (G8: no costless dice).");
+			const clock = { easy: 4, middling: 6, hard: 8 }[params.weight];
+			const { tier, dc } = TIERS[clock] ?? TIERS[6];
+			let edge: "favored" | "hindered" | undefined = params.edge;
+			let edgeReason: string | undefined;
+			if (edge) {
+				edgeReason = params.edge_reason?.trim() || "";
+				if (!edgeReason) throw new Error("An edge needs its one-line reason — favored and hindered are never free.");
+			}
+			appendEvents(ctx, [
+				{
+					ev: "check",
+					slug: "",
+					tier,
+					dc,
+					trial,
+					kind: "venture",
+					edge,
+					edgeReason,
+					...(params.flesh ? { flesh: true } : {}),
+				},
+			]);
+			return {
+				content: [
+					{
+						type: "text",
+						text:
+							`The venture is a trial in the open: ${tier} (DC ${dc})` +
+							(edge ? ` — the seeker stands ${edge} (${edgeReason}), a second die will show it` : "") +
+							(params.flesh ? ` — and FLESH is at stake: a setback wounds` : "") +
+							`.\n\nAnnounce the stakes in your voice — ${stakes} — and end your reply at the brink. ` +
+							`The seeker casts the die themselves (/roll). Never roll or resolve for them; until the die falls, no work anywhere advances.`,
+					},
+				],
+				details: { trial, tier, dc, edge, flesh: !!params.flesh },
 			};
 		},
 	});

@@ -171,7 +171,7 @@ fail and only on a `desperate` option. `[failed]` is a terminal status like
 | offer_dropped  | —                                    | "the choices pass unchosen…" |
 | offer_taken    | n (offer ordinal), option            | "a formerly offered course is taken up…" |
 | pick           | slug ("" = offer), option id, extra? | "the seeker chooses…"  |
-| check          | slug ("" = peril), tier, dc, trial, kind (finale/hazard/checkpoint/peril), edge? | "a trial bars…" (stakes contract, public) |
+| check          | slug ("" = peril/venture), tier, dc, trial, kind (finale/hazard/checkpoint/peril/venture), edge?, flesh? | "a trial bars…" (stakes contract, public) |
 | roll           | slug, dice[], kept, dc, band, grit   | "the die falls…" (every face public) |
 | outcome        | slug, band, add, public text         | "the fates answer…"    |
 | peril_fuse     | at (chat count), turns               | veiled: "the fates wind a hidden spring" (A4) |
@@ -366,6 +366,74 @@ the course leaves the list.
   grounded STRICTLY in the record lines, *uN*-cited at pivots, nothing
   invented (falls back to the plain full timeline when the model is
   unreachable). Never a raw JSONL dump.
+
+## 12½. The chronicler round (built — 2026-08-04, maintainer's rulings on AI batch 2)
+
+**The record-on-mention sweep (WC-15's fix).** `before_agent_start` reads
+the LAST keeper reply off the branch, extracts proper-name candidates
+(`names.ts`, pure + unit-tested: capitalized runs, joiners allowed,
+grammar/register stopwords, word-bounded known-set matching against page
+titles + world names + quest titles), and hands the unpaged ones to the
+keeper through a standing-layer line: judge each THIS reply — soul →
+record_persona, place → chronicle_place, neither → speak on. No extra LLM
+call, no latency; self-clearing (a founded page joins the known set); a
+name ignored twice rests (NAME_OFFER_CAP — precision is the keeper's job,
+recall is the sweep's). The protocol laws now also demand page-before-prose
+in the same reply (the sound core of "create first, then narrate" — the
+full pre-generation pipeline was analyzed and rejected: it cannot know what
+prose will improvise; see undertakings-research.md). The GM table completes
+the record on request too: "add X as a person" is a legitimate
+persona_record/chronicle_place fix whenever X was named in play.
+
+**The chronicler himself (G16).** The voice fronting the keeper (Bernd in
+the dragon realm) is never a soul: `record_persona`/`move_persona`/table
+persona-fixes bearing his name refuse with the canonized witness-not-
+inhabitant text. His SPECIAL page lives at the chronicle root
+(`chronicler.md`): after CHRONICLER_CRAFT_AFTER_CHATS (3) player messages a
+fire-and-forget side call (`gmCraftChronicler`) shapes "how he shows
+himself to this seeker" and "what the quill has noted" from the opening
+exchanges (failure = silent retry next boundary; play never blocks); the
+engine appends dated "Witnessed" lines per major event (quest, wound, heal,
+death, truth, naming — code, no LLM). The keeper reads the page back every
+turn (prompt layer 1¾) — the fail-safe: the being the player meets is the
+being the record holds. `/persons` lists and shows him specially.
+
+**Ventures (G17) — the seeker's own dice.** `stage_trial(trial, weight,
+stakes, edge?, edge_reason?, flesh?)`: a keeper tool for risky deeds
+OUTSIDE granted work (locks, theft, charm). Same d20 grammar: tier/DC from
+weight (easy 10 / middling 15 / hard 20), stakes contract announced before
+the cast (F3), edge only with a recorded reason, one gate holds all work
+(G7). `check` event kind "venture", slug "" like perils; `/roll` resolves:
+bands as ever; a SETBACK narrates the declared stakes landing and wounds
++1 ONLY when `flesh` was staged (F5 bounded — and refused framing keeps G8:
+no dice where nothing is uncertain or nothing at cost). No grit (grit is
+quest-bound), no karmic clamp, no fuse rewind (only the world's own strikes
+rewind the spring).
+
+**The table knows both worlds.** The GM table's context now carries the
+full chronicle page index, a wider play/ledger window (40/60 lines), its
+own durable past exchanges, and a record-model paragraph (uN semantics:
+bookkeeping entries consume numbers — u1/u2 are typically model/thinking
+changes; ledger.md mirrors game events only, across ALL branches). The
+keeper still sees none of it. And the curtain opens on the GAME only: real-
+world questions (the model behind it, technology foreign to the world's
+theme) deflect in one dry line — theme-judged, so a world of machines may
+speak of machines.
+
+**Durable table talk + the reading records.** Every /gm exchange appends a
+`world-console.gm` custom entry: rendered as a permanent transcript block
+(question AND answer, one style), never sent to any LLM, surviving resume
+and /tree, mined by the audit kit (session-map prints ⟡ table lines) and by
+`/record` — which compiles the COMPLETE record (`record.md` beside
+ledger.md: header, chronicler, quests, souls, places, items, and the full
+uN-numbered timeline of both conversations, events, and labeled
+bookkeeping; regenerated per call, the minimalist ledger.md stays the
+append-only mirror). `/thoughts bernd` drives pi's persistent Hide-thinking
+setting (label set in-register; applies live via pi's own /settings toggle,
+persists across sittings and worlds in the extension's settings file);
+`/thoughts gm` collapses past table blocks to one line each — except the
+trailing uninterrupted run, which always stays open (any entry kind ends a
+run; nothing hardcoded) — with pi's expand key as the per-block peek.
 
 ## 13. The long game (Phase 3 — spec'd, not built)
 

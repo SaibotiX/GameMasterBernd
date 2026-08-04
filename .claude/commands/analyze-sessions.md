@@ -30,13 +30,16 @@ Follow `research/analysis/audit-workflow.md` EXACTLY. In short:
    BOTH sessions-affected and total incidents per class.
 5. **Verify**: re-open one cited span per S1/S2 class against the raw
    record; drop findings that die under verification.
-6. **Report**: write `research/analysis/reports/<YYYY-MM-DD>-<batch>.md` per the
-   template (for an AI batch from `aitester/sessions-in/`, write to
-   `aitester/reports/` instead) — summary table sorted Severity →
-   Sessions affected → Incidents; one concrete proposed fix per class with
-   its fix surface; status NEW/KNOWN/REGRESSION against earlier reports in
-   `research/analysis/reports/` and `aitester/reports/`; a short "what went right"
-   section.
+6. **Report**: run `node research/analysis/tools/report-tally.mjs` first —
+   the cross-report recurrence tally over ALL earlier reports in both
+   report folders; it sets each class's status mechanically (in the tally =
+   KNOWN, fixed-then-back = REGRESSION) and chronic classes (2+ reports)
+   get called out in the verdict as priority. Then write
+   `research/analysis/reports/<YYYY-MM-DD>-<batch>.md` per the template (for
+   an AI batch from `aitester/sessions-in/`, write to `aitester/reports/`
+   instead) — summary table sorted Severity → Sessions affected →
+   Incidents; one concrete proposed fix per class with its fix surface; a
+   short "what went right" section.
 
 Hard rules: every finding cites uN evidence; do NOT modify engine code,
 prompts, or design docs in this run — the report proposes, the maintainer

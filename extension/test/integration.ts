@@ -14,7 +14,7 @@
  * the session file's custom entries directly.
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
@@ -455,6 +455,113 @@ if (process.env.WC_VIDEO === "1") {
 	await rpc.stop();
 } else {
 	console.log("skip C3 (/web video) — set WC_VIDEO=1 to include the slow yt-dlp download");
+}
+
+// ---- Part D: the chronicler round (2026-08-04) — no LLM -------------------
+// Ventures (/roll on a staged trial), durable GM entries feeding /record,
+// and the /thoughts toggles — all against crafted sessions, all sandboxed
+// (PI_CODING_AGENT_DIR keeps settings writes out of the real agent dir; the
+// Rpc env already sandboxes sessions and world data).
+console.log("— Part D: chronicler round (no LLM) —");
+{
+	// Sandbox ONLY the extension's own settings file (pi's boot environment —
+	// models, auth — stays exactly as in Parts A–C).
+	process.env.WORLD_CONSOLE_SETTINGS_FILE = join(WORK, "world-console.json");
+
+	// D1: a staged venture with flesh at stake — /roll resolves it headlessly,
+	// events land, a setback wounds exactly +1 (F5). The die is random, so
+	// assert band-consistent effects rather than one fixed outcome.
+	const file = join(WORK, "d1-venture.jsonl");
+	{
+		const entries: Record<string, unknown>[] = [header()];
+		const stamp = custom(null, { ev: "world", world: "dragon-realm" }, 1);
+		entries.push(stamp);
+		const chron = custom(stamp.id as string, { ev: "chronicle", key: "d1-test" }, 2);
+		entries.push(chron);
+		const check = custom(
+			chron.id as string,
+			{ ev: "check", slug: "", tier: "a hard trial", dc: 20, trial: "lift the toll-purse", kind: "venture", flesh: true },
+			3,
+		);
+		entries.push(check);
+		writeSession(file, entries);
+	}
+	const rpc = new Rpc(["--session", file]);
+	await rpc.command({ type: "prompt", message: "/roll" }, 30_000);
+	const rolled = await waitFileEvent(file, (event) => event.ev === "roll" && event.slug === "");
+	ok("D1: /roll resolves a staged venture (roll event, slug \"\")", rolled);
+	const outcome = fileEvents(file).find((event) => event.ev === "outcome" && String(event.text ?? "").includes("venture"));
+	ok("D1: outcome names the venture", !!outcome);
+	const wounds = fileEvents(file).filter((event) => event.ev === "wound");
+	if (outcome?.band === "setback") {
+		ok("D1: setback with flesh at stake wounds exactly +1", wounds.length === 1 && wounds[0].add === 1);
+	} else {
+		ok("D1: non-setback ventures draw no blood", wounds.length === 0);
+	}
+	ok(
+		"D1: ventures never rewind the peril fuse",
+		!fileEvents(file).some((event) => event.ev === "peril_fuse" && Number((event as { at?: number }).at ?? 0) > 0),
+	);
+	await rpc.stop();
+
+	// D2: crafted GM entries — /record compiles the complete record with table
+	// talk, seeker and keeper turns, and bookkeeping labels; session-map
+	// numbering stays ledger-canonical.
+	const file2 = join(WORK, "d2-record.jsonl");
+	{
+		const entries: Record<string, unknown>[] = [header()];
+		const stamp = custom(null, { ev: "world", world: "dragon-realm" }, 1);
+		entries.push(stamp);
+		const chron = custom(stamp.id as string, { ev: "chronicle", key: "d2-test" }, 2);
+		entries.push(chron);
+		const u1 = userEntry(chron.id as string, "I am here for work.", 3);
+		entries.push(u1);
+		const a1 = assistantEntry(u1.id as string, "The tavern is warm; Garrick is spoken of.", 4);
+		entries.push(a1);
+		entries.push({
+			type: "custom",
+			id: id(),
+			parentId: a1.id,
+			timestamp: iso(5),
+			customType: "world-console.gm",
+			data: { q: "what is entry u1?", a: "pi bookkeeping — the ledger starts later." },
+		});
+		writeSession(file2, entries);
+	}
+	const rpc2 = new Rpc(["--session", file2]);
+	const markD2 = rpc2.markLines();
+	await rpc2.command({ type: "prompt", message: "/record" }, 30_000);
+	await new Promise((resolve) => setTimeout(resolve, 600));
+	ok("D2: /record announces the compiled file", rpc2.since(markD2).includes("the complete record stands compiled"));
+	const recordFile = join(WORK, "worlddata", "dragon-realm", "d2-test", "record.md");
+	const recordText = existsSync(recordFile) ? readFileSync(recordFile, "utf8") : "";
+	ok("D2: record.md holds header, table talk, both voices and bookkeeping",
+		recordText.includes("## The full timeline") &&
+		recordText.includes("⟡ the seeker, at the table: what is entry u1?") &&
+		recordText.includes("the seeker:\nI am here for work.") &&
+		recordText.includes("Garrick is spoken of") &&
+		recordText.includes("pi bookkeeping"));
+	await rpc2.stop();
+
+	// D3: /thoughts — usage line bare; gm toggle flips, persists in the
+	// sandboxed world-console.json, and flips back.
+	const rpc3 = new Rpc(["--session", join(WORK, "d3-thoughts.jsonl")]);
+	const mark3 = rpc3.markLines();
+	await rpc3.command({ type: "prompt", message: "/thoughts" }, 20_000);
+	await new Promise((resolve) => setTimeout(resolve, 400));
+	ok("D3: /thoughts shows usage", rpc3.since(mark3).includes("Quiet thoughts"));
+	const mark4 = rpc3.markLines();
+	await rpc3.command({ type: "prompt", message: "/thoughts gm" }, 20_000);
+	await new Promise((resolve) => setTimeout(resolve, 400));
+	ok("D3: /thoughts gm collapses", rpc3.since(mark4).includes("collapsed to one line"));
+	const wcSettingsFile = join(WORK, "world-console.json");
+	const savedOn = existsSync(wcSettingsFile) && JSON.parse(readFileSync(wcSettingsFile, "utf8")).thoughts.gm === true;
+	ok("D3: the collapse persists in world-console.json (sandboxed)", savedOn);
+	await rpc3.command({ type: "prompt", message: "/thoughts gm" }, 20_000);
+	await new Promise((resolve) => setTimeout(resolve, 400));
+	const savedOff = existsSync(wcSettingsFile) && JSON.parse(readFileSync(wcSettingsFile, "utf8")).thoughts.gm === false;
+	ok("D3: toggling back persists too", savedOff);
+	await rpc3.stop();
 }
 
 console.log(`\n${passed} checks passed, ${hard} failed, ${soft.length} soft-skipped${soft.length ? ` (${soft.join(", ")})` : ""}`);

@@ -10,6 +10,12 @@
  * current leaf's branch actually contains vs. entries orphaned by /tree).
  * Dependency-free; read-only; never prints more than SNIP chars per line, so
  * the output is safe to paste into an analysis context whole.
+ *
+ * uN numbering is CANONICAL (fixed 2026-08-04 after the batch-2 audit found
+ * a +1 skew): the {type:"session"} header consumes no number — u1 is the
+ * first real entry, exactly as ledger.md and /ledger count. GM-table
+ * exchanges (custom world-console.gm, durable since the same round) print
+ * as ⟡ lines — table talk is audit evidence now.
  */
 import { readFileSync } from "node:fs";
 
@@ -45,11 +51,21 @@ for (const file of process.argv.slice(2)) {
 	const eventCounts = new Map();
 	const errorResults = [];
 
-	lines.forEach((entry, index) => {
-		const u = index + 1;
-		const off = onBranch.has(entry.id) || entry.type === "session" ? " " : "×"; // × = orphaned by /tree
+	let u = 0; // canonical uN: the session header consumes no number
+	lines.forEach((entry) => {
+		if (entry.type === "session") {
+			console.log(`  hdr · session (consumes no uN)`);
+			return;
+		}
+		u += 1;
+		const off = onBranch.has(entry.id) ? " " : "×"; // × = orphaned by /tree
 		if (entry.type === "custom") {
 			const ev = entry.data?.ev;
+			if (entry.customType === "world-console.gm") {
+				eventCounts.set("gm-exchange", (eventCounts.get("gm-exchange") ?? 0) + 1);
+				console.log(`${off}u${u} ⟡ table: "${clip(entry.data?.q ?? "")}" → "${clip(entry.data?.a ?? "")}"`);
+				return;
+			}
 			if (entry.customType === "world-console.ledger" && ev) {
 				eventCounts.set(ev, (eventCounts.get(ev) ?? 0) + 1);
 				const detail =

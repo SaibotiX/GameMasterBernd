@@ -1165,4 +1165,120 @@ ok("asGameEvent: non-custom entries → null", () => {
 	passed++;
 }
 
+// ---- the chronicler round (2026-08-04): names, ventures, the witness ------
+{
+	const { extractCandidateNames, nameKey } = await import(join(EXT, "names.ts"));
+
+	ok("names: batch-2 misses all caught (souls and places, spoken-of)", () => {
+		const known = ["Marta", "The Salt Road North", "Dragon Realm of Aeldenmoor"];
+		const u21 =
+			"The stables lie just south of here, past the market square—old Torvin keeps them. Tell him Marta sent you. " +
+			"They will carry you north on the Salt Road. The Crossed Stones waystone lies a day's ride north. Garrick keeps a small lodge there.";
+		const found = extractCandidateNames(u21, known);
+		assert.ok(found.includes("Torvin") && found.includes("Garrick") && found.includes("Crossed Stones"));
+		assert.ok(!found.some((name) => nameKey(name) === "marta" || nameKey(name) === "salt road"));
+	});
+	ok("names: clean narration and known-run styles stay silent", () => {
+		assert.deepEqual(
+			extractCandidateNames("Marta the dye-merchant nods. Promise me you will be careful, Kael.", ["Marta", "Kael"]),
+			[],
+		);
+		assert.deepEqual(
+			extractCandidateNames("The pottage is hearty; the bread is warm. You eat slowly and sleep.", []),
+			[],
+		);
+	});
+	ok("names: comma breaks a run; joiners hold one together; cap holds", () => {
+		const found = extractCandidateNames("I am Bernd, Keeper of the Chronicle. West lies the Vale of Cinders.", []);
+		assert.ok(found.includes("Bernd"));
+		assert.ok(found.includes("Vale of Cinders"));
+		assert.ok(!found.some((name) => name.startsWith("Bernd ")));
+		const many = extractCandidateNames(
+			"Ada met Bogo, Cyra, Dov, Eron, Fife, Gorm and Hix beyond the Ninth Gate.",
+			[],
+			6,
+		);
+		assert.equal(many.length, 6);
+	});
+
+	ok("venture: check derives a pending roll with kind and flesh; roll clears it", () => {
+		const st = derive(
+			[
+				ev({ ev: "check", slug: "", tier: "a middling trial", dc: 15, trial: "pick the lock", kind: "venture", flesh: true }),
+			],
+			"neutral",
+		);
+		assert.equal(st.pendingRoll?.kind, "venture");
+		assert.equal(st.pendingRoll?.flesh, true);
+		assert.equal(st.pendingRoll?.slug, "");
+		const after = derive(
+			[
+				ev({ ev: "check", slug: "", tier: "a middling trial", dc: 15, trial: "pick the lock", kind: "venture" }),
+				ev({ ev: "roll", slug: "", dice: [12], kept: 12, dc: 15, band: "cost", grit: false }),
+				ev({ ev: "outcome", slug: "", band: "cost", add: 0, text: 'the venture "pick the lock" — cost' }),
+			],
+			"neutral",
+		);
+		assert.equal(after.pendingRoll, undefined);
+		assert.equal(after.wounds, 0); // no flesh on the resolved one, no wound either way from the outcome
+	});
+	ok("venture: describeEvent names the venture and its stakes", () => {
+		const line = describeEvent({
+			ev: "check", slug: "", tier: "a hard trial", dc: 20, trial: "lift the purse", kind: "venture", flesh: true,
+		});
+		assert.match(line, /the seeker's own venture/);
+		assert.match(line, /\[venture\]/);
+		assert.match(line, /flesh at stake/);
+	});
+
+	const { craftChroniclerPage, chroniclerExists, chroniclerPage, extendChronicler, chroniclerCreed } = await import(
+		join(EXT, "world.ts")
+	);
+	const { mkdtempSync, rmSync } = await import("node:fs");
+	const { tmpdir } = await import("node:os");
+	ok("chronicler: crafted once, creed fixed, witnessed lines append, never recrafts", () => {
+		const root = mkdtempSync(join(tmpdir(), "wc-chronicler-"));
+		const world = { root };
+		assert.equal(chroniclerExists(world), false);
+		assert.equal(
+			craftChroniclerPage(world, "Bernd", { shows: "A dry, patient witness.", noted: "The seeker is brisk." }),
+			true,
+		);
+		assert.equal(chroniclerExists(world), true);
+		const page = chroniclerPage(world);
+		assert.match(page, /^# Bernd/m);
+		assert.ok(page.includes(chroniclerCreed("Bernd")));
+		assert.match(page, /## How he shows himself to this seeker\nA dry, patient witness\./);
+		assert.match(page, /## Witnessed\n$/m);
+		extendChronicler(world, 'quest granted: "The Faceless Thief"');
+		assert.match(chroniclerPage(world), /· quest granted: "The Faceless Thief"/);
+		assert.equal(
+			craftChroniclerPage(world, "Bernd", { shows: "Another form.", noted: "Other notes." }),
+			false, // the witness does not change his nature mid-tale
+		);
+		assert.ok(chroniclerPage(world).includes("A dry, patient witness."));
+		rmSync(root, { recursive: true, force: true });
+	});
+
+	ok("prompt: unpaged names ride the standing layer; venture gate holds; chronicler layer appears", () => {
+		const config = loadConfig(BASE, "dragon-realm");
+		const base = derive([], config.world.defaultMood);
+		const prompt = assembleSystemPrompt(config, {
+			state: { ...base, pendingRoll: { slug: "", tier: "an easy trial", dc: 10, trial: "charm the guard", kind: "venture" } },
+			engineNonce: "t",
+			justArrived: false,
+			unpagedNames: ["Garrick", "Crossed Stones"],
+			chronicler: "Bernd dwells nowhere because he dwells everywhere.",
+		});
+		assert.match(prompt, /NAMES THE TELLING HAS SPOKEN THAT STILL LACK PAGES: Garrick, Crossed Stones/);
+		assert.match(prompt, /own VENTURE stands untried: charm the guard/);
+		assert.match(prompt, /1¾ · the chronicler himself/);
+		assert.match(prompt, /YOU NEVER ASK/);
+		assert.match(prompt, /stage_trial/);
+		const bare = assembleSystemPrompt(config, { state: base, engineNonce: "t", justArrived: true });
+		assert.ok(!bare.includes("STILL LACK PAGES"));
+		assert.ok(!bare.includes("1¾ · the chronicler himself"));
+	});
+}
+
 console.log(`\n${passed} checks passed`);

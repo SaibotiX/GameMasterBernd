@@ -287,8 +287,21 @@ the sitting's own short transcript). A 24-turn sitting ≈ 25 keeper turns +
 the tester side is near-free on a small model.
 
 Flags: `--sittings N --turns 24 --world <id> --personas a,b,c
---tester-model provider/id --batch <name>`. Tester default: a cheap fast
-model (haiku-class); the keeper stays whatever pi is configured to run.
+--tester-model provider/id --keeper-model provider/id --batch <name>`.
+Tester default: a cheap fast model (haiku-class), overridable by flag or
+`WC_TESTER_MODEL` env; the keeper stays whatever pi is configured to run
+unless `--keeper-model`/`WC_KEEPER_MODEL` passes a `--model` ref to pi.
+Both refs are validated against pi-ai's catalog AT STARTUP (an unknown
+model used to abort sittings mid-batch with a bare "not in pi-ai's
+catalog" — the Gemini stumble of 2026-08-04); a new provider needs its
+credential in `~/.pi/agent/auth.json` or its env key (e.g. GEMINI_API_KEY).
+Transient transport failures on the tester call (the SDK's "Connection
+error.", timeouts, 5xx/overloaded) retry three times with backoff before a
+sitting is surrendered — batches 1–2 each lost a sitting to a single
+unretried blip; meta.md now carries a "transport retries" count when any
+fired. Reasoning Gemini models (gemini-3.x) may reject the harness's
+replayed signature-less assistant turns — prefer non-reasoning ids
+(gemini-2.5-flash class) for the tester.
 
 **Cost data points (2026-08-03, haiku-class keeper):** 5-turn v1 smoke
 **$0.099** · full 24-turn batch-1 sittings **$0.56–0.64** · 6-turn v2 smoke

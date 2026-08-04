@@ -39,6 +39,11 @@ verdicts** — false positives are expected and fine.
 Then the chronicle cross-check per `session-anatomy.md` §5 (named entities
 vs pages, statuses vs events, mirror vs branch).
 
+GM-table exchanges are in the record too (durable `world-console.gm`
+entries since 2026-08-04; the map prints them as `⟡ table:` lines) — read
+them as first-class evidence: the seeker's confusion, arguments and repair
+requests name failure classes the play transcript hides.
+
 ## 2. Per-session judgment pass (open coding)
 
 Read each mapped session end to end — the map plus targeted reads of the
@@ -87,6 +92,19 @@ beside the batches it judges). The summary table is sorted by **Severity, then
 Sessions affected, then Incidents** — the top row is always the next thing
 to fix. Every class row carries its fix surface (taxonomy's map) and a
 concrete proposed change.
+
+**Recurrence first (2026-08-04):** before assigning statuses, run
+
+```
+node research/analysis/tools/report-tally.mjs
+```
+
+— the cross-report tally of every shipped report (both report folders). It
+answers "how often has this class been found before?" mechanically: a class
+already in the tally is KNOWN (or REGRESSION if a fix round sits between);
+a chronic class (2+ reports) outranks a same-severity one-off in the
+priority read of the new report's table, and belongs in the verdict
+paragraph. Reports stay immutable — the tally only reads them.
 
 ## 5. The fix loop (RITE)
 

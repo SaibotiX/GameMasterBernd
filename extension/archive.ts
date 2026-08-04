@@ -15,7 +15,7 @@
 export interface ArchiveLine {
 	/** Stable per-ledger number: 1-based position in the session file. */
 	uid: number;
-	who: "seeker" | "game" | "ledger";
+	who: "seeker" | "game" | "ledger" | "table";
 	text: string;
 }
 
