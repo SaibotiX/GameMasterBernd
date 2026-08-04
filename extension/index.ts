@@ -2653,11 +2653,15 @@ export default function (pi: ExtensionAPI) {
 			appendEvents(ctx, [
 				{ ev: "search_performed", query, source: "youtube.com", ref: result.url, title: result.title, kind: "video" },
 			]);
-			// The player must know each time their browser cookies were borrowed
-			// (their standing choice: cookies only as the last resort, never silent).
-			if (result.cookieSource && result.cookieSource !== "file" && ctx.hasUI) {
+			// The player must know each time identity was spent (2026-08-04:
+			// the anonymous client ladder exhausts first, so ANY cookie use —
+			// their export file included — is now a climbed rung worth naming;
+			// silence means the scrying stayed anonymous).
+			if (result.cookieSource && ctx.hasUI) {
 				ctx.ui.notify(
-					`YouTube demanded proof of humanity — cookies were borrowed from ${result.cookieSource} for this scrying.`,
+					result.cookieSource === "file"
+						? "YouTube demanded proof of humanity — the anonymous rungs failed, and your cookie export (config/youtube-cookies.txt) answered for this scrying."
+						: `YouTube demanded proof of humanity — the anonymous rungs failed, and cookies were borrowed from ${result.cookieSource} for this scrying.`,
 					"info",
 				);
 			}

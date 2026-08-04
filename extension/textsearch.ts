@@ -14,6 +14,37 @@ import type { SiteEntry } from "./config.ts";
 export const USER_AGENT = "world-console/1.0 (terminal game; local use)";
 const TIMEOUT_MS = 12_000;
 
+/**
+ * fetch with ONE retry on transient failures (network blips, 5xx, 429) —
+ * a single hiccup should cost 400 ms, not the whole site (2026-08-04; the
+ * scrying lenses skipped a site on any first-try blip before). 4xx answers
+ * return as-is (they are real); a user abort never retries.
+ */
+export async function fetchWithRetry(
+	url: URL | string,
+	init: { headers?: Record<string, string>; redirect?: RequestRedirect },
+	timeoutMs: number,
+	signal?: AbortSignal,
+): Promise<Response> {
+	for (let attempt = 0; ; attempt++) {
+		const timeout = AbortSignal.timeout(timeoutMs);
+		try {
+			const response = await fetch(url, {
+				...init,
+				signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+			});
+			if ((response.status >= 500 || response.status === 429) && attempt === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 400));
+				continue;
+			}
+			return response;
+		} catch (error) {
+			if (signal?.aborted || attempt > 0) throw error;
+			await new Promise((resolve) => setTimeout(resolve, 400));
+		}
+	}
+}
+
 export interface TextResult {
 	site: string;
 	title: string;
@@ -37,12 +68,12 @@ async function apiGet(
 			url.searchParams.set(key, value);
 		}
 		try {
-			const timeout = AbortSignal.timeout(TIMEOUT_MS);
-			const response = await fetch(url, {
-				headers: { "user-agent": USER_AGENT },
-				signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-				redirect: "follow",
-			});
+			const response = await fetchWithRetry(
+				url,
+				{ headers: { "user-agent": USER_AGENT }, redirect: "follow" },
+				TIMEOUT_MS,
+				signal,
+			);
 			if (!response.ok) continue;
 			const contentType = response.headers.get("content-type") ?? "";
 			if (!contentType.includes("json")) continue;

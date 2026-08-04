@@ -45,7 +45,7 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
   |---|---|
   | `find_text` | MediaWiki text search over `config/sites.json` text hosts |
   | `find_picture` | MediaWiki file search (Commons by default); best match downloaded to `data/downloads/` |
-  | `find_video` | yt-dlp (vendored source) via YouTube search; ~10 s ffmpeg clip, or shortest video without ffmpeg |
+  | `find_video` | yt-dlp (vendored source) via YouTube search; ~10 s ffmpeg clip, or shortest video without ffmpeg. Bot checks climb an anonymity-first ladder: three cookieless client rotations before any cookie is touched (your export file, then browser borrowing — every identity use is announced); `WORLD_CONSOLE_YT_PROXY` routes all of it through your own proxy |
   | `set_mood` | mood shifts; setting the angriest mood makes the engine bar the glass (code-owned invariant) |
   | `grant_redemption` | lifts the bar after sincere amends; no-op unless barred (code-owned invariant) |
   | `record_name` | stores the seeker's name for the standing layer |

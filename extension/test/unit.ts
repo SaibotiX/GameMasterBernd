@@ -1260,6 +1260,34 @@ ok("asGameEvent: non-custom entries → null", () => {
 		rmSync(root, { recursive: true, force: true });
 	});
 
+	const media2 = await import(join(EXT, "mediasearch.ts"));
+	ok("scrying ladder: anonymous rungs first, file before browser, absent rungs skipped", () => {
+		const base = {
+			ytDlpSource: null, ffmpegDir: null, hasSystemFfmpeg: false,
+			cookiesFile: null, cookiesFromBrowser: null, browserFallback: null, proxy: null,
+		};
+		const bare = media2.buildLadder(base);
+		assert.deepEqual(bare.map((rung: { label: string }) => rung.label), ["anonymous", "anonymous:tv", "anonymous:web_safari"]);
+		assert.ok(bare.every((rung: { cookieFile?: boolean; browser?: string }) => !rung.cookieFile && !rung.browser));
+		const full = media2.buildLadder({ ...base, cookiesFile: "/tmp/c.txt", browserFallback: "firefox" });
+		assert.deepEqual(full.map((rung: { label: string }) => rung.label), ["anonymous", "anonymous:tv", "anonymous:web_safari", "file", "firefox"]);
+		assert.equal(full[3].cookieFile, true);
+		assert.equal(full[4].browser, "firefox");
+		const named = media2.buildLadder({ ...base, cookiesFromBrowser: "brave", browserFallback: "firefox" });
+		assert.equal(named.at(-1).browser, "brave"); // the env-named browser outranks detection
+	});
+	ok("scrying ladder: bot-check detection covers the 2026 wordings and rate limits", () => {
+		for (const wording of [
+			"ERROR: Sign in to confirm you're not a bot",
+			"ERROR: confirm you're not a robot",
+			"ERROR: HTTP Error 429: Too Many Requests",
+		]) {
+			assert.ok(media2.BOT_CHECK.test(wording), wording);
+		}
+		assert.ok(!media2.BOT_CHECK.test("ERROR: Video unavailable"));
+		assert.ok(!media2.BOT_CHECK.test("ERROR: Requested format is not available"));
+	});
+
 	ok("prompt: unpaged names ride the standing layer; venture gate holds; chronicler layer appears", () => {
 		const config = loadConfig(BASE, "dragon-realm");
 		const base = derive([], config.world.defaultMood);

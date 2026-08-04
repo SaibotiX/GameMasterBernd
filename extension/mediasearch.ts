@@ -4,24 +4,37 @@
  * network work (and kills the yt-dlp subprocess) instead of being swallowed.
  *
  * Picture: MediaWiki file-namespace search (Wikimedia Commons by default),
- * best match downloaded to data/downloads/.
+ * best match downloaded to data/downloads/. Transient network blips retry
+ * once with a short backoff before a site is skipped (2026-08-04).
  * Video: yt-dlp as an arm's-length subprocess from the vendored source tree
  * (the git submodule at tools/yt-dlp); with ffmpeg (bundled under
  * tools/ffmpeg/ or on PATH) a ~10 s clip, otherwise the shortest matching
  * full video ≤ 90 s.
  *
  * YouTube sometimes answers with an IP-level bot check ("Sign in to confirm
- * you're not a bot") that hits every player client; per yt-dlp only cookies
- * (or a PO-token provider plugin) cure it. Escalation ladder, least invasive
- * first, per the player's 2026-08-02 choice:
- *   1. the player's own Netscape export at config/youtube-cookies.txt,
- *      if present — they control exactly which cookies it holds;
- *   2. otherwise a bare attempt; the identity-free bgutil-ytdlp-pot-provider
- *      plugin, when installed, upgrades every attempt transparently;
- *   3. only when YouTube still bot-checks: cookies borrowed live from an
- *      installed browser (WORLD_CONSOLE_YT_BROWSER names one, else the first
- *      detected), sticky for the rest of the run. Every search that borrowed
- *      them reports it via cookieSource so the UI can tell the player.
+ * you're not a bot") that hits every player client. The escalation ladder
+ * was REBUILT 2026-08-04 (maintainer: the identity rung fired too often;
+ * anonymity first) — ANONYMOUS rungs exhaust before any identity is spent:
+ *   1. bare — the vendored version's own cookieless client defaults
+ *      (2026.07.04: visionos, android_vr, web — upstream's best picks; the
+ *      identity-free bgutil-ytdlp-pot-provider plugin, when installed,
+ *      upgrades every rung transparently);
+ *   2. the TV clients (tv, tv_downgraded) — the classic wall-dodgers, the
+ *      very clients yt-dlp itself prefers once authenticated, still
+ *      cookieless here;
+ *   3. the web_safari/web_embedded pair — a different device story from
+ *      the same IP, still cookieless;
+ *   4. only now the player's own Netscape export at
+ *      config/youtube-cookies.txt, if present (they control exactly which
+ *      cookies it holds — before this rebuild the file rode EVERY first
+ *      attempt; now most scryings never touch it);
+ *   5. last: cookies borrowed live from an installed browser
+ *      (WORLD_CONSOLE_YT_BROWSER names one, else the first detected).
+ * The rung that cured a bot check is remembered for the rest of the run
+ * (no re-climbing per call); identity use is always reported via
+ * cookieSource so the UI can tell the player. WORLD_CONSOLE_YT_PROXY hands
+ * every yt-dlp call a --proxy (the player's own anonymity lever — a VPN or
+ * SOCKS proxy keeps even the bare rungs unlinkable to their line).
  * yt-dlp reads the whole browser cookie store locally but only sends the
  * youtube/google-scoped cookies with requests.
  *
@@ -37,7 +50,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { promisify } from "node:util";
 import type { SiteEntry } from "./config.ts";
-import { USER_AGENT } from "./textsearch.ts";
+import { fetchWithRetry, USER_AGENT } from "./textsearch.ts";
 
 const run = promisify(execFile);
 const PICTURE_TIMEOUT_MS = 20_000;
@@ -53,11 +66,6 @@ function slug(text: string, max = 40): string {
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
 	if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("search aborted");
-}
-
-function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
-	const timeout = AbortSignal.timeout(timeoutMs);
-	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
 // ---- pictures -------------------------------------------------------------
@@ -103,10 +111,12 @@ export async function searchPicture(
 
 			let pages: WikiImage[];
 			try {
-				const response = await fetch(url, {
-					headers: { "user-agent": USER_AGENT },
-					signal: withTimeout(signal, PICTURE_TIMEOUT_MS),
-				});
+				const response = await fetchWithRetry(
+					url,
+					{ headers: { "user-agent": USER_AGENT } },
+					PICTURE_TIMEOUT_MS,
+					signal,
+				);
 				if (!response.ok) continue;
 				const data = (await response.json()) as { query?: { pages?: WikiImage[] } };
 				pages = data.query?.pages ?? [];
@@ -132,10 +142,12 @@ export async function searchPicture(
 			const path = join(downloadDir, `pic-${slug(searchKey)}-${Date.now()}.${extension}`);
 
 			try {
-				const download = await fetch(fileUrl, {
-					headers: { "user-agent": USER_AGENT },
-					signal: withTimeout(signal, 60_000),
-				});
+				const download = await fetchWithRetry(
+					fileUrl,
+					{ headers: { "user-agent": USER_AGENT } },
+					60_000,
+					signal,
+				);
 				if (!download.ok || !download.body) continue;
 				const size = Number(download.headers.get("content-length") ?? 0);
 				if (size > MAX_BYTES) continue;
@@ -184,6 +196,9 @@ export interface VideoTooling {
 	cookiesFromBrowser: string | null;
 	/** Installed browser to borrow cookies from when YouTube bot-checks. */
 	browserFallback: string | null;
+	/** WORLD_CONSOLE_YT_PROXY — handed to every yt-dlp call as --proxy (the
+	 * player's own anonymity lever; empty = direct). */
+	proxy: string | null;
 }
 
 /** First installed browser yt-dlp knows how to borrow cookies from. */
@@ -215,7 +230,36 @@ export function detectTooling(appRoot: string): VideoTooling {
 		cookiesFile: existsSync(cookiesFile) ? cookiesFile : null,
 		cookiesFromBrowser: process.env.WORLD_CONSOLE_YT_BROWSER || null,
 		browserFallback: detectBrowser(),
+		proxy: process.env.WORLD_CONSOLE_YT_PROXY || null,
 	};
+}
+
+/**
+ * One rung of the bot-check ladder. `clients` overrides yt-dlp's player
+ * clients (anonymous rotation); `cookieFile`/`browser` spend identity.
+ */
+export interface LadderRung {
+	label: string;
+	clients?: string;
+	cookieFile?: boolean;
+	browser?: string;
+}
+
+/**
+ * The escalation ladder, least identifying first (pure — unit-tested).
+ * Anonymous client rotations exhaust before any cookie is touched; the
+ * player's export file outranks live browser borrowing.
+ */
+export function buildLadder(tooling: VideoTooling): LadderRung[] {
+	const rungs: LadderRung[] = [
+		{ label: "anonymous" }, // the version's own cookieless defaults
+		{ label: "anonymous:tv", clients: "tv,tv_downgraded" },
+		{ label: "anonymous:web_safari", clients: "web_safari,web_embedded" },
+	];
+	if (tooling.cookiesFile) rungs.push({ label: "file", cookieFile: true });
+	const browser = tooling.cookiesFromBrowser ?? tooling.browserFallback;
+	if (browser) rungs.push({ label: browser, browser });
+	return rungs;
 }
 
 function ytDlp(
@@ -223,7 +267,7 @@ function ytDlp(
 	args: string[],
 	timeout: number,
 	signal: AbortSignal | undefined,
-	browser: string | null,
+	rung: LadderRung,
 ) {
 	// --remote-components ejs:github lets yt-dlp fetch its official challenge
 	// solver script (cached after the first download); without it YouTube's
@@ -234,8 +278,10 @@ function ytDlp(
 		...args,
 	];
 	if (tooling.ffmpegDir) fullArgs.push("--ffmpeg-location", tooling.ffmpegDir);
-	if (browser) fullArgs.push("--cookies-from-browser", browser);
-	else if (tooling.cookiesFile) fullArgs.push("--cookies", tooling.cookiesFile);
+	if (tooling.proxy) fullArgs.push("--proxy", tooling.proxy);
+	if (rung.clients) fullArgs.push("--extractor-args", `youtube:player_client=${rung.clients}`);
+	if (rung.browser) fullArgs.push("--cookies-from-browser", rung.browser);
+	else if (rung.cookieFile && tooling.cookiesFile) fullArgs.push("--cookies", tooling.cookiesFile);
 	return run("python3", fullArgs, {
 		timeout,
 		signal,
@@ -251,7 +297,9 @@ function ytDlp(
 	});
 }
 
-const BOT_CHECK = /Sign in to confirm|not a bot/i;
+/** YouTube's wall in its 2026 wordings, plus the rate-limit answers that the
+ * ladder's later rungs (different client story, then cookies) sometimes cure. */
+export const BOT_CHECK = /Sign in to confirm|not a bot|not a robot|HTTP Error 429|Too Many Requests/i;
 
 function isBotCheck(error: unknown): boolean {
 	return BOT_CHECK.test(
@@ -265,7 +313,7 @@ function isBotCheck(error: unknown): boolean {
  * YouTube's bot check into the instruction that actually fixes it — so the
  * model and the ledger get a short reason instead of a wall of text.
  */
-function ytDlpError(error: unknown, triedBrowser?: string): Error {
+function ytDlpError(error: unknown, ladderExhausted = false): Error {
 	const raw = [(error as { stderr?: string })?.stderr, (error as Error)?.message].filter(Boolean).join("\n");
 	const firstError = raw
 		.split("\n")
@@ -273,13 +321,16 @@ function ytDlpError(error: unknown, triedBrowser?: string): Error {
 		?.trim();
 	if (firstError && BOT_CHECK.test(firstError)) {
 		return new Error(
-			triedBrowser
-				? `YouTube's bot check refused even cookies borrowed from ${triedBrowser}. ` +
-					`Open youtube.com in ${triedBrowser} once (signing in helps most), then try again — ` +
-					`or save a signed-in Netscape export to config/youtube-cookies.txt.`
-				: "YouTube refused the request (bot check) and no browser was found to borrow cookies from. " +
-					"Set WORLD_CONSOLE_YT_BROWSER=<firefox|chrome|...>, save a Netscape cookie export to " +
-					"config/youtube-cookies.txt, or install the identity-free bgutil-ytdlp-pot-provider plugin.",
+			ladderExhausted
+				? "YouTube's bot check refused every rung — three anonymous client stories and the cookie rungs alike. " +
+					"What helps: open youtube.com once in the cookie browser (signing in helps most); or save a fresh " +
+					"signed-in Netscape export to config/youtube-cookies.txt; or route the glass through your own " +
+					"proxy/VPN (WORLD_CONSOLE_YT_PROXY=socks5://…); the identity-free bgutil-ytdlp-pot-provider " +
+					"plugin also upgrades every anonymous rung when installed."
+				: "YouTube refused the request (bot check) and no cookie rung exists to climb to. Anonymous options " +
+					"first: route through your own proxy (WORLD_CONSOLE_YT_PROXY=socks5://…) or install the " +
+					"identity-free bgutil-ytdlp-pot-provider plugin. Identity options: save a Netscape export to " +
+					"config/youtube-cookies.txt, or set WORLD_CONSOLE_YT_BROWSER=<firefox|chrome|…> to allow borrowing.",
 		);
 	}
 	if (firstError) return new Error(firstError);
@@ -287,21 +338,22 @@ function ytDlpError(error: unknown, triedBrowser?: string): Error {
 	return new Error(brief.length > 300 ? `${brief.slice(0, 300)}…` : brief || "yt-dlp failed");
 }
 
-/** Browser that already rescued a bot-checked call — reused for the rest of the run. */
-let cookieRescue: string | null = null;
+/** The rung that last cured a bot check — the run starts there next time
+ * instead of re-climbing (and re-failing) the whole ladder per call. */
+let stickyRungLabel: string | null = null;
 
-/** Records which cookies a search ended up using (browser name, "file", or null). */
+/** Records what a search ended up spending: a browser name, "file", or null
+ * (all anonymous rungs report null — no identity was used). */
 interface CookieTrace {
 	used: string | null;
 }
 
 /**
- * Run yt-dlp; when YouTube answers with its bot check, retry once with
- * cookies borrowed live from an installed browser and keep using them for
- * later calls. Browser cookies are the LAST resort: the first attempt runs
- * bare — or with the player's own cookie file — and WORLD_CONSOLE_YT_BROWSER
- * only names which browser the rescue may borrow from. The browser store is
- * re-read on every invocation, so no export file, reload, or rerun is needed.
+ * Run yt-dlp up the escalation ladder (buildLadder — anonymous client
+ * rotations first, the player's cookie file next, live browser borrowing
+ * last). Only a BOT CHECK climbs; every other error is real and thrown as
+ * it was. The curing rung is remembered for the rest of the run; browser
+ * stores are re-read on every invocation, so no export or rerun is needed.
  */
 async function ytDlpRescued(
 	tooling: VideoTooling,
@@ -310,25 +362,23 @@ async function ytDlpRescued(
 	signal: AbortSignal | undefined,
 	trace?: CookieTrace,
 ) {
-	const standing = cookieRescue;
-	try {
-		const result = await ytDlp(tooling, args, timeout, signal, standing);
-		if (trace) trace.used = standing ?? (tooling.cookiesFile ? "file" : null);
-		return result;
-	} catch (error) {
-		throwIfAborted(signal);
-		const rescue = tooling.cookiesFromBrowser ?? tooling.browserFallback;
-		if (!isBotCheck(error) || standing || !rescue) throw ytDlpError(error, standing ?? undefined);
+	const ladder = buildLadder(tooling);
+	const startAt = Math.max(0, ladder.findIndex((rung) => rung.label === stickyRungLabel));
+	let lastError: unknown;
+	for (let i = startAt; i < ladder.length; i++) {
+		const rung = ladder[i];
 		try {
-			const result = await ytDlp(tooling, args, timeout, signal, rescue);
-			cookieRescue = rescue;
-			if (trace) trace.used = rescue;
+			const result = await ytDlp(tooling, args, timeout, signal, rung);
+			if (i > 0) stickyRungLabel = rung.label;
+			if (trace) trace.used = rung.browser ?? (rung.cookieFile ? "file" : null);
 			return result;
-		} catch (retryError) {
+		} catch (error) {
 			throwIfAborted(signal);
-			throw ytDlpError(retryError, rescue);
+			lastError = error;
+			if (!isBotCheck(error)) throw ytDlpError(error);
 		}
 	}
+	throw ytDlpError(lastError, ladder.some((rung) => rung.cookieFile || rung.browser));
 }
 
 interface Candidate {
