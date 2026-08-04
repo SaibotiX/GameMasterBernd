@@ -100,7 +100,11 @@ for (const file of process.argv.slice(2)) {
 			// them for the signatures that matter (crashes, refusals, holds).
 			if (role === "toolResult") {
 				const isCrash = /is not a function|^TypeError|^ReferenceError|undefined is not/i.test(text);
-				const isRefusal = /refus|stands nowhere|not done —|No work advances|must fall first|stands unresolved|already stand open|takes no fifth|Empty |No page exists|is not here|is shelved|already await/i.test(text);
+				// isError:true is ALWAYS at least a refusal-grade lead — the batch-3
+				// audit found a rejected stage_trial the wording regex missed.
+				const isRefusal =
+					message.isError === true ||
+					/refus|stands nowhere|not done —|No work advances|must fall first|stands unresolved|already stand|takes no fifth|Empty |No page exists|is not here|is shelved|already await|Validation failed/i.test(text);
 				if (isCrash) errorResults.push(`u${u} CRASH: ${clip(text)}`);
 				else if (isRefusal) errorResults.push(`u${u} refusal: ${clip(text)}`);
 				console.log(`${off}u${u} → ${isCrash ? "⚠⚠ " : isRefusal ? "⚠ " : ""}${clip(text)}`);

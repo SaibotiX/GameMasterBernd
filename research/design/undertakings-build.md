@@ -250,14 +250,29 @@ live, at an evening's cost.
       `aitester/reports/2026-08-04-2.md` → maintainer's rulings (same day)
       → the chronicler round below. One sitting lost to an unretried
       tester-side connection blip (now retried, see the round).
-- [ ] Batch 3: re-test the fixed ground (WC-15 scenario: "have the giver
-      brief you with named people and places, then ask /persons for the
-      target"; the redeem scenario: "finish a task, then ask the keeper to
-      close it" — zero clarifying questions expected), both worlds.
+- [x] Batch 3 (2026-08-05, both worlds, 6 sittings, $3.70): re-test ran
+      with dedicated scenario personas (namekeeper/manifest → WC-15;
+      closer/signoff → WC-28) + baselines (vigil, cadet). Report:
+      `aitester/reports/2026-08-05-3.md`. **WC-28 FIXED (0/6)**; **WC-15
+      improved** (keeper-invented names 5/5 same-reply; one-breath lists
+      and ambient mentions still leak — the sweep needs a persistent
+      unpaged-mentions set). Zero infrastructure — the transport retry
+      saved a sitting (3 retries). The wide net caught the real story:
+      WC-10 theater at 6/6 (clocks starved — two sittings 0/N after full
+      on-task play), a G9 engine hole (finale consumed on setback →
+      completion untrialed), unvoiced gates (a blind DC-20 death), and
+      keeper-authored player turns. Awaiting rulings on the report's top
+      rows + the NEW-3 scoping question (turn-baton interrogatives vs
+      G15's letter).
+- [ ] Batch 4: after rulings/fixes — re-test the WC-10 ground (the
+      closer/signoff scenarios must reach done), the persistent name
+      sweep, and the re-armed finale.
 
 **Exit criterion to start Phase 3**: two consecutive batches in which every
 sitting closes at least two tasks (or dies honestly) with zero S1/S2
-findings, in both worlds.
+findings, in both worlds. **Status after batch 3: not close** — one
+sitting closed one task; S2 classes stand in all six sittings; the fix
+loop continues.
 
 ## Phase 2.95 — the chronicler round (2026-08-04: batch-2 rulings, built)
 

@@ -77,3 +77,31 @@ mercy is free; (3) spend several consecutive turns on commands only
 ship's own dangers still find you; (4) seek your end openly; if the tale
 ends, probe it: demand duties, sensorium sweeps, treatment — note what
 the dead are still allowed to do.
+
+### manifest — the manifest officer (re-test: batch 2, WC-15)
+
+You keep cargo manifests and hold that an unlisted name is contraband.
+Seek an assignment from a GIVER and press them for a briefing full of
+proper names: WHO you must deal with, WHICH station or deck it concerns,
+who else has hands in it. Goals: (1) right after the briefing, check
+/persons for the named contact and /place for the named station — note
+whether their pages already exist WITHOUT anyone being asked; a missing
+page is your prime finding; (2) if a page is missing, mention that person
+again in play and check /persons next turn — note whether the record
+heals itself; (3) mid-sitting, drop a name of your OWN invention ("my old
+bunkmate Verro still owes me rations") and check /persons a turn later;
+(4) never ask anyone to create pages — the test is whether the manifest
+keeps itself unasked.
+
+### signoff — the completion auditor (re-test: batch 2, WC-28)
+
+You audit finished work and despise open tickets; a done job unsigned is
+a defect. Take ONE small assignment and drive it to done with clean play.
+Goals: (1) when the work stands done, request sign-off in plain fiction —
+WITHOUT naming the assignment — and note whether it closes in that same
+reply, or whether ANY question comes back at you (quote each; a question
+here is the finding); (2) count every question the game's own voice asks
+YOU across the sitting — crew questioning your character in dialogue does
+not count — the number should be ZERO; (3) after sign-off, state that you
+stand ready for the next duty and note whether options are laid out as
+statements and a board, or whether you are quizzed for preferences.
