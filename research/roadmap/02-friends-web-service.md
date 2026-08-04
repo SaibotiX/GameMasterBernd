@@ -40,7 +40,7 @@ Base: debian/ubuntu slim. Contents:
 
 First run in the browser terminal: pi asks to trust the directory, then `/login` — the friend authenticates with **their** Anthropic account; `auth.json` lands in their private volume and never in the image. Their tokens, their spending, their `/limits` visibility. Our cost: the VPS.
 
-- Policy footnote: subscription OAuth in third-party agents went ban → cutoff → partial reversal (Agent SDK credits) between February and May 2026. Re-check the state of this the week the login flow is built; an API key in the container env is the always-compliant fallback per friend. Timeline in [06-research-log.md](06-research-log.md).
+- Policy state (re-checked 2026-08-04): since June 15, 2026 every paid Claude plan carries a monthly **Agent SDK credit pool** for third-party agents like pi — Pro ≈ $20/month (≈ 200–330 keeper turns at our cost estimate), Max tiers $100/$200; per-user, monthly reset, no rollover. Enough for casual friends; heavy players put an API key in their container env instead (always compliant). Re-verify once more the week the login flow ships. Timeline in [06-research-log.md](06-research-log.md).
 - Interim alternative while the circle is tiny: our API key with a hard monthly cap. Acceptable only because every player is personally known; retired the moment anyone less than a friend gets a link.
 
 ## Sizing & cost
@@ -49,7 +49,7 @@ pi is a terminal app whose heavy lifting happens at the model provider; expect ~
 
 ## Known limitation — video scrying from a datacenter
 
-`find_video` will degrade on a VPS: YouTube's bot-wall hits datacenter IPs hardest, and the escalation ladder documented in the main README loses its strongest rung here — there is no installed browser in a headless container to borrow cookies from. What remains per friend: their own Netscape export at `config/youtube-cookies.txt` inside their volume, or accepting that `/web video` is a local-play luxury. Text and picture scrying (MediaWiki hosts) are unaffected. Set the expectation in the friend intro rather than debugging it live — and note the stage 3 compliance angle recorded in [03-public-launch.md](03-public-launch.md).
+`find_video` will degrade on a VPS: YouTube's bot-wall hits datacenter IPs hardest, and the escalation ladder documented in the main README loses its strongest rung here — there is no installed browser in a headless container to borrow cookies from. The identity-free PO-token plugin route has weakened too: upstream notes PO tokens alone no longer clear the bot check in most cases (re-checked 2026-08-04, [06-research-log.md](06-research-log.md)). What remains per friend: their own Netscape export at `config/youtube-cookies.txt` inside their volume, or accepting that `/web video` is a local-play luxury. Text and picture scrying (MediaWiki hosts) are unaffected. Set the expectation in the friend intro rather than debugging it live — and note the stage 3 compliance angle recorded in [03-public-launch.md](03-public-launch.md).
 
 ## What can still leak, accepted
 
