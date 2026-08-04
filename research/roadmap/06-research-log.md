@@ -1,0 +1,72 @@
+# Research log — the evidence behind the roadmap
+
+Snapshot of everything verified during the distribution research sitting of **2026-08-04**. Facts here are true as of that date; the items marked ⚠ move fast and must be re-checked before the stage that relies on them.
+
+## Case study: Old Greg's Tavern (oldgregstavern.com)
+
+AI dungeon-master platform, solo or up to 5 players, mobile-first (iOS/Android), claims **361,500+ adventurers**. The closest live analogue to our public-launch shape.
+
+- Pricing: **Adventurer $5 one-time → 5 credits + 50 rounds · Hero $15/mo → 20 credits + 200 rounds · Legend $25/mo → 45 credits + 450 rounds** ⇒ **5.6–10 ¢ per round**. Moved from a flat $5 one-time price to tiers in August 2025. First hour free, no credit card.
+- A **round** = one full cycle: whole party acts, checks roll, the AI DM responds — bundling several messages into one billable unit.
+- **Host pays, guests ride free** — five players, one payer; viral and simple.
+- Sources: [pricing page](https://www.oldgregstavern.com/pricing), [landing](https://www.oldgregstavern.com/), [LoreKeeper comparison](https://lore-keeper.com/blog/lorekeeper-vs-old-gregs-tavern), [Fables' own comparison](https://fables.gg/blog/old-gregs-tavern-vs-friends--fables-plan--feature-comparison), [Arcanum review](https://arcanumrpgs.com/blog/old-gregs-tavern-review/)
+
+## Case study: Friends & Fables (fables.gg)
+
+AI GM ("Franz") + world-building platform. The subscription-shaped alternative.
+
+- Tiers: **Free $0 (25 turns/day cap, 3-player) · Starter $19.95 · Pro $29.95 · Legend $39.95**, paid tiers with "Unlimited Standard Turns", 4/5/6-player campaigns, and **100/300/600 monthly credits**. Prices raised from $14.95–34.95 in Dec 2025. A turn = Franz sends a message. Friends play free with any paid subscriber.
+- "Unlimited" survives via: hard-capped free tier, cheap default routing, and **credits gating the expensive paths** (premium narration models, image studio).
+- Model mix: **Gemini, Llama, GPT, Grok, custom fine-tunes ("ACE-1")** — many providers behind one internal credit currency, proving the credit is pure bookkeeping.
+- Sources: [pricing](https://fables.gg/pricing), [worlds](https://fables.gg/worlds), [plan comparison](https://fables.gg/blog/ai-game-master-vs-friends--fables-plan--feature-comparison), [Dungeons Deep review (models)](https://dungeonsdeep.ai/blog/friends-and-fables-review-2026)
+
+## Case studies: open source × selling games
+
+- **Mindustry** — GPLv3 on GitHub, compilable free, **sells at $9.99 on Steam** with thousands of reviews at 94 % positive; Steam buys convenience + support. [Wikipedia](https://en.wikipedia.org/wiki/Mindustry) · [Steam](https://store.steampowered.com/app/1127400/Mindustry/) · [itch](https://anuke.itch.io/mindustry) · [solo-dev experience report](https://simondalvai.org/blog/open-source-games/)
+- **Aseprite** — source fully public, but the 2016 license switch (GPL → proprietary EULA) allows compile-for-yourself and forbids redistribution; only the authors sell builds ($20). Its GPL past persists as the **LibreSprite** fork — the canonical proof that open → closed only works *forward*. [License change post](https://dev.aseprite.org/2016/09/01/new-source-code-license/) · [FAQ](https://www.aseprite.org/faq/) · [Aseprite vs LibreSprite](https://www.virtualcuriosities.com/articles/2345/what-is-the-difference-between-aseprite-and-libresprite)
+- **AI Dungeon** (cautionary): server-side hosting financed by subscriptions; its GPT-3 era demonstrated both prompt leakage via chat and mass abuse of an underpriced LLM endpoint — the two standing risks priced into stages 2–3.
+
+## ⚠ Anthropic third-party policy timeline (2026)
+
+The ground under "players bring their own Claude account" moved three times in five months:
+
+| When | What |
+|---|---|
+| Jan–Feb 2026 | Enforcement + docs update: consumer-plan **OAuth in third-party tools banned**; developers pushed to API keys / usage billing. Third-party app requests moved to a separate prepaid "extra usage credits" balance |
+| April 4, 2026 | Broader cutoff: subscriptions no longer usable with third-party agentic tools (compute strain cited) |
+| May 2026 | Partial reversal: **"Agent SDK credits"** — a subcategory all paid subscribers can allocate to third-party agents (e.g. OpenClaw) |
+
+Implications: pi is a third-party agent; friends' subscription logins ride the Agent SDK/extra-usage lane (our `/limits` extension already shows which bucket serves a request); **API keys are the always-compliant fallback**. Re-check the current state at stage 1 login-flow build time and again before stage 2 design freeze (decision R5).
+Sources: [winbuzzer (Feb ban)](https://winbuzzer.com/2026/02/19/anthropic-bans-claude-subscription-oauth-in-third-party-apps-xcxwbn/) · [VentureBeat (April cutoff)](https://venturebeat.com/technology/anthropic-cuts-off-the-ability-to-use-claude-subscriptions-with-openclaw-and) · [VentureBeat (May reversal)](https://venturebeat.com/technology/anthropic-reinstates-openclaw-and-third-party-agent-usage-on-claude-subscriptions-with-a-catch) · [TechRadar (billing change)](https://www.techradar.com/pro/bad-news-claude-users-anthropic-says-youll-need-to-pay-to-use-openclaw-now)
+
+## Verified technical facts (this repo & stack)
+
+- **pi**: MIT (© 2025 Mario Zechner); install via npm `@earendil-works/pi-coding-agent`, standalone **Bun-compiled binaries** in GitHub releases (checksummed source archives + rebuild instructions since v0.81.1); multi-provider LLM API; **no built-in permission system** — the container is the boundary. [Repo](https://github.com/earendil-works/pi)
+- **This repo**: ~3.5 MB game (TS + markdown) + 26 MB yt-dlp submodule; at research time no LICENSE file existed (= all rights reserved by default) — the explicit all-rights `LICENSE` landed 2026-08-04 (R3); `.gitignore` already excludes `auth.json`, `data/`, `tools/ffmpeg/`, session drops.
+- **Video path**: `extension/mediasearch.ts` runs `python3 -m yt_dlp` with `PYTHONPATH` at the vendored source → python3 is a runtime dependency of `find_video` only; official yt-dlp standalone binaries exist as a Python-free alternative (code change required).
+- **yt-dlp**: Unlicense (public domain) — redistribution unrestricted.
+- **Terminal-to-web**: ttyd (xterm.js + libwebsockets; process per connection) is the established bridge; xterm.js is the underlying browser terminal. [ttyd](https://tsl0922.github.io/ttyd/) · [xterm.js](https://xtermjs.org/)
+- **Node "protection" reality**: obfuscation raises reading cost only; bytenode (V8 bytecode) is stronger but breaks nothing determined; **Node SEA embeds source readable** — packaging, not protection. None of it can protect markdown. [obfuscator](https://github.com/javascript-obfuscator/javascript-obfuscator) · [bytenode](https://github.com/bawerd/bytenode) · [packaging overview](https://json-server.dev/packaging-nodejs-app-secure-code/)
+- **Legal defaults**: no license ⇒ full copyright, viewing ≠ rights ([GitHub docs](https://docs.github.com/articles/licensing-a-repository), [choosealicense](https://choosealicense.com/no-permission/)); PolyForm Noncommercial 1.0.0 = lawyer-written "source visible, no commercial use" ([text](https://polyformproject.org/licenses/noncommercial/1.0.0)).
+- **Private distribution channels**: itch.io draft/restricted modes with passwords + download keys ([docs](https://itch.io/docs/creators/access-control)); Steam Playtest with controlled invites ([docs](https://partner.steamgames.com/doc/features/playtest)) — Steam requires app registration ($100), later-stage only.
+- **Normal game anatomy** (for the record): compiled executable + engine runtime + cooked/packed assets (e.g. Unreal `.pak`), source never shipped, decompilation yields approximations — and script-heavy engines (Unity IL, Godot pck, Ren'Py) leak far more. Protection is a gradient ending in law, not walls. [Unreal packaging](https://dev.epicgames.com/documentation/unreal-engine/packaging-your-project?lang=en-US) · [pak-file anatomy](https://simoncoenen.com/blog/programming/PakFiles)
+
+## Our cost model (estimate — replace with stage 1 telemetry)
+
+Assumptions: keeper turn ≈ 10–20 k tokens in (layered prompt + context) / ~1 k out; Sonnet-class list prices ($3/M in, $15/M out) ⇒ ≈ 5–8 ¢/turn; side calls (guardian, fate weaver, GM table) routed to Haiku/Flash-class ⇒ +1–2 ¢ ⇒ **~6–10 ¢ per round all-in; ~3–6 ¢ with cheap routing**. An evening's sitting (~40 turns) ≈ $2–4 on the expensive path. These brackets bound the stage 2–3 pricing draft; pi stamps real cost into every session file, so stage 1 replaces this section with measured numbers for free.
+
+## ⚠ Migrated: platform research from the prior project (researched 2026-08-01)
+
+Adopted 2026-08-04 from an earlier project's platform/business papers. Only **platform, legal and market facts** were migrated — that game's design (multiplayer lobbies, player-to-player economies, UGC/upload pipelines, referral mechanics) does not apply to a single-seeker game with no player-to-player value flows and no uploads, and was deliberately dropped. Re-verify the Steam policy items when stage 4 planning starts.
+
+**Steam Direct mechanics:** $100 per app, recoupable at $1 k adjusted gross (in-app credit purchases count — F2P recoups); identity/bank/tax paperwork; 30-day wait after the fee; "Coming Soon" page public ≥ 2 weeks; store/build reviews 1–5 business days each ⇒ realistic signup→launch minimum 4–6 weeks. Store page needs 5+ real screenshots + full capsule set. ([onboarding](https://partner.steamgames.com/doc/gettingstarted/onboarding) · [fee](https://partner.steamgames.com/doc/gettingstarted/appfee))
+
+**Steam AI-content regime:** disclosure since Jan 2024, split pre-generated vs **live-generated** (us), published on the store page; Jan 2026 update narrowed scope to content players consume. Live-generated duties: guarantee no illegal/infringing output, **describe the guardrails**, keep the in-game overlay working as an illegal-output report channel. **Live AO sexual content banned outright.** Adoption reality: ~7,818 games (~7 % of catalog) disclosed GenAI by mid-2025, ~1 in 5 of 2025 releases; shipped live-LLM games include Suck Up! (Mixed 61 %), Whispers from the Star (Very Positive 80 %, **recent-negative from AI-capacity queues** — the genre's true failure mode), AI Roguelite, Dead Meat, 1001 Nights; no documented post-2024 rejection of a live-LLM game was found (absence not provable). ([content survey](https://partner.steamgames.com/doc/gettingstarted/contentsurvey))
+
+**Money rules:** Steam bans gambling (Code of Conduct + rule 15 payment-processor standards; no explicit partner-doc line — treat as hard). ***Kater v. Churchill Downs* (9th Cir. 2018): purchasable virtual currency can be a "thing of value" ⇒ illegal gambling under state law even with no cash-out**; regulators active (NY AG suit over game-currency gambling, Jan 2026) → our decision R8. In-client purchases must use the Steam MTX API (30 % cut; 25 % past $10 M); selling identical credits on one's own site is allowed if the client doesn't funnel there (Path of Exile, Warframe, Genshin). Rule 14: no advertising-based business models. BYO-key games have Steam precedent ("Ai Chan" requires the user's own key; AI Roguelite supports custom/local endpoints). ([MTX docs](https://partner.steamgames.com/doc/features/microtransactions))
+
+**Platform strategy facts:** Steam OS share June 2026 — Windows 94.1 %, Linux 3.7 %, macOS 2.2 % ⇒ Windows-first QA. Electron on Steam is proven (Vampire Survivors' breakout build was Phaser + Electron; Cookie Clicker; official Phaser pipeline); **no shipped Tauri-on-Steam example found**. Steam Deck: runs under Proton; needs 1280 × 800 layout + explicit on-screen-keyboard invocation via Steamworks — critical for text-input games. Shared servers/accounts across Steam + own site is Valve-tolerated precedent (RuneScape, Screeps: World, Melvor Idle). Early Access: must be playable, not a crowdfunding mechanism, no undercutting the Steam price elsewhere. Validation sequencing consensus: web/itch first, Coming Soon in parallel, Steam when retention is proven; wishlist folklore threshold ~5–10 k.
+
+**Terminal/text-game market comps:** Hacknet (paid) >200 k copies year one · Duskers ($19.99) 100–200 k owners, ~$1.6 M est. gross · Kind Words ($4.99) 200–500 k owners, BAFTA, ~3 % content-report rate · hackmud (~$19, closest structural analog) 20–50 k owners, **all-time peak 503 concurrents, settled ~10–20** · A Dark Room's paid Steam port of a free web hit **flopped** (59 reviews) — the aligned-offer lesson · Emily is Away (free) 22.8 k reviews at 87 %. Lessons carried into stage 4: sell the fantasy, never "a text game"; **hundreds of concurrents = success** (which also keeps the AI bill sane); a free web version and a Steam release must be the same offer.
+
+**New project-specific consequence found during this migration:** hosted `find_video` is doubly untenable at commercial stages — YouTube bot-walls hit datacenter IPs hardest (and the browser-cookie escalation rung doesn't exist in a headless container), and shipping YouTube-scraped clips to paying customers is ToS exposure. Recorded as a stage 1 limitation ([02](02-friends-web-service.md)) and a stage 3 media-compliance decision ([03](03-public-launch.md)): hosted tiers wiki-media-only, video as BYO-cookies opt-in or local-play luxury.

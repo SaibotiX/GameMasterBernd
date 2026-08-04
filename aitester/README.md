@@ -2,7 +2,7 @@
 
 Everything that lets an AI play World Console sittings to find bugs and
 exploits lives HERE, cleanly apart from the game (`extension/` at the repo
-root) and from the shared analysis method (`analysis/`, which serves human
+root) and from the shared analysis method (`research/analysis/`, which serves human
 batches too). It lives in the game's own repo on purpose: the wrapper and
 the engine version together, and every batch's `meta.md` pins both to ONE
 commit. (v1–v2 history: built inside `analysis/`, then a separate repo —
@@ -30,7 +30,7 @@ Each sitting drops a human-contract folder into `aitester/sessions-in/<batch>/`
 (session.jsonl, story/, notes.md, summary.md, meta.md). Auditing uses the
 analysis kit — in Claude Code:
 `/analyze-sessions aitester/sessions-in/<batch>` (or by hand per
-`analysis/audit-workflow.md`). Reports for AI batches land in
+`research/analysis/audit-workflow.md`). Reports for AI batches land in
 `aitester/reports/`, beside the batches they judge.
 
 ## The files
@@ -50,7 +50,7 @@ analysis kit — in Claude Code:
 
 - **Exactly two dependencies on the rest of the repo, both deliberate:**
   the wrapper's import of the engine under test (`extension/` — the whole
-  point), and the audit method (`analysis/` — shared with human batches).
+  point), and the audit method (`research/analysis/` — shared with human batches).
   Everything else here runs and reads standalone.
 - **The engine is never instrumented** — the wrapper only ADDS a read-only
   command; game rules, prompts and tools are byte-identical to human play.

@@ -184,7 +184,7 @@ quest, peril inside the grace window or double-striking, twist before
 commitment. These are ENGINE guarantees — any hit is engine code, and
 usually an S2/S1 upgrade.
 - **Detect:** event census vs the shape rules
-  (`design/undertakings-mechanics.md` §1, §11).
+  (`research/design/undertakings-mechanics.md` §1, §11).
 
 ### WC-26 · Table confabulation
 The GM table answers from memory instead of the record: denying what the
@@ -223,5 +223,5 @@ don't chase; they become S2 the moment the record disagrees.
 | Keeper protocol (`prompt.ts`) | the laws of behavior | WC-10, 13, 15, 16, 20–24, 27 |
 | Side-call prompts (`gmchat.ts`) | planner, judges, table, chronicler | WC-11, 12, 26 |
 | Refusal texts (throughout) | every error the model reads | WC-13 |
-| Design docs (`design/*.md`) | when reality was right and the spec wrong | any |
+| Design docs (`research/design/*.md`) | when reality was right and the spec wrong | any |
 | pi API usage | contracts like the setWidget factory | WC-01 |

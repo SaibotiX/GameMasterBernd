@@ -29,7 +29,7 @@ A session file is one JSON object per line:
     texts land here — this role is where most audit evidence lives.
 - `{type:"custom", customType:"world-console.ledger", data:{ev:…}}` — a game
   event. The full event catalog with payloads is
-  `design/undertakings-mechanics.md` §6.
+  `research/design/undertakings-mechanics.md` §6.
 - `{type:"custom_message", …}` — an engine→keeper hand-off (`/pick`, `/roll`,
   `/web`, nudges, quest-accepts). Reaches the model as a user-role turn
   bearing the `[engine:<nonce>]` mark; rendered to the player as a dim line.
@@ -62,7 +62,7 @@ parentId. Consequences for analysis:
 ## 4. The mechanical map — always run this first
 
 ```
-node analysis/tools/session-map.mjs <session.jsonl> [more…]
+node research/analysis/tools/session-map.mjs <session.jsonl> [more…]
 ```
 
 One bounded line per entry (`×` prefix = off the live branch), then a

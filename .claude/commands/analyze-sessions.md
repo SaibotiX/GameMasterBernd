@@ -4,17 +4,17 @@ description: Audit World Console playtest sessions — map, classify, count, and
 
 Audit the World Console playtest sessions given as: $ARGUMENTS
 
-(If no paths were given, ask which batch under `analysis/sessions-in/`
+(If no paths were given, ask which batch under `research/analysis/sessions-in/`
 (human play) or `aitester/sessions-in/` (AI play) to audit, or take every
 `.jsonl` under the newest batch folder there.)
 
-Follow `analysis/audit-workflow.md` EXACTLY. In short:
+Follow `research/analysis/audit-workflow.md` EXACTLY. In short:
 
-1. **Read the kit first**: `analysis/audit-workflow.md`,
-   `analysis/failure-taxonomy.md`, `analysis/session-anatomy.md`,
-   `analysis/report-template.md`. They are the method; do not improvise
+1. **Read the kit first**: `research/analysis/audit-workflow.md`,
+   `research/analysis/failure-taxonomy.md`, `research/analysis/session-anatomy.md`,
+   `research/analysis/report-template.md`. They are the method; do not improvise
    past them.
-2. **Mechanical map**: run `node analysis/tools/session-map.mjs <files>`
+2. **Mechanical map**: run `node research/analysis/tools/session-map.mjs <files>`
    per session. Never paste raw session JSONL into context — work from the
    map plus targeted bounded reads of flagged uN spans. Cross-check each
    session's chronicle folder (named souls/places vs pages, quest statuses
@@ -30,12 +30,12 @@ Follow `analysis/audit-workflow.md` EXACTLY. In short:
    BOTH sessions-affected and total incidents per class.
 5. **Verify**: re-open one cited span per S1/S2 class against the raw
    record; drop findings that die under verification.
-6. **Report**: write `analysis/reports/<YYYY-MM-DD>-<batch>.md` per the
+6. **Report**: write `research/analysis/reports/<YYYY-MM-DD>-<batch>.md` per the
    template (for an AI batch from `aitester/sessions-in/`, write to
    `aitester/reports/` instead) — summary table sorted Severity →
    Sessions affected → Incidents; one concrete proposed fix per class with
    its fix surface; status NEW/KNOWN/REGRESSION against earlier reports in
-   `analysis/reports/` and `aitester/reports/`; a short "what went right"
+   `research/analysis/reports/` and `aitester/reports/`; a short "what went right"
    section.
 
 Hard rules: every finding cites uN evidence; do NOT modify engine code,

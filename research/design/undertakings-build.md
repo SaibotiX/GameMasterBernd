@@ -111,7 +111,7 @@ names the goals/invariants it serves (undertakings-goals.md).
 
 ## Phase 2.8 — the challenge round (2026-08-03: audit resolutions + the living world)
 
-The full-stop audit (design/design-code-audit.md) found 12 discrepancies; the
+The full-stop audit (research/design/design-code-audit.md) found 12 discrepancies; the
 user ruled on every one and decreed three new systems. All built this round:
 
 - [x] D1 · ONE GATE HOLDS ALL WORK: attempt_quest refuses while any choice or
@@ -335,7 +335,7 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   keeper via a nonce-marked message (route through attempt_quest; never
   announce undeclared dice) and the true moment follows; with a choice
   pending it points at /pick. Theater now costs one turn, not the sitting.
-- 2026-08-03 · Audit round (design/design-code-audit.md, user's rulings):
+- 2026-08-03 · Audit round (research/design/design-code-audit.md, user's rulings):
   gates are UNSKIPPABLE and global (one gate holds all work — flash red, ring
   the bell, refuse every attempt) rather than per-quest; hindered outranks
   the karmic clamp (challenge over mercy); the 4-cap is absolute but the

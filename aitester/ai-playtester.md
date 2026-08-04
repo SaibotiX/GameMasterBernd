@@ -127,7 +127,7 @@ sitting boundary lives in the DRIVER, never in game code.
 - `extension/ledger.ts` — the wrapper's `/ai-state` derives its board
   with the game's own `derive()` fold over the live branch: one truth, no
   re-implementation.
-- `analysis/` — the SHARED audit kit (taxonomy, workflow, session-map,
+- `research/analysis/` — the SHARED audit kit (taxonomy, workflow, session-map,
   the human guide) stays where it is and serves both tester kinds. AI
   folders are named `ai-<persona>-<n>` under `aitester/sessions-in/`;
   `/analyze-sessions aitester/sessions-in/<batch>` consumes them
@@ -312,7 +312,7 @@ six personas of a world) per world is the standard batch.
 ## 9. Order of work — recommendation (APPROVED by the maintainer 2026-08-03)
 
 **Test first. Phase 3 waits, and shrinks.** The re-scope below is now law:
-the game's build tracker (`design/undertakings-build.md`) carries it as
+the game's build tracker (`research/design/undertakings-build.md`) carries it as
 Phase 2.9 + the rewritten Phase 3 + a decisions-log entry, self-contained.
 Three reasons:
 

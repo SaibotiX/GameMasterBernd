@@ -1,6 +1,6 @@
 # Design ↔ code audit — 2026-08-03
 
-Full-stop review: does the shipped extension keep true to `design/undertakings-*.md`?
+Full-stop review: does the shipped extension keep true to `research/design/undertakings-*.md`?
 Method: all four design docs read against every line of `extension/*.ts`, the two
 `.pi/extensions` entry points, the config tree and the tests; `unit.ts` re-run
 during this audit — **54/54 green, matching the build doc's claim**. Integration

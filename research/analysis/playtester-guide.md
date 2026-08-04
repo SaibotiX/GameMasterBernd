@@ -78,7 +78,12 @@ naturally beat nine done mechanically.
 4. One sentence: overall, would you play again — why or why not?
 
 Put all of it in one folder named after you and send it over. The
-maintainer drops it into `analysis/sessions-in/<batch>/<you>/`.
+maintainer drops it into `research/analysis/sessions-in/<batch>/<you>/`.
+
+**Playing hosted?** If you were handed a web link instead of a local
+install (the friends web service), skip items 1–2: the maintainer pulls
+your session and story folder straight from the server. You send only
+`notes.md` and the one sentence.
 
 ## Privacy — read once
 
@@ -92,6 +97,6 @@ these files.
 ## What happens with it
 
 Each batch is mapped mechanically, read end to end, and every failure is
-classified, counted and ranked (`analysis/audit-workflow.md`). Your notes
+classified, counted and ranked (`research/analysis/audit-workflow.md`). Your notes
 are paired with the exact recorded moments they describe. Fixes ship, and
 the next batch checks they held. If you marked a moment, it WILL be read.

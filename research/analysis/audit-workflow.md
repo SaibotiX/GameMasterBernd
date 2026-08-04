@@ -16,7 +16,7 @@ and walks the agent through exactly this file). Or paste the prompt from §6.
 
 - Testers hand in per `playtester-guide.md`: session `.jsonl`, their
   chronicle folder, `ledger.md`, and their notes file.
-- Drop each batch under `analysis/sessions-in/<batch-name>/<tester>/…`
+- Drop each batch under `research/analysis/sessions-in/<batch-name>/<tester>/…`
   (gitignored — sessions are private play).
 - AI batches arrive ready-made: the driver (`aitester/tools/ai-playtest.mjs`)
   writes the same contract into `aitester/sessions-in/<batch>/ai-<persona>-<n>/`,
@@ -28,7 +28,7 @@ and walks the agent through exactly this file). Or paste the prompt from §6.
 ## 1. Mechanical map (code, deterministic — always first)
 
 ```
-node analysis/tools/session-map.mjs sessions-in/<batch>/**/*.jsonl
+node research/analysis/tools/session-map.mjs research/analysis/sessions-in/<batch>/**/*.jsonl
 ```
 
 Per session this yields: the uN-numbered entry map (× = off the live
@@ -81,7 +81,7 @@ Pool all notes and cluster:
 
 ## 4. The report
 
-Write `analysis/reports/<YYYY-MM-DD>-<batch>.md` following
+Write `research/analysis/reports/<YYYY-MM-DD>-<batch>.md` following
 `report-template.md` (for an AI batch: `aitester/reports/<YYYY-MM-DD>-<batch>.md`,
 beside the batches it judges). The summary table is sorted by **Severity, then
 Sessions affected, then Incidents** — the top row is always the next thing
@@ -91,12 +91,12 @@ concrete proposed change.
 ## 5. The fix loop (RITE)
 
 1. Top rows → rulings by the maintainer (some findings are decisions, not
-   bugs — route those to `design/` docs first, code second, exactly like
+   bugs — route those to `research/design/` docs first, code second, exactly like
    the audit round did).
 2. Fixes land with the standing verification recipe: unit suite
    (`node extension/test/unit.ts`), headless RPC smoke, and the pseudo-TTY
    probe for anything touching widgets/overlays. Update
-   `design/undertakings-build.md` (the tracker) per round.
+   `research/design/undertakings-build.md` (the tracker) per round.
 3. **Re-test the same ground next batch**: give at least one tester the
    scenario that broke ("set yourself a fetch task, then escalate the
    story mid-quest") and check the class's count went to zero. A fixed
@@ -109,15 +109,15 @@ concrete proposed change.
 
 ```
 Audit these playtest sessions of the World Console pi extension:
-<paths or analysis/sessions-in/<batch>/>
+<paths or research/analysis/sessions-in/<batch>/>
 
-Follow analysis/audit-workflow.md exactly: mechanical map first
-(analysis/tools/session-map.mjs), then an independent open-coding pass per
+Follow research/analysis/audit-workflow.md exactly: mechanical map first
+(research/analysis/tools/session-map.mjs), then an independent open-coding pass per
 session (subagents when more than two), then aggregate per
-analysis/failure-taxonomy.md with both counts (sessions affected +
+research/analysis/failure-taxonomy.md with both counts (sessions affected +
 incidents), verify every S1/S2 citation against the raw record, and write
-the report to analysis/reports/<today>-<batch>.md per
-analysis/report-template.md. Sort by Severity, then Sessions affected,
+the report to research/analysis/reports/<today>-<batch>.md per
+research/analysis/report-template.md. Sort by Severity, then Sessions affected,
 then Incidents. Cite uN evidence for every finding. Propose one concrete
 fix per class with its fix surface. Do not modify engine code in this run.
 ```
@@ -144,4 +144,4 @@ and [what to automate](https://hamel.dev/blog/posts/evals-faq/what-parts-of-eval
 the [RITE method](https://en.wikipedia.org/wiki/RITE_Method);
 playtest-instruction practice per
 [Schell Games' playtest-questions guide](https://schellgames.com/blog/the-definitive-guide-to-playtest-questions-for-video-game-playtesters)
-and [Game Developer's five tips](https://www.gamedeveloper.com/design/best-practices-five-tips-for-better-playtesting).
+and [Game Developer's five tips](https://www.gamedeveloper.com/research/design/best-practices-five-tips-for-better-playtesting).

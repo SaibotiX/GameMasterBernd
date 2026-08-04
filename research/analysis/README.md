@@ -1,4 +1,4 @@
-# analysis/ — the playtest telemetry kit
+# research/analysis/ — the playtest telemetry kit
 
 Turn recorded sittings into a ranked, evidence-cited list of what to fix.
 Every World Console session is a complete trace (every word, tool call,
@@ -16,7 +16,7 @@ testers play  ──►  sessions-in/<batch>/<tester>/     (jsonl + story folder
                      ▼
              reports/<date>-<batch>.md   — sorted Severity → Sessions → Incidents
                      │
-                     ▼  rulings → design/ docs → fixes → unit + smoke + TTY probe
+                     ▼  rulings → research/design/ docs → fixes → unit + smoke + TTY probe
                      ▼  next batch re-tests the same ground (RITE)
 ```
 
@@ -35,19 +35,22 @@ testers play  ──►  sessions-in/<batch>/<tester>/     (jsonl + story folder
 
 ```
 # one command, whole batch — from the repo root in Claude Code:
-/analyze-sessions analysis/sessions-in/2026-08-xx-first-batch/
+/analyze-sessions research/analysis/sessions-in/2026-08-xx-first-batch/
 
 # AI batches (played by aitester/) use the same kit and contract:
 /analyze-sessions aitester/sessions-in/<batch>/
 
 # or by hand, following audit-workflow.md:
-node analysis/tools/session-map.mjs analysis/sessions-in/<batch>/**/*.jsonl
+node research/analysis/tools/session-map.mjs research/analysis/sessions-in/<batch>/**/*.jsonl
 ```
 
 Reports land in `reports/` (tracked — they are the project's quality
 history); reports for AI batches land in `aitester/reports/`, beside the
 batches they judge. Both `sessions-in/` folders are **gitignored**:
-sessions are private play.
+sessions are private play. Hosted testers (the friends web service,
+roadmap stage 1) hand in only their notes: the maintainer copies session
++ chronicle from the server volumes into `sessions-in/<batch>/<tester>/`
+— the same contract from there on.
 
 ## The three rules that make it work
 

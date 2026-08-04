@@ -31,6 +31,6 @@ dist/
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.
-# (human batches under analysis/, AI batches under aitester/)
-analysis/sessions-in/
+# (human batches under research/analysis/, AI batches under aitester/)
+research/analysis/sessions-in/
 aitester/sessions-in/

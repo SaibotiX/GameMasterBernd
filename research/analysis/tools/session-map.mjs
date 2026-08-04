@@ -2,7 +2,7 @@
 /**
  * session-map — the mechanical first pass of every session audit.
  *
- *   node analysis/tools/session-map.mjs <session.jsonl> [more.jsonl…]
+ *   node research/analysis/tools/session-map.mjs <session.jsonl> [more.jsonl…]
  *
  * Prints, per session: a compact one-line-per-entry map (uN numbering — the
  * same numbers /ledger, ledger.md and the GM table cite), a tool-error
