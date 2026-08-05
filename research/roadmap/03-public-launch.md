@@ -22,12 +22,14 @@ The player's money never touches Google/Anthropic/OpenAI. There is **one org API
 
 ## New components on top of stage 1
 
+*(revised 2026-08-05, decision R12: the **ledger and the LLM gateway are no longer stage-2 novelties** — stage 1's house lane builds and exercises both, with free grants, per-player caps and the kill-switch running on friends for months before money arrives. Stage 2 adds the money loop onto the standing rails: accounts, Stripe, purchased top-ups.)*
+
 | Component | Choice / note |
 |---|---|
 | Accounts | e-mail magic-link (no passwords to store); one account ↔ one container+volumes identity |
-| Ledger | Postgres: `users`, `credit_transactions` (append-only), `balance` as derived sum — same fold-the-log philosophy as the game's own ledger; balance may never go negative |
+| Ledger | **from stage 1 (R12)** — Postgres: `users`, `credit_transactions` (append-only), `balance` as derived sum — same fold-the-log philosophy as the game's own ledger; balance may never go negative; stage 2 adds purchase/refund transaction types |
 | Payments | Stripe Checkout + webhooks (web-only sidesteps the 15–30 % app-store cut Old Greg's mobile-first approach pays) |
-| LLM gateway | LiteLLM-style proxy: per-user virtual keys with individual budgets and rate limits in front of our single org key; pi in each container is pointed at the gateway (pi's provider layer is multi-provider/configurable — one config detail to verify). The gateway's metering is the billing source of truth |
+| LLM gateway | **from stage 1 (R12)** — LiteLLM-style proxy: per-user virtual keys with individual budgets and rate limits in front of our single org key; house-lane pi in each container is pointed at the gateway (pi's provider layer is multi-provider/configurable — one config detail to verify). The gateway's metering is the billing source of truth |
 | Reconciliation | pi's own per-turn cost lines in session files are the independent second record; a nightly job compares the two |
 | Abuse controls | per-user rate limits, per-user gateway budget, global daily spend alarm, signup friction (invite codes in stage 2, e-mail verification + drip limits in stage 3) |
 

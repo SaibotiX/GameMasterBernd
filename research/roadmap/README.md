@@ -9,7 +9,7 @@ This folder is **internal planning** — like the rest of `research/` and `aites
 | Stage | What | Players | Who pays AI | Status |
 |---|---|---|---|---|
 | 0 | Local play + trusted-friend copies | you + a few friends | each their own account | current |
-| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | each their own account (or your key, hard-capped) | next |
+| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | own key/sign-in per the door table (R11), or the ledgered house lane on our org key (R12) | next |
 | 2 | **Invite-only paid beta** — accounts, credit ledger, LLM gateway, Stripe | waitlist invites | players buy rounds; your org API account underneath | gated |
 | 3 | **Public launch** — open signups, free taste, prepaid rounds | anyone | same as stage 2, at scale | gated |
 | 4 | **Steam launch** — Electron shell around the same client; same servers, accounts, credits | Steam's audience | same as stages 2–3 (Steam MTX in-client) | gated |
@@ -42,7 +42,7 @@ Next, in order:
 ## Guiding principles
 
 1. **Reversible before irreversible.** Private → hosted → paid → public are all revocable moves. Open-sourcing is not. Order the path accordingly.
-2. **The player pays their own AI cost for as long as possible.** The current "hassle" — everyone logs into their own Anthropic account — is what keeps our cost at exactly zero. Give that up only when a credit ledger meters every turn against money the player already paid.
+2. **The player pays their own AI cost for as long as possible — and nobody plays unmetered.** (revised 2026-08-05, R11/R12) Bring-your-own stays the default door: their key or permitted sign-in, their spending, our cost zero. The one exception is deliberate: the house lane, where the maintainer's org key pays *through the credit ledger* — capped grants during the test phase to buy playtest data, purchased top-ups later. The ledger is the constant; who fills it changes by stage.
 3. **The readable game is a feature, not a leak.** The engine is TypeScript and the worlds are prose; client-side they can never be hidden, server-side they never leave the box. Hosting *is* the protection strategy — everything else (obfuscation, bundling) was researched and rejected.
 4. **Cost engineering is already half-built.** The engine splits its LLM work into separate calls (keeper / guardian / fate weaver / GM table / saga) and does archive recall in code. That is exactly the structure the profitable AI games use to route cheap and price sanely.
 5. **The moat is not the code.** Mindustry sells at $9.99 with its GPL source a click away; Aseprite sells at $20 with its source public. What they sell is the official, convenient, maintained artifact and the brand. Plan for that moat, not for secrecy.

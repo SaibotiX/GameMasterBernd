@@ -1,9 +1,9 @@
 # Stage 1 — the friends web service
 
-The existing game, unchanged, streamed into a browser tab. A friend clicks a secret link, sees the real terminal UI (dice overlay, four-slot board, footer and all), brings their own key or provider sign-in once (decision R11), and plays. No installs, no git, no Node, no Python on their machine — and the source never leaves the server.
+The existing game, unchanged, streamed into a browser tab. A friend clicks a secret link, sees the real terminal UI (dice overlay, four-slot board, footer and all), brings their own key or provider sign-in once (decision R11) — or picks the house lane and plays on us, metered (decision R12). No installs, no git, no Node, no Python on their machine — and the source never leaves the server.
 
 **Goal:** zero-setup play for invited friends; real human playtesting; the update path that cannot destroy a chronicle.
-**Non-goals (deferred to stage 2):** accounts database, payments, serving strangers, our API key underneath players.
+**Non-goals (deferred to stage 2):** accounts database, payments, serving strangers. (Our org key underneath *friends* is now in scope — the ledgered house lane, decision R12; strangers on any lane stay stage 2+.)
 
 ## Architecture
 
@@ -46,6 +46,15 @@ The login screen ([08-stage1-web-ui.md](08-stage1-web-ui.md)) offers the player'
 **Custody (R11):** the durable copy of every credential lives in the player's **browser vault** — IndexedDB ciphertext under a non-extractable WebCrypto device key, wrapped by a passkey (WebAuthn PRF) or an Argon2id passphrase, served from an isolated vault origin under strict CSP + Trusted Types. At connect, the vault injects `auth.json` over TLS into **tmpfs** in the player's container (the provisioning endpoint logs method/status/timing — never bodies); pi's OAuth refreshes rewrite `auth.json`, so a file-watch syncs rotations **back** to the vault; at session end the container teardown wipes the plaintext structurally. The `.pi` volume keeps sessions; `auth.json` never persists in it, and backups exclude it by name either way. Host hardening that makes the wipe real: core dumps off, no (or encrypted) swap. First-time OAuth enrollment runs in the terminal itself (`/login` — pi 0.83's headless provider sign-in and credential-export commands exist for exactly this), with the fresh tokens shipped down into the vault at session end and the server-side copy dying with the container.
 
 Their credentials, their spending, their `/limits` visibility (Anthropic-lane requests). Our cost: the VPS. Playing with no credentials at all is the house lane — next section.
+
+## The house lane: play without any key (decision R12)
+
+The third door: no account, no key — the friend plays, we pay, and the meter runs from the first turn.
+
+- **Plumbing:** the container's pi is pointed at our **gateway** instead of a provider (per-player virtual key with its own budget and rate limit — the LiteLLM-style component [03-public-launch.md](03-public-launch.md) specified for stage 2, built now); the gateway holds the **org API key** (commercial terms — the compliant operator-funded vehicle; never the personal subscription, see the 2026-08-05 research-log entry) and its metering is the billing source of truth, reconciled nightly against pi's own per-turn cost lines (R6: the telemetry collects itself).
+- **The ledger, live early:** per-player balance, append-only transactions, free test-phase **grants** with a hard per-player cap (placeholder until telemetry: ≈ €10/month ≈ 100–170 rounds at the 6–10 ¢ estimate), the global daily spend alarm, and the monthly kill-switch cap that never comes off. A dry grant stops the lane with a friendly message and pings the maintainer — nothing is purchasable in stage 1.
+- **Model routing is ours on this lane** (cheap-routing target per 03); BYO players keep their own model choice. The status strip shows the remaining rounds plainly ([08-stage1-web-ui.md](08-stage1-web-ui.md)) — an invisible meter is the genre's #1 complaint, even free.
+- **Why the lane exists:** it removes the last onboarding wall for exactly the friends whose playtest data the test phase wants (decision R13), and it exercises stage 2's riskiest component months before money touches it — purchased token packs are top-ups on these same rails.
 
 - Policy state (re-checked 2026-08-05 — **corrects 2026-08-04**): Anthropic's June-15 Agent SDK credit pool **never took effect** — paused June 15–16, 2026 ("nothing changes for now"); subscription usage draws ordinary limits again, for first-party/local surfaces only, and hosted third-party apps may not offer Claude.ai login at all. Consequence here: an Anthropic-subscribed friend plays this hosted copy with an API key (or the house lane); their subscription still serves any local copy they run. Timeline, door table and sources: [06-research-log.md](06-research-log.md).
 
