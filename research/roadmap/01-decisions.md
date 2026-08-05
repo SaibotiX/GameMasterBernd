@@ -93,3 +93,53 @@ Decisions taken 2026-08-04. Each entry: what was decided, why, what was rejected
 **Why:** This game runs on open dice, and purchasable currency near chance mechanics is legally radioactive: *Kater v. Churchill Downs* (9th Cir. 2018) held purchasable virtual chips can be a "thing of value," making a game illegal gambling under state law **even with no cash-out**; Steam bans gambling outright; state regulators remain active. Our prepaid-compute model is safe precisely because money never touches outcomes — and beyond the law, "no hidden modifiers anywhere" is the game's identity, and a purchasable die would be the most hidden modifier of all.
 
 **Rejected:** purchased rerolls/boons/healing; ad-subsidized rounds (Steam rule 14 bans ad-based models, and it is a poor fit regardless).
+
+---
+
+## R9 — Commit per revertible change, push per verified checkpoint
+
+*(added 2026-08-05 after the batch-3 round; operational rules bind every session via CLAUDE.md "Committing & pushing")*
+
+**Decided:** The commit is the unit of REVERT, not the unit of session or
+reply. One commit = one logical change that (a) could be `git revert`ed
+alone and still make sense, and (b) leaves the tree green (fast unit gate
+before every commit touching `extension/`; full recipe before push). A
+maintainer ruling with N items becomes ~N commits landed one by one as
+each goes green — entangled fixes that cannot be verified apart stay
+together in one commit (that IS one logical change); independent fixes
+never share one. Docs, tests and registry lines ride in the commit of the
+change they describe; the round narrative (build-log entry, cross-cutting
+records) closes the round as its own wrap commit. Pushes happen at
+VERIFIED CHECKPOINTS only — a few per session, never per commit, never
+red: after a task-group lands verified, ALWAYS before an AI batch
+launches (meta.md stamps `git log -1`; no commits mid-batch, ever), at
+round/session end (a session never ends with unpushed work — a clearly
+marked `wip:` commit is allowed when truly interrupted), and before
+anything sweeping or risky. Messages keep the house narrative register,
+scoped to the one change: `<surface>: <what and why in one breath>`. This
+decision is the maintainer's standing authorization: sessions commit and
+push per this policy without asking each time; history-rewriting git
+(amend after push, rebase, force-push, reset) stays ask-first.
+
+**Why:** The batch-3 era exposed both failure modes in one day. The
+"chronicler round" landed as ONE commit — 23 files, ~1,950 lines,
+fourteen concerns — where reverting any single feature is surgery; and
+mid-round a commit had to be artificially HELD BACK so a running batch
+would not split across two stamps. Atomic-commit doctrine exists for the
+first problem (smallest meaningful change → `git revert` in seconds,
+`git bisect` lands on the culprit); the agent-era consensus adds
+verify-before-commit as the bisectability guarantee. The checkpoint-push
+rule solves the second structurally: batches always run against a pushed,
+stamped, green commit.
+
+**Rejected:** *Feature-branch-per-task with PRs* — the 2026 team default,
+but this repo is one maintainer plus one agent session on a trunk; a
+branch layer would add ceremony with no reviewer to serve (worktrees
+remain the tool for parallel agents, which this repo doesn't run).
+*Commit-per-reply / auto-checkpoint commits* — noise without revert
+value. *Conventional-commit prefixes (feat:/fix:)* — machine-readable but
+foreign to the house register; the surface-prefix style carries the same
+information here.
+
+**Revisit when:** a second human contributor or CI lands (branches + PRs
+return then), or a batch's stamp discipline fails in practice.

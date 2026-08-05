@@ -24,6 +24,13 @@ Before adopting ANY new research finding, plan, or design change:
 4. **File new evidence where it belongs:** game mechanics/feel → `research/design/undertakings-research.md`; platform/legal/business/market → `research/roadmap/06-research-log.md` (dated; ⚠-mark fast-moving facts with their re-verify trigger).
 5. **End of session: zero silent deviations** — each one either ruled on, or explicitly listed to the maintainer.
 
+## Committing & pushing (decision R9 — standing authorization, no per-commit asks)
+
+- **The commit is the unit of REVERT.** One commit = one logical change: revertible alone, tree green after it. A ruling with N items lands as ~N commits, each as it goes green — never one round-blob. Entangled fixes that can't be verified apart share one commit; independent fixes never do. Tests, docs and registry lines ride WITH the change they describe.
+- **Gate before committing:** `node extension/test/unit.ts` when `extension/` changed (seconds); the full recipe before any push. Never commit or push red.
+- **Push at verified checkpoints, not per commit:** after a task-group lands verified · ALWAYS before launching an AI batch (meta.md stamps `git log -1`; never commit mid-batch) · at round/session end (no session ends with unpushed work; a marked `wip:` commit is allowed if truly interrupted) · before anything sweeping.
+- **Plan commit boundaries when planning tasks** (say them with the task list), close the round with a wrap commit carrying the build-log/round records. Messages: house narrative register, scoped — `<surface>: <what and why in one breath>`. History-rewriting git (amend-after-push, rebase, force-push, reset) stays ask-first.
+
 ## House rules
 
 - Never paste raw session JSONL into context — map first (`node research/analysis/tools/session-map.mjs`), then bounded reads of flagged uN spans (`research/analysis/session-anatomy.md`).
