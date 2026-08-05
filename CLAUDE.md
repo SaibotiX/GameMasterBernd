@@ -29,4 +29,5 @@ Before adopting ANY new research finding, plan, or design change:
 - Never paste raw session JSONL into context — map first (`node research/analysis/tools/session-map.mjs`), then bounded reads of flagged uN spans (`research/analysis/session-anatomy.md`).
 - Audit runs propose; the maintainer rules (`research/analysis/audit-workflow.md` §7). Playtest reports are immutable once written — the next batch gets a new file.
 - Player copies and any public surface exclude `research/` and `aitester/` (decision R4).
+- `research/collaboration/` is the maintainer's self-review corner: OFF-LIMITS — never read, quote, or act on it unless the maintainer invokes `/collab-review` or points to a file there themselves (rationale inside its README; it is evidence-based, not decorative).
 - Verification recipe for engine changes: `node extension/test/unit.ts`, headless RPC smoke, and the pseudo-TTY probe for anything touching widgets/overlays (`research/design/undertakings-build.md`).
