@@ -11,7 +11,7 @@ The game running inside the stock [pi coding agent](https://github.com/earendil-
 | `config/` | constitution, worlds (+ per-world `*.laws.md`), moods, web sources — plain markdown, hot-reloaded |
 | `research/design/` | the undertakings design: goals & invariants, mechanics spec, research record, build progress — and the design↔code audit |
 | `research/analysis/` | the playtest telemetry kit: session anatomy, failure taxonomy, audit workflow, report template, tester guide (`/analyze-sessions` runs it) |
-| `research/roadmap/` | the product path: decision registry (R1–R8), stage specs (friends web service → paid beta → public → Steam), licensing & IP, platform research log |
+| `research/roadmap/` | the product path: decision registry (R1…, open-ended), stage specs (friends web service → paid beta → public → Steam), licensing & IP, platform research log |
 | `aitester/` | the AI playtesting service: driver + wrapper extension (`/ai-state` headless parity), world persona cards, AI batches and their reports (see `aitester/README.md`) |
 | `data/world/<world>/<chronicle>/` | one folder per STORY: places, personas, quests, items — and `ledger.md`, the readable game log |
 | `data/downloads/` | pictures and video clips the scrying glass fetched |

@@ -4,7 +4,7 @@ Decisions taken 2026-08-04. Each entry: what was decided, why, what was rejected
 
 ## How this registry works (the guardrail)
 
-- **Two registries govern this project.** Game-design law lives in [`research/design/undertakings-goals.md`](../design/undertakings-goals.md) (the G/F/P/A entries) with its running decisions log in [`research/design/undertakings-build.md`](../design/undertakings-build.md); product and distribution law lives here (R1–R8). The root `CLAUDE.md` binds every future research or planning session to check both **before** adopting new findings.
+- **Two registries govern this project.** Game-design law lives in [`research/design/undertakings-goals.md`](../design/undertakings-goals.md) (the G/F/P/A entries) with its running decisions log in [`research/design/undertakings-build.md`](../design/undertakings-build.md); product and distribution law lives here (R1…, open-ended). The root `CLAUDE.md` binds every future research or planning session to check both **before** adopting new findings.
 - **Deviations are marked, never silent.** New material that contradicts a standing entry is neither adopted nor discarded quietly: it gets a `⚠ DEVIATION (<id>): <one line>` marker in the document where it lands, and goes to the maintainer for a ruling.
 - **Rulings amend entries in place, dated** — "(revised 2026-08-05: …)" or "superseded by R9, 2026-08-05" — never a silent rewrite. Same convention the goals file already uses ("G7 … revised 2026-08-03, audit round").
 - **Ids are never reused.** New decisions take the next free number here (R9…) or in the goals file (G15…). The design↔code audit's D1–D12 belong to that document alone.

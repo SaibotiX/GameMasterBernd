@@ -31,7 +31,7 @@ Next, in order:
 
 | File | Topic |
 |---|---|
-| [01-decisions.md](01-decisions.md) | The decision registry (R1–R8) and the deviation protocol: what was chosen, why, what was rejected, the one-way doors |
+| [01-decisions.md](01-decisions.md) | The decision registry (R1…, open-ended) and the deviation protocol: what was chosen, why, what was rejected, the one-way doors |
 | [02-friends-web-service.md](02-friends-web-service.md) | Stage 1 spec: architecture, containers, auth, security, ops, build checklist |
 | [03-public-launch.md](03-public-launch.md) | Stages 2–3 spec: accounts, credit ledger, gateway, pricing math, abuse, business duties |
 | [04-licensing-and-ip.md](04-licensing-and-ip.md) | Legal state today, the licensing ladder, the open-source decision, third-party compliance |
@@ -47,4 +47,4 @@ Next, in order:
 3. **The readable game is a feature, not a leak.** The engine is TypeScript and the worlds are prose; client-side they can never be hidden, server-side they never leave the box. Hosting *is* the protection strategy — everything else (obfuscation, bundling) was researched and rejected.
 4. **Cost engineering is already half-built.** The engine splits its LLM work into separate calls (keeper / guardian / fate weaver / GM table / saga) and does archive recall in code. That is exactly the structure the profitable AI games use to route cheap and price sanely.
 5. **The moat is not the code.** Mindustry sells at $9.99 with its GPL source a click away; Aseprite sells at $20 with its source public. What they sell is the official, convenient, maintained artifact and the brand. Plan for that moat, not for secrecy.
-6. **No silent deviations.** Every future research or planning session checks new findings against both decision registries — this folder's R1–R8 and the game-design law in `research/design/undertakings-goals.md` — before adopting them; conflicts are marked `⚠ DEVIATION (<id>)` and ruled on by the maintainer. The protocol lives in [01-decisions.md](01-decisions.md) and the root `CLAUDE.md`.
+6. **No silent deviations.** Every future research or planning session checks new findings against both decision registries — this folder's R registry and the game-design law in `research/design/undertakings-goals.md` — before adopting them; conflicts are marked `⚠ DEVIATION (<id>)` and ruled on by the maintainer. The protocol lives in [01-decisions.md](01-decisions.md) and the root `CLAUDE.md`.
