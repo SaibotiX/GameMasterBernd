@@ -1,6 +1,6 @@
 # Stage 1 — the friends web service
 
-The existing game, unchanged, streamed into a browser tab. A friend clicks a secret link, sees the real terminal UI (dice overlay, four-slot board, footer and all), logs into their own Anthropic account once, and plays. No installs, no git, no Node, no Python on their machine — and the source never leaves the server.
+The existing game, unchanged, streamed into a browser tab. A friend clicks a secret link, sees the real terminal UI (dice overlay, four-slot board, footer and all), brings their own key or provider sign-in once (decision R11), and plays. No installs, no git, no Node, no Python on their machine — and the source never leaves the server.
 
 **Goal:** zero-setup play for invited friends; real human playtesting; the update path that cannot destroy a chronicle.
 **Non-goals (deferred to stage 2):** accounts database, payments, serving strangers, our API key underneath players.
@@ -15,8 +15,8 @@ friend's browser ── xterm.js (rendered TUI) ──┐
                     per-friend container ─────┘
                       └─ pi + game folder (copy)      ← the whole game, as on this machine
                           ├─ /data volume             ← worlds, chronicles  (persists)
-                          ├─ /home/player/.pi volume  ← sessions, auth.json (persists)
-                          └─ outbound: Anthropic API, MediaWiki hosts, YouTube
+                          ├─ /home/player/.pi volume  ← sessions (persist); auth.json = tmpfs, per-session (R11)
+                          └─ outbound: model-provider APIs, MediaWiki hosts, YouTube
 ```
 
 - **Terminal streaming:** ttyd (xterm.js + libwebsockets, one process per connection) is the off-the-shelf piece; a small node-pty + xterm.js server is the DIY alternative if we need custom routing/idle logic. Start with ttyd, one instance per friend behind the proxy.
@@ -36,12 +36,18 @@ Base: debian/ubuntu slim. Contents:
 | ffmpeg | system package — enables the ~10 s clips without vendoring the 420 MB static build |
 | ttyd | the terminal-to-web bridge |
 
-## Auth: each friend, their own account (decision R5)
+## Auth: any provider's open door, keys in the player's custody (decisions R5 → R11)
 
-First run in the browser terminal: pi asks to trust the directory, then `/login` — the friend authenticates with **their** Anthropic account; `auth.json` lands in their private volume and never in the image. Their tokens, their spending, their `/limits` visibility. Our cost: the VPS.
+The login screen ([08-stage1-web-ui.md](08-stage1-web-ui.md)) offers the player's-own-credential doors first:
 
-- Policy state (re-checked 2026-08-04): since June 15, 2026 every paid Claude plan carries a monthly **Agent SDK credit pool** for third-party agents like pi — Pro ≈ $20/month (≈ 200–330 keeper turns at our cost estimate), Max tiers $100/$200; per-user, monthly reset, no rollover. Enough for casual friends; heavy players put an API key in their container env instead (always compliant). Re-verify once more the week the login flow ships. Timeline in [06-research-log.md](06-research-log.md).
-- Interim alternative while the circle is tiny: our API key with a hard monthly cap. Acceptable only because every player is personally known; retired the moment anyone less than a friend gets a link.
+1. **Own API key** — the universal, always-compliant door. Any of pi's 40+ API-key providers (Anthropic, OpenAI, Google, Mistral, Groq, DeepSeek, …): pasted once, into the browser vault, never into any store of ours. The friend intro pushes the one mitigation that beats all architecture: a scoped key with a provider-side spend limit.
+2. **Own provider sign-in (OAuth)** — only the flows whose providers permit hosted third-party use. Per the 2026-08-05 door table ([06-research-log.md](06-research-log.md)): **OpenRouter qualifies today** (PKCE minting a user-owned key — and one OpenRouter account reaches many models); the **Anthropic / Google / ChatGPT subscription doors are closed for hosted apps** (Anthropic prohibits offering Claude.ai login in third-party services; Google shut its consumer lane 2026-06-18; ChatGPT's Aug-2026 sign-in carries identity, not compute). ⚠ xAI / Kimi / Copilot: verify their terms at build week. Doors reopen the day a provider's policy does — the door table is the standing record of which are open, re-checked the week this ships (R5's trigger).
+
+**Custody (R11):** the durable copy of every credential lives in the player's **browser vault** — IndexedDB ciphertext under a non-extractable WebCrypto device key, wrapped by a passkey (WebAuthn PRF) or an Argon2id passphrase, served from an isolated vault origin under strict CSP + Trusted Types. At connect, the vault injects `auth.json` over TLS into **tmpfs** in the player's container (the provisioning endpoint logs method/status/timing — never bodies); pi's OAuth refreshes rewrite `auth.json`, so a file-watch syncs rotations **back** to the vault; at session end the container teardown wipes the plaintext structurally. The `.pi` volume keeps sessions; `auth.json` never persists in it, and backups exclude it by name either way. Host hardening that makes the wipe real: core dumps off, no (or encrypted) swap. First-time OAuth enrollment runs in the terminal itself (`/login` — pi 0.83's headless provider sign-in and credential-export commands exist for exactly this), with the fresh tokens shipped down into the vault at session end and the server-side copy dying with the container.
+
+Their credentials, their spending, their `/limits` visibility (Anthropic-lane requests). Our cost: the VPS. Playing with no credentials at all is the house lane — next section.
+
+- Policy state (re-checked 2026-08-05 — **corrects 2026-08-04**): Anthropic's June-15 Agent SDK credit pool **never took effect** — paused June 15–16, 2026 ("nothing changes for now"); subscription usage draws ordinary limits again, for first-party/local surfaces only, and hosted third-party apps may not offer Claude.ai login at all. Consequence here: an Anthropic-subscribed friend plays this hosted copy with an API key (or the house lane); their subscription still serves any local copy they run. Timeline, door table and sources: [06-research-log.md](06-research-log.md).
 
 ## Sizing & cost
 
