@@ -83,22 +83,31 @@ pi is a terminal app whose heavy lifting happens at the model provider; expect ~
 - A friend can try to talk the keeper into reciting its prompt (the AI Dungeon precedent). Dampen, don't chase elimination — the full corpus and engine never leave the server either way.
 - Worlds reveal themselves through play. That is called playing the game.
 
-## Build checklist
+## Build checklist (absorbs R11–R14, 2026-08-05)
 
-1. [ ] Dockerfile as specified; build the game copy from a whitelist.
-2. [ ] Verify in-container: TUI renders under ttyd; `/login` round-trip; a full sitting; `find_text` / `find_picture`; `find_video` (python3 + ffmpeg path — expect the YouTube bot-wall from a datacenter IP; see the limitation note above).
-3. [ ] **Keybinding check in real browsers:** Alt+number is browser-sensitive (Firefox on Linux switches tabs with it) — confirm the `/pick` and `/roll` slash-command paths cover everything the Alt shortcuts do, and note the caveat in the friend-facing intro. Space-to-cast in the dice overlay must reach the terminal.
-4. [ ] Caddy: TLS, one long-random secret path + basic-auth pair per friend, WebSocket pass-through.
-5. [ ] Idle reaper + `docker stats` watch; disk quota per volume (downloads folder can grow — clips and pictures).
-6. [ ] Nightly volume backup to off-box storage; test one restore.
-7. [ ] Per-friend smoke sitting with each of the first 2–3 friends, watching latency and rendering (desktop browser first; phones work via xterm.js but the on-screen-keyboard experience is poor — say so upfront).
-8. [ ] Write the two-paragraph friend intro: what it is, the trust prompt, `/login`, that play spends *their* tokens, `/limits` to check, and who to ping when the keeper misbehaves.
+Two rungs, deliberately. The **fallback rung** — bare ttyd page, own-API-key pasted in the terminal, no panes — proves the whole pipeline and could serve friend #1 in a weekend. But hosted access and recording begin there, so even the fallback needs items 1–2 and 9–11 (image, disclosure, LICENSE line) before anyone plays. The **full rung** is R11–R14.
 
-Effort estimate: a weekend to first playable link; one to two part-time weeks to the hardened version of everything above.
+1. [ ] Domain + Caddy: TLS, one long-random secret path + basic-auth pair per friend, WebSocket pass-through; reserve the `vault.` subdomain (R11's isolated credential origin). (Securing the eventual name's domain is 04's standing cheap move — same errand.)
+2. [ ] Dockerfile as specified; game copy from a whitelist; no credentials in layers/args ever (BuildKit secret mounts only); host hardening that makes R11's wipe real: core dumps off, no (or encrypted) swap, `auth.json` path on tmpfs.
+3. [ ] In-container verify: the TUI's dress renders in a real browser terminal — dice overlay, four-slot board, red urgency, bell (the pseudo-TTY probe's checklist, now behind xterm.js); a full sitting; `find_text` / `find_picture`; `find_video` expectation set (datacenter bot-wall; limitation note above).
+4. [ ] Keybinding check in real browsers: Alt+number is browser-sensitive (Firefox on Linux switches tabs) — `/pick` and `/roll` cover everything; space-to-cast must reach the terminal *through the page* (R14's focus laws).
+5. [ ] App server + panes ([08-stage1-web-ui.md](08-stage1-web-ui.md)): node-pty ↔ pi, file API scoped to `config/` + `data/` with `youtube-cookies.txt` excluded, watcher → hot-reload, tabs, media auto-open; meet 08's smoothness acceptance numbers on the VPS.
+6. [ ] The vault (R11): enroll (paste key / terminal OAuth with export-down), passkey-PRF wrap with Argon2id fallback, isolated origin + CSP + Trusted Types, inject → tmpfs, rotation sync-back, and a verified wipe: after teardown, no `auth.json` in any volume, backup, or image layer.
+7. [ ] Door table re-verified the week this ships (R5/R11's trigger; Anthropic's paused credit plan checked monthly; xAI/Kimi/Copilot terms checked before their doors are shown).
+8. [ ] House lane (R12): org API account with a provider-side spend cap; gateway with per-friend virtual keys (budget + rate limit); ledger with grants, the global daily alarm, the monthly kill-switch; rounds visible in the status strip; nightly reconciliation against pi's per-turn cost lines. House-lane model mix chosen with provider terms in view (Gemini's under-18 clause — door table).
+9. [ ] Disclosure live **before the first friend plays** (R13): landing/privacy note + first-run notice (drafts in [06-research-log.md](06-research-log.md)), consent recorded at invite-acceptance; deletion runbook written and dry-run once.
+10. [ ] Shipper (R13): checkpoint mirror, seal-at-end with manifest + hashes, sweep-on-connect + daily cron; central store private and EU-located; the analysis machine's mirror pull lands in the kit's `sessions-in` layout; ship-twice idempotency tested.
+11. [ ] The friend intro (two paragraphs, plus the LICENSE line — R3's trigger fires at first hosted access): what it is, the trust prompt, the three doors, scoped-key + spend-limit advice, that play is recorded (link to the note), `/limits`, the video-scrying expectation, the phone caveat, who to ping when the keeper misbehaves.
+12. [ ] Idle reaper wired to the seams: a stop is *both* R11's wipe and R13's seal; `docker stats` watch; disk quota per volume (downloads grow — clips and pictures).
+13. [ ] Nightly volume backup to off-box storage, excluding `auth.json` by construction; test one restore. The central session store backs up separately (it is the research record).
+14. [ ] Per-friend smoke sitting with each of the first 2–3 friends, watching latency and rendering (desktop first; phones work via xterm.js but the on-screen-keyboard experience is poor — say so upfront).
+
+Effort estimate: the fallback rung stays a weekend; the full rung is realistically **two to four part-time weeks**, vault and ledger dominating — both are stage-2 work done early on purpose (R12's front-load argument).
 
 ## Exit gates → stage 2
 
-- ≥ 4 friends have completed multi-sitting stories without operator hand-holding; the ranked-findings loop (`/analyze-sessions`) has digested their sessions.
-- Real per-turn cost telemetry extracted from session files (replaces every estimate in [03-public-launch.md](03-public-launch.md)).
-- Backup/restore proven; update path exercised at least twice without a lost chronicle.
-- The R5 policy check is current, and the stage 2 auth/billing design is written against what is true *then*.
+- ≥ 4 friends have completed multi-sitting stories without operator hand-holding; the ranked-findings loop (`/analyze-sessions`) has digested their sessions **arriving via the shipper, not hand-carried** (R13 end-to-end).
+- Real per-turn cost telemetry from shipped sessions replaces every estimate in [03-public-launch.md](03-public-launch.md) (the per-turn `usage.cost` field is already summable — sweep receipt in 06).
+- House-lane ledger reconciles to the cent against pi's cost lines over a full month; caps and kill-switch proven by deliberately draining a test grant.
+- Backup/restore proven; update path exercised at least twice without a lost chronicle; **one deletion request executed end-to-end** (volume + central store + analysis mirror).
+- The R5/R11 door table is current, and the stage 2 auth/billing design is written against what is true *then*.

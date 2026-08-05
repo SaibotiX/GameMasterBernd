@@ -17,13 +17,13 @@ This folder is **internal planning** — like the rest of `research/` and `aites
 
 Each stage is cheap enough to abandon, and every gate must be passed by evidence, not enthusiasm — the gates are listed in each stage's document.
 
-## Now (updated 2026-08-04)
+## Now (updated 2026-08-05)
 
-Stage 0 housekeeping is **complete**: roadmap decided (R1–R8), `research/` consolidated, guardrail live (root `CLAUDE.md` + registry protocol), `LICENSE` in place, constitution content bounds explicit, repo pushed to GitHub (verified private). The R5 policy re-check is done — the June-15 **Agent SDK credit pool** is the current regime (Pro ≈ $20/month of third-party-agent budget; see [06-research-log.md](06-research-log.md)).
+Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated, guardrail live (root `CLAUDE.md` + registry protocol), `LICENSE` in place, constitution content bounds explicit, repo pushed to GitHub (verified private). **The 2026-08-05 stage-1 design round landed R11–R14** — multi-provider doors with player-side credential custody · the ledgered house lane on the org key · session shipping with loud disclosure · the three-pane page — and corrected the policy ground: the June-15 **Agent SDK credit pool was paused before it ever took effect**, and hosted third-party apps may not offer Claude.ai login at all; the per-provider **door table** in [06-research-log.md](06-research-log.md) is the standing record. Two ⚠ rulings await the maintainer, recorded in the R11/R12 entries (the door constraint; the funding vehicle).
 
 Next, in order:
 
-1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist: Dockerfile → in-container smoke → Caddy + secret links → friend intro. First artifact: the Dockerfile.
+1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist: fallback rung first (Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one), then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
 2. **aitester Batch 2** (game track, `research/design/undertakings-build.md` Phase 2.9) — Phase 3 waits for two consecutive clean batches in both worlds.
 3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
