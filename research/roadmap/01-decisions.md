@@ -142,4 +142,10 @@ foreign to the house register; the surface-prefix style carries the same
 information here.
 
 **Revisit when:** a second human contributor or CI lands (branches + PRs
-return then), or a batch's stamp discipline fails in practice.
+return then), or a batch's stamp discipline fails in practice — or the
+maintainer adopts a standing REVIEWER thread (clarified 2026-08-05): an
+advisory post-commit reviewer needs no revision (atomic commits are its
+food); a gating reviewer slots into the existing commit≠push gap
+("verified checkpoint" grows to mean recipe-green AND review-clean —
+still no branches); only a reviewer that also WRITES in parallel with the
+main thread brings worktrees/branches back.
