@@ -8,18 +8,20 @@ The existing game, unchanged, streamed into a browser tab. A friend clicks a sec
 ## Architecture
 
 ```
-friend's browser ── xterm.js (rendered TUI) ──┐
-                                              │ WebSocket (TLS, secret path, basic auth)
+friend's browser ── the three-pane page: terminal + viewer + files (R14, [08]) ──┐
+                                              │ WebSocket + HTTPS (TLS, secret path, basic auth)
                        reverse proxy (Caddy) ─┤
                                               │ one route per friend
                     per-friend container ─────┘
-                      └─ pi + game folder (copy)      ← the whole game, as on this machine
-                          ├─ /data volume             ← worlds, chronicles  (persists)
-                          ├─ /home/player/.pi volume  ← sessions (persist); auth.json = tmpfs, per-session (R11)
-                          └─ outbound: model-provider APIs, MediaWiki hosts, YouTube
+                      └─ app server: node-pty ↔ pi · xterm WS · file API · watcher · R11/R13 hooks
+                          └─ pi + game folder (copy)      ← the whole game, as on this machine
+                              ├─ /data volume             ← worlds, chronicles  (persists)
+                              ├─ /home/player/.pi volume  ← sessions (persist); auth.json = tmpfs, per-session (R11)
+                              └─ outbound: model-provider APIs, MediaWiki hosts, YouTube
 ```
 
-- **Terminal streaming:** ttyd (xterm.js + libwebsockets, one process per connection) is the off-the-shelf piece; a small node-pty + xterm.js server is the DIY alternative if we need custom routing/idle logic. Start with ttyd, one instance per friend behind the proxy.
+- **Terminal streaming:** xterm.js in the page, fed over a WebSocket by the per-container **app server** (node-pty spawning pi) — promoted from 02's original "DIY alternative" because the panes, the auth injection (R11) and the shipper hooks (R13) need a server inside the container anyway ([08-stage1-web-ui.md](08-stage1-web-ui.md), decision R14). ttyd (xterm.js + libwebsockets) stays the day-one fallback: the game is playable in a bare terminal page before any pane exists. R1 is untouched either way — same streamed TUI, no rewrite.
+- **The page around the stream:** three panes — terminal · viewer (tabs, markdown, media) · file manager — serving `config/` + `data/` read-only from inside the container. Nothing served is secret by design (invariant A5); the session files that *do* hold secrets (sealed fates, engine nonce) are never served. Spec, interaction laws and the login screen's face: [08-stage1-web-ui.md](08-stage1-web-ui.md).
 - **One container per friend, always.** pi has **no built-in permission system** — it runs with the launching user's rights. Our game strips the coding tools, so the model itself can only reach the game tools, but the container is the actual security boundary: no shared volumes, no docker socket, read-only image, CPU/memory/disk limits, block RFC-1918 egress (the scrying glass needs open internet for its configured wiki hosts and YouTube, so a strict allowlist would fight `config/sites.json` — block the local network instead).
 - **State that must survive:** the friend's `data/` (worlds — the irreplaceable part) and `~/.pi` (session files carrying the ledger, plus their `auth.json`). Both live in named volumes; nightly tar to off-box storage.
 - **Updates:** `git pull` → rebuild image → recreate containers. Volumes untouched; chronicles survive by construction. This retires the scariest failure mode of the zip-distribution plan.

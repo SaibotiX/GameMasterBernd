@@ -38,6 +38,7 @@ Next, in order:
 | [05-offline-distribution.md](05-offline-distribution.md) | The fallback channel: trimmed player copies and the portable one-click bundle |
 | [06-research-log.md](06-research-log.md) | The evidence base: case studies with numbers, the 2026 Anthropic policy timeline, all sources |
 | [07-steam-launch.md](07-steam-launch.md) | Stage 4 spec: the Steam build, AI-content compliance, Steam money rules, store logistics, scale expectations |
+| [08-stage1-web-ui.md](08-stage1-web-ui.md) | Stage 1 page spec: three panes around the terminal, interaction laws, hot-reload, the login screen's face |
 
 ## Guiding principles
 
