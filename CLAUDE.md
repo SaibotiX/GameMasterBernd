@@ -31,8 +31,14 @@ Before adopting ANY new research finding, plan, or design change:
 - **Push at verified checkpoints, not per commit:** after a task-group lands verified · ALWAYS before launching an AI batch (meta.md stamps `git log -1`; never commit mid-batch) · at round/session end (no session ends with unpushed work; a marked `wip:` commit is allowed if truly interrupted) · before anything sweeping.
 - **Plan commit boundaries when planning tasks** (say them with the task list), close the round with a wrap commit carrying the build-log/round records. Messages: house narrative register, scoped — `<surface>: <what and why in one breath>`. History-rewriting git (amend-after-push, rebase, force-push, reset) stays ask-first.
 
+## Session cut points (decision R10 — the session's own duty)
+
+- **Recommending the end of a session is YOUR job, unprompted.** When a round closes per R9 (wrapped, green, pushed, zero deviations, no open tasks) and the next item is a substantial new round — or you notice real strain (re-reading known files, unsure of your own earlier decisions, heavy compaction behind you) — say so and recommend a fresh session. Never cut mid-round (that's `wip:` + compaction).
+- **Before recommending: the cold-start test.** Could a fresh session reconstruct everything from this file + the owning docs alone? A "no" is a records bug — fix the records, then cut. End with a paste-ready opener that POINTS at the owning documents (build log next-step, report, registry) — it never restates their content.
+
 ## House rules
 
+- **One truth, one home:** every fact, rule, or workflow has exactly ONE owning document; everything else points to it, never restates it. New material that would duplicate or contradict a standing home is a ⚠ DEVIATION for the maintainer's ruling — two documents must never answer the same question differently.
 - Never paste raw session JSONL into context — map first (`node research/analysis/tools/session-map.mjs`), then bounded reads of flagged uN spans (`research/analysis/session-anatomy.md`).
 - Audit runs propose; the maintainer rules (`research/analysis/audit-workflow.md` §7). Playtest reports are immutable once written — the next batch gets a new file.
 - Player copies and any public surface exclude `research/` and `aitester/` (decision R4).

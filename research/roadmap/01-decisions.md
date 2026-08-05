@@ -149,3 +149,58 @@ food); a gating reviewer slots into the existing commit≠push gap
 ("verified checkpoint" grows to mean recipe-green AND review-clean —
 still no branches); only a reviewer that also WRITES in parallel with the
 main thread brings worktrees/branches back.
+
+---
+
+## R10 — Sessions end at round boundaries, by the session's own judgment
+
+*(added 2026-08-05; extends R9's round-end wrap — operational rules bind
+every session via CLAUDE.md "Session cut points")*
+
+**Decided:** Deciding when a session should END is the SESSION's duty,
+not the maintainer's — only the AI can feel its own context strain, and
+the maintainer cannot. A session must proactively recommend a cut (never
+wait to be asked) when BOTH hold: (1) a round just closed per R9 — wrap
+commit done, suites green, pushed, zero silent deviations, no open tasks
+— and (2) the next work item is a substantial new round (an
+implementation round, a batch, an audit) OR the session notices genuine
+strain (re-reading files it already read to answer, uncertainty about its
+own earlier in-session decisions, heavy compaction behind it). Never cut
+mid-round — mid-round interruption is R9's `wip:` + the harness's own
+compaction, which exists precisely for continuation. At a cut the session
+runs the COLD-START TEST — "could a fresh session reconstruct everything
+needed from CLAUDE.md and the owning documents alone?" — repairs any
+record gap it finds (that gap is a records bug, not a memory bug), then
+ends with a paste-ready opener pointing at the owning documents. THERE IS
+NO HANDOFF FILE: the repo's records ARE the handoff (build log carries
+the next-step checkbox; registries carry the decisions; reports carry the
+findings). The opener points; it never restates.
+
+**Why:** Context degradation is measured, not felt: accuracy drops of
+30–50% begin well before documented window limits (~50K tokens of a 200K
+window in Chroma's 2025 study, across 18 frontier models), hit complex
+tasks hardest, and skew attention toward recent tokens — exactly the
+failure surface of this project's long implementation rounds. Practice
+consensus matches: fresh-session-per-distinct-round, with handoffs as
+pointers to typed state, "without duplicating file content." This
+project already paid the whole cost of that architecture — records-first,
+reconstructable from the repo (proven 2026-08-05 when a fresh-session
+readiness check passed against the live tree) — so the fresh window is
+nearly free, and the only missing piece was WHO decides. Sessions have
+the information; now they have the duty.
+
+**Rejected:** *A literal self-respawn* — the harness cannot start its
+successor, and session boundaries should stay in the maintainer's hands
+anyway (the session decides and prepares; the maintainer presses new).
+*Token-count thresholds* — a session cannot honestly measure its own
+usage; a number would be hallucinated precision, so triggers are
+event-based (round boundaries) plus named behavioral signals.
+*A standing HANDOFF.md* — a second home for state that drifts from the
+registries; forbidden by the one-truth-one-home rule.
+*Always-compact-never-cut* — compaction is the right tool mid-round; at
+round boundaries the research says a fresh window simply reasons better.
+
+**Revisit when:** the harness gains a trustworthy context-usage readout
+for the session itself (thresholds become honest then), or cut
+recommendations turn out too eager/too timid across a few rounds (tune
+the criteria against real use).
