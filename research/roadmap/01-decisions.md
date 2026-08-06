@@ -330,3 +330,15 @@ the criteria against real use).
 **Rejected (for now):** renting a virtual-office/business address pre-stage-1 (the section's lead proposal) — real money for a privacy shield the friends stage doesn't need; the kleine-Website-floor-only fallback — the full block costs one HTML block more and removes the grey zone entirely.
 
 **Revisit when:** stage-3 planning (the standing gate above) — or earlier if the page's audience widens for any reason.
+
+---
+
+## R20 — 18+, stages 1 and 2
+
+*(added 2026-08-07, same ruling pass; evidence: [06-research-log.md](06-research-log.md) § compliance gaps. Closes the open decision named in [03](03-public-launch.md) and satisfies the door table's Gemini constraint.)*
+
+**Decided:** The game is **18+ through stages 1 and 2**. Implementation is an assertion, not an ID check: the 18+ line rides R13's consent step at invite-acceptance (stage 1) and the purchase flow (stage 2 — where it also answers § 170 ABGB: minors' online purchases hang unratified and reclaimable). What it buys, per the evidence: **Gemini stays lawful in the house-lane model mix** (its API terms prohibit services "likely to be accessed by" under-18s — the strictest door in the table); **no verified-parental-consent machinery** (Austria's GDPR consent age is 14; welcoming under-14s would bolt verification onto R13's consent flow); the DPIA and Art.-50 vulnerable-audience weightings soften. The ToS carries the policy; the constitution's content bounds remain the content story either way.
+
+**Rejected:** the 13+/16+ framing 03 carried, and 14+ — each re-opens the Gemini door problem and the consent machinery, for an audience stages 1–2 don't have.
+
+**Revisit when:** stage-3 planning, as its own decision — any move below 18 only with per-provider age terms re-verified and the parental-consent cost priced.

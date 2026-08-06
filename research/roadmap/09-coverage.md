@@ -30,7 +30,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |
 | Privacy papers beyond R13 | ◐ | same section | VVZ · threshold assessment · DPA collection · breach runbook — stage-1 build items |
 | AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · ⚠ AT authority designation watch |
-| Age policy | ○ | open decision named in [03](03-public-launch.md) + door table + compliance section | ruling proposed: 18+ for stages 1–2 |
+| Age policy | ● | R20 | 18+ assertion into invite-acceptance (stage-1 build) + the purchase flow (stage 2) · revisit at stage-3 planning |
 | Accessibility (EAA/BaFG) | ⊘ | compliance section | trigger: ≥10 persons or >€2 M — or stage 4 |
 | Product liability (PLD 2024/2853) | ⊘ | compliance section | trigger: public availability past 2026-12-09 |
 | DSA duties | ◐ | [03](03-public-launch.md) + compliance section | Art. 11/12/14/16 land at stage-2 build |
