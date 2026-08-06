@@ -509,4 +509,5 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   lives in aimodels.ts (roles + aliases, refs split on the FIRST slash —
   OpenRouter ids carry slashes — and pattern resolution exact-ref →
   exact-id → unique-substring); this is 03's cheap-routing target landed
-  engine-side.
+  engine-side. Verified (full recipe, 2026-08-07): unit 79/79 · tty-probe
+  ok · integration 30/30 (+1 standing soft-skip) · wrapper-smoke 9/9.

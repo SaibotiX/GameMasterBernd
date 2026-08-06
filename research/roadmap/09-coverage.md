@@ -41,4 +41,5 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
 | Mail on the domain | ◐ | hosting section (Migadu proposed) | ruling still open (not covered by R18, 2026-08-07) · needed for the published privacy/support contact before the first friend |
+| Generative media (image · sound · video) | ◐ | [06](06-research-log.md) §2026-08-07 modalities | design ruling open (surfaced 2026-08-07): real-web scrying vs. generated media — the glass's identity and find_video's fate ride it; G/F territory, the maintainer rules |
 | Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · stage-1 Dockerfile pins the exact pi version (02 item 2) |
