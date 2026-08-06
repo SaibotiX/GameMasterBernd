@@ -23,8 +23,8 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Domain, TLD, registrar | ● | R17 · [06](06-research-log.md) §2026-08-06 name's ground | buy worldconsole.eu at INWX (02 item 1) · premium-tier check at the cart · .com expiry watch late Oct 2026 |
 | Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use + first-use archive start with the page (R16) |
 | Trademark & registrations | ◐ | [06](06-research-log.md) §2026-08-06 trademark | €0 now · professional search + EUTM 41+9 with SME voucher at stage 2→3 · Italian-mark check before filing |
-| Company form & Gewerbe (AT) | ◐ | [06](06-research-log.md) §2026-08-06 founding & tax | maintainer's branch input (employment/age) · registration only pre-stage-2 (03 gate) |
-| Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · any ALG episode · January re-verify of indexed values |
+| Company form & Gewerbe (AT) | ● | R21 · [06](06-research-log.md) §2026-08-06 founding & tax | registration only pre-stage-2 (03 gate) · re-confirm the branch at registration |
+| Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · Familienbeihilfe limit (R21) · any ALG episode · January re-verify of indexed values · VAT path finalizes with the stage-2 payments ruling |
 | Payment processor & rails | ◐ | [06](06-research-log.md) §2026-08-06 payments · Stripe standing per [03](03-public-launch.md) | ruling at stage-2 build: Stripe direct vs Stripe-MoR · €10 pack floor · Widerrufsbutton (in force 2026-10-01) in the checkout |
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
 | Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |

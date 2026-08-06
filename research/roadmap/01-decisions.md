@@ -342,3 +342,15 @@ the criteria against real use).
 **Rejected:** the 13+/16+ framing 03 carried, and 14+ — each re-opens the Gemini door problem and the consent machinery, for an audience stages 1–2 don't have.
 
 **Revisit when:** stage-3 planning, as its own decision — any move below 18 only with per-provider age terms re-verified and the parental-consent cost priced.
+
+---
+
+## R21 — The founding branch: a student, 18+ — the e.U. kit stands, every branch kept
+
+*(added 2026-08-07, same ruling pass; evidence: [06-research-log.md](06-research-log.md) § founding & tax — this was the section's one input research could not supply. The paper answer to [03](03-public-launch.md)'s "business registration answered" gate; the doing stays gated pre-stage-2.)*
+
+**Decided:** The maintainer's branch, given 2026-08-07: **student, 18 or older.** That selects the mildest path through the founding evidence: Eigenberechtigung satisfied (no legal-representative construction), no employment contract to clear, no ALG exposure. On the student branch the SVS Kleinstunternehmer-Ausnahme preserves student health cover (co-insurance to 27, or the cheap self-insurance fallback), and the branch's own tripwire is the **Familienbeihilfe Zuverdienstgrenze** (€17,212 for 2025; 2026 value ⚠ unverified — check before stage 2). The stage-2 kit is confirmed as evidenced: **Einzelunternehmen + the free IT-Gewerbe + SVS exemption filed with the Anmeldung + Kleinunternehmer riding the €10k EU micro-threshold**; stage 1 stays legally nothing (no Ertragsabsicht — keep it free of public "buy" language). One free WKO Gründerservice session, optionally one paid Steuerberater hour, before registering. **By the maintainer's instruction, every branch stays documented** — employed, ALG, under-18 all remain in the section for future reference, because circumstances can change between now and stage 2; the branch is re-confirmed at the actual registration moment.
+
+**Rejected:** nothing — the other branches are not wrong, just not the maintainer's today; pruning them was explicitly declined.
+
+**Revisit when:** the pre-stage-2 registration point (re-confirm the branch + the January-indexed values); any change in study/employment/benefit status before then (ALG especially: AMS consultation *before* any Gewerbe move).
