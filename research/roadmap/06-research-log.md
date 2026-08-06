@@ -138,3 +138,48 @@ Sources verified 2026-08-05 unless dated. Context that shaped the design: our "c
 > **Your rights.** Recording happens because you agreed when you accepted your invite; withdraw any time by email — we delete your sessions within a month. You can also ask for a copy, or complain to your data-protection authority. Raw session logs are deleted or anonymized at latest 12 months after the beta ends.
 
 First-run notice (one screen): *"This beta records your play. Everything in this session is saved and read by the developer to improve the game. Don't enter real personal info. Details & rights: [URL]."*
+
+## 2026-08-06 — payments & selling to consumers (stage-2 evidence; Stripe standing per 03/R12)
+
+Fee pages fetched live 2026-08-06 (Lemon Squeezy 403'd — ⚠ indexed copies). Context: [03](03-public-launch.md) specifies **Stripe Checkout + webhooks** feeding the ledger; this sitting priced that choice against the merchant-of-record (MoR) field and collected the consumer-law duties that arrive with the first sold pack. Tax mechanics (thresholds, OSS, EU-KU) are this sitting's founding-&-tax section; here only who *carries* the VAT burden.
+
+**The processor field (2026 prices, official pages):**
+
+- **Stripe direct** — supports Austrian sole traders (Einzelunternehmer as "individual" business type; ID + IBAN + website KYC). EEA standard consumer card **1.5 % + €0.25** (premium consumer cards 2.8 %); **EPS** (Austrian bank method) 1.6 % + €0.25 with **no chargebacks possible**; card dispute fee **€20**; Stripe Tax add-on 0.5 %/txn; payouts to AT ~3 business days after a ~7-day first hold. We stay merchant of record — every VAT/consumer duty below is ours.
+- **Stripe Managed Payments** — the MoR product Lemon Squeezy is being folded into: **+3.5 % on top of processing**, Stripe becomes seller of record (calculates/remits tax, absorbs disputes and L1 support) **while keeping the exact Checkout + webhook architecture**. ⚠ "eligible sellers", gradual rollout — AT availability unverified.
+- **Paddle** (5 % + $0.50, all-in MoR): its Acceptable Use Policy **Category 10 prohibits "virtual currency or stored value, including … store credit"** — credit packs are likely rejected at their mandatory domain review; sub-$10 products are sales-gated besides. Poor fit twice over.
+- **Lemon Squeezy** — mid-dissolution into Stripe Managed Payments; not a foundation. **Gumroad** (10 % + $0.50, MoR since 2025) and **itch.io** (10 % share + processing; no MTX rails, VAT handled only in "collected" mode) are the wrong shape for credits redeemed in an external hosted app. **PayPal standalone** 3.4 % + €0.35 (micropayments 5 % + €0.10 on request), documented small-seller freeze pattern.
+
+**Fee math is the pack-size law** (EEA card; $0.50 ≈ €0.46):
+
+| all-in cost | €5 pack | €10 | €20 |
+|---|---|---|---|
+| Stripe direct | **6.5 %** | 4.0 % | 2.75 % |
+| Stripe Managed Payments | 10.0 % | 7.5 % | 6.25 % |
+| Paddle (if allowed at all) | 14.2 % | 9.6 % | 7.3 % |
+| Gumroad | 19.2 % | 14.6 % | 12.3 % |
+| PayPal standard | 10.4 % | 6.9 % | 5.15 % |
+
+A **€5 pack survives only on Stripe direct**; under any MoR the sensible floor is **€10**. One €20 card dispute eats the margin of several small packs — the chargeback-free EPS/SEPA methods matter at this scale.
+
+**Duties that arrive with the first sold pack** (FAGG/VGG/PrAG — WKO-verified 2026-08-06):
+
+- **Button-Lösung:** the order button reads "zahlungspflichtig bestellen" (or "kaufen") — vaguer wording and the consumer isn't bound. Pre-contract info + confirmation email on a durable medium.
+- **Withdrawal on credits — the safe pattern:** treat packs as digital *service*, not content: both § 18 FAGG checkboxes at checkout (express consent to immediate performance + acknowledgment of losing the right, both echoed in the confirmation email) **and** a stated policy of refunding the **unused** balance on 14-day withdrawal (§ 16 pro-rata). Satisfies either legal bucket; Steam handles wallet funds exactly this way; unused credits are unearned revenue anyway.
+- **NEW — § 13a FAGG "Widerrufsbutton"** (VerbRÄG 2026, gazetted 2026-07-28, binds contracts concluded **after 2026-09-30** — i.e. any stage-2 launch): the shop must carry a continuously available, prominent **"Vertrag widerrufen"** function, reachable without login barriers. Build it with the checkout. ⚠ re-verify final text at build.
+- **VGG** (Digital Content Directive 2019/770): conformity + **update duty** (§ 7) for the whole period sold credits are live; trader bears the conformity burden of proof throughout continuous supply (§ 19); remedies ladder § 20. Practical: keep the service working and patched while any credits are outstanding; document outages.
+- Prices **gross** for consumers (§ 9 PrAG); Kleinunternehmer invoices carry the § 6 Abs 1 Z 27 UStG exemption note (depth: tax section).
+- **The EU ODR platform is dead** — Reg (EU) 2024/3228 repealed it (complaints off 2025-03-20, platform off 2025-07-20): the old mandatory ODR link is **gone, and a stale link is now misleading-practice exposure**. Residue: § 19 AStG — name the competent ADR body (AT: Internet Ombudsstelle) on a durable medium *when an actual dispute stalls*; participation voluntary.
+- **Geoblocking Reg (EU) 2018/302 covers electronically supplied services:** no "EU but only AT+DE" launch — an EU consumer reaching the shop must get equal terms regardless of residence (Art 4(1)(b)); EU-only vs. rest-of-world stays free; stage-2 invite-gating by *person* is not residence discrimination.
+- **Minors:** online purchases are generally **not** Taschengeld transactions (§ 170 ABGB) → contracts with minors hang unratified and payments are reclaimable; practical gate: 18+/guardian-consent assertion at purchase. Feeds the standing age-policy decision (03, door table).
+
+**Implementation shape recorded** (built at stage 2): Checkout session → signature-verified webhook (`checkout.session.completed`) → **idempotent ledger credit** (UNIQUE on event id; ship-twice no-op — the R13 shipper's philosophy on the money rail); refund = negative ledger transaction referencing the credit row; dispute webhook freezes that account's spend lane; Stripe CLI as test harness. SCA/3-DS is the hosted checkout's problem. ⚠ PSD3/PSR horizon — glance before stage 3.
+
+**Proposal (for the maintainer's ruling):**
+- **Branch A — keep Stripe direct** (the standing 03 choice, no deviation): cheapest rail, €5 packs stay possible, EPS beside cards; precondition from the tax side: the micro-threshold/EU-KU route keeps cross-border VAT trivial.
+- **Branch B — MoR, only if the tax evidence argues for erasing VAT admin:** **Stripe Managed Payments** at +3.5 % — same account, same Checkout, same webhooks; a *seller-of-record* change more than an architecture change (⚠ AT eligibility unverified). A **non-Stripe** MoR would be a ⚠ DEVIATION against 03/R12's Stripe rails — and the field argues against it anyway (Paddle's stored-value ban; Gumroad/itch wrong shape).
+- **Either branch: minimum pack €10**, with €5 only as a deliberate Branch-A choice. Draft ladder: €10 / €20.
+
+**Re-verify at stage-2 build:** Stripe Managed Payments AT eligibility · Paddle only with written stored-value clearance · eps→Wero migration in Stripe's AT method lineup (Wero already listed at €0.29) · § 13a FAGG final wording.
+
+Sources: [Stripe AT pricing](https://stripe.com/en-at/pricing) · [local methods](https://stripe.com/pricing/local-payment-methods) · [EPS](https://docs.stripe.com/payments/eps) · [payouts](https://docs.stripe.com/payouts) · [Managed Payments](https://stripe.com/managed-payments) + [pricing](https://support.stripe.com/questions/managed-payments-pricing) · [Paddle pricing](https://www.paddle.com/pricing) · [Paddle AUP](https://www.paddle.com/help/start/intro-to-paddle/what-am-i-not-allowed-to-sell-on-paddle) · [Gumroad](https://gumroad.com/pricing) · [itch rev share](https://itch.io/docs/creators/faq) · [PayPal AT](https://www.paypal.com/at/webapps/mpp/merchant-fees) · WKO: [Bestell-Button](https://www.wko.at/internetrecht/der-bestell-buton-im-webshop) · [FAGG-Infopflichten](https://www.wko.at/internetrecht/spezielle-informationspflichten-im-fernabsatz-b2c-im-detail) · [Rücktritt: Downloads](https://www.wko.at/internetrecht/ruecktrittsrecht-bei-downloads-b2c) / [Dienstleistungen](https://www.wko.at/internetrecht/ruecktrittsrecht-bei-dienstleistungen-im-internet) · [Widerrufsbutton](https://www.wko.at/internetrecht/e-commerce-widerrufsbutton-webshop) · [VGG](https://www.wko.at/internetrecht/vgg-uebersicht) · [Rechnung](https://www.wko.at/steuern/rechnung-richtig-ausstellen) · [PrAG](https://www.wko.at/wettbewerbsrecht/allgemeine-grundsaetze-preisauszeichnung) · [ADR/ODR](https://www.wko.at/internetrecht/alternative-streitbeilegung) · [ODR shutdown](https://consumer-redress.ec.europa.eu/site-relocation_en) · [Geoblocking](https://www.wko.at/internetrecht/geoblocking-verbot) · [§ 170 ABGB](https://www.jusline.at/gesetz/abgb/paragraf/170) · [Steam refunds](https://store.steampowered.com/steam_refunds/)
