@@ -400,9 +400,17 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			requestFooterRender = () => tui.requestRender();
 			tuiRef = tui as unknown as { invalidate?(): void; requestRender?(): void };
-			// FooterComponent only reads state.model/state.thinkingLevel,
-			// sessionManager, getContextUsage() and modelRuntime.isUsingOAuth()
-			// — all reachable through the extension context.
+			// The stock footer (pi 0.84.0) reads state.model/state.thinkingLevel,
+			// sessionManager (entries/cwd/session name), getContextUsage() and
+			// modelRuntime.isUsingSubscription() — all reachable through the
+			// extension context. pi is 0.x: when an update makes the footer read
+			// past this shim, render() below degrades to a marker instead of
+			// crashing the app (research/design/pi-upgrades.md).
+			type FooterRegistry = {
+				isUsingOAuth?: (model: unknown) => boolean;
+				getProvider?: (provider: string) => { auth?: { oauth?: { isSubscription?: boolean } } } | undefined;
+			};
+			const registry = () => uiCtx?.modelRegistry as FooterRegistry | undefined;
 			const sessionLike = {
 				get state() {
 					return { model: uiCtx?.model, thinkingLevel: uiCtx?.thinkingLevel };
@@ -410,10 +418,22 @@ export default function (pi: ExtensionAPI) {
 				sessionManager: ctx.sessionManager,
 				getContextUsage: () => uiCtx?.getContextUsage(),
 				modelRuntime: {
+					// pre-0.84 footers ask this — kept so the shim spans versions
 					isUsingOAuth: (_provider: string): boolean => {
 						try {
-							const registry = uiCtx?.modelRegistry as { isUsingOAuth?: (model: unknown) => boolean } | undefined;
-							return registry?.isUsingOAuth?.(uiCtx?.model) ?? false;
+							return registry()?.isUsingOAuth?.(uiCtx?.model) ?? false;
+						} catch {
+							return false;
+						}
+					},
+					// 0.84.0's "(sub)" tag — ModelRuntime's own recipe: an OAuth
+					// sign-in AND the provider's oauth config claiming a subscription
+					isUsingSubscription: (provider: string): boolean => {
+						try {
+							return (
+								(registry()?.isUsingOAuth?.(uiCtx?.model) ?? false) &&
+								registry()?.getProvider?.(provider)?.auth?.oauth?.isSubscription === true
+							);
 						} catch {
 							return false;
 						}
@@ -433,9 +453,22 @@ export default function (pi: ExtensionAPI) {
 					// Stock lines are [cwd, stats, extension-statuses?] — drop the
 					// cwd line, keep the stats line, add the game line, and pass
 					// through any other extension's status line.
-					const stock = inner.render(width);
+					let stats: string;
+					let passthrough: string[];
+					try {
+						const stock = inner.render(width);
+						stats = stock[1] ?? "";
+						passthrough = stock.slice(2);
+					} catch (error) {
+						stats = truncateToWidth(
+							theme.fg("warning", `⚠ pi footer API drift — stats off, game on · pi-upgrades.md · ${String(error)}`),
+							width,
+							theme.fg("dim", "..."),
+						);
+						passthrough = [];
+					}
 					const game = truncateToWidth(theme.fg("dim", gameFooterLine()), width, theme.fg("dim", "..."));
-					return [stock[1] ?? "", game, ...stock.slice(2)];
+					return [stats, game, ...passthrough];
 				},
 			};
 		});
