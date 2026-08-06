@@ -27,7 +27,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · any ALG episode · January re-verify of indexed values |
 | Payment processor & rails | ◐ | [06](06-research-log.md) §2026-08-06 payments · Stripe standing per [03](03-public-launch.md) | ruling at stage-2 build: Stripe direct vs Stripe-MoR · €10 pack floor · Widerrufsbutton (in force 2026-10-01) in the checkout |
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
-| Impressum & website duties | ◐ | [06](06-research-log.md) §2026-08-06 compliance gaps | ruling: address strategy (virtual office vs kleine-Website floor) · page live before the first friend |
+| Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |
 | Privacy papers beyond R13 | ◐ | same section | VVZ · threshold assessment · DPA collection · breach runbook — stage-1 build items |
 | AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · ⚠ AT authority designation watch |
 | Age policy | ○ | open decision named in [03](03-public-launch.md) + door table + compliance section | ruling proposed: 18+ for stages 1–2 |

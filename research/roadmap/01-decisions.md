@@ -318,3 +318,15 @@ the criteria against real use).
 **Not ruled here:** mail on the domain (Migadu proposed) — the one line of the day-1 basket the ruling didn't touch; it stays open in the register and is needed for the published privacy/support contact before the first friend.
 
 **Revisit when:** renewal (re-compare the field — ⚠ netcup/OVH price moves expected in the wave); or netcup's abuse desk ever locks the account (the runner-up activates).
+
+---
+
+## R19 — The Impressum carries the private address until the public gate
+
+*(added 2026-08-07, same ruling pass; evidence: [06-research-log.md](06-research-log.md) § compliance gaps. The page itself is a stage-1 build item — live before the first friend.)*
+
+**Decided:** § 5 ECG is treated as applying from stage 1 (the cautious read, adopted), and the address on the Impressum/Offenlegung page is the **maintainer's private home address** — a real street-level, service-capable address satisfies both regimes in full (§ 5 ECG and the § 25 MedienG floor at once, no grey zone left); the maintainer enters it themselves when the page is built. The cost is privacy, accepted deliberately while the audience is invited friends behind secret links. **Standing gate, in the maintainer's own words: this is revised before the public release** — at stage-3 planning the address strategy comes back for a fresh ruling (the rented/virtual-office answer stays documented in the compliance section) before the page faces strangers. Stage 2 grows the block with the UID/GewO/WKO lines once the Gewerbe exists (the section's stage map).
+
+**Rejected (for now):** renting a virtual-office/business address pre-stage-1 (the section's lead proposal) — real money for a privacy shield the friends stage doesn't need; the kleine-Website-floor-only fallback — the full block costs one HTML block more and removes the grey zone entirely.
+
+**Revisit when:** stage-3 planning (the standing gate above) — or earlier if the page's audience widens for any reason.
