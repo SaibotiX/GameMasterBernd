@@ -304,3 +304,17 @@ the criteria against real use).
 **Known edges, accepted:** .eu eligibility rides on EU residence/establishment (the Brexit precedent: lose eligibility, lose domain — a non-issue for an Austrian operator); EURid whois is GDPR-masked. worldconsole.com's expiry (2026-10-22) stays a calendar watch, not a plan.
 
 **Revisit when:** stage-3 marketing wants a second public face (.games/.gg — availability re-checked then); or eligibility circumstances would ever change.
+
+---
+
+## R18 — The box: netcup Vienna, Hetzner the named runner-up
+
+*(added 2026-08-07, same ruling pass; evidence: [06-research-log.md](06-research-log.md) § hosting. Purchase + AVV are [02](02-friends-web-service.md) item 1's errand; the backup shape hardens item 13.)*
+
+**Decided:** Stage 1 runs on a **netcup VPS 500 G12 in Vienna** (2 vCPU / 4 GB DDR5 / 128 GB NVMe, ≈ €5.96/mo incl. VAT) — the cheapest credible 4 GB box, session store on Austrian soil (R13's EU bound with margin), free click-AVV signed day 1, price locked a year into the 2026 wave once the term converts. Start on hourly billing; convert to the 12-month term when friends actually play. **The runner-up is part of the ruling: Hetzner CX23** — if netcup fails at signup or in service, that is the prepared exit (create and verify the Hetzner account before it is needed; the signup lottery is the documented risk there). The cross-provider lesson stands regardless of winner: nightly backups land at a *different* provider (Hetzner Storage Box as the borg target) plus the periodic pull to the maintainer's machine — an account lockout costs hours of uptime, never the research record.
+
+**Rejected:** OVH (cheapest with backup included — but same-datacenter backup, the Strasbourg-fire lesson) · IONOS (dearer, upsell culture) · Contabo (spec king, disqualified for research data on its support/deletion complaint record) · easyname (+€5/mo for an Austrian comfort netcup's Vienna site already provides) · PaaS/hyperscalers (2–10× structurally wrong for always-on multi-container with local state).
+
+**Not ruled here:** mail on the domain (Migadu proposed) — the one line of the day-1 basket the ruling didn't touch; it stays open in the register and is needed for the published privacy/support contact before the first friend.
+
+**Revisit when:** renewal (re-compare the field — ⚠ netcup/OVH price moves expected in the wave); or netcup's abuse desk ever locks the account (the runner-up activates).

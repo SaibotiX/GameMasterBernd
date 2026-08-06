@@ -19,7 +19,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Session recording & consent | ● | R13 · [06](06-research-log.md) 2026-08-05 | deletion dry-run before the first friend (02 checklist 9) |
 | Stage-1 page | ● | R14 · [08](08-stage1-web-ui.md) | build |
 | Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
-| Hosting provider | ◐ | [06](06-research-log.md) §2026-08-06 hosting | ruling: netcup Vienna vs Hetzner · then purchase + AVV (02 item 1) |
+| Hosting provider | ● | R18 · [06](06-research-log.md) §2026-08-06 hosting | purchase + AVV (02 item 1) · re-compare the field at renewal |
 | Domain, TLD, registrar | ● | R17 · [06](06-research-log.md) §2026-08-06 name's ground | buy worldconsole.eu at INWX (02 item 1) · premium-tier check at the cart · .com expiry watch late Oct 2026 |
 | Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use + first-use archive start with the page (R16) |
 | Trademark & registrations | ◐ | [06](06-research-log.md) §2026-08-06 trademark | €0 now · professional search + EUTM 41+9 with SME voucher at stage 2→3 · Italian-mark check before filing |
@@ -40,4 +40,4 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Ops runbooks (support · breach · deletion) | ◐ | [03](03-public-launch.md) §support · compliance §breach · R13 deletion | write with the stage-1 build; exercise per the exit gates |
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
-| Mail on the domain | ◐ | hosting section (Migadu proposed) | ruled with the hosting basket |
+| Mail on the domain | ◐ | hosting section (Migadu proposed) | ruling still open (not covered by R18, 2026-08-07) · needed for the published privacy/support contact before the first friend |
