@@ -8,7 +8,7 @@ World Console: a terminal story game built as extensions on the pi coding agent.
 |---|---|
 | `README.md` | architecture & how the engine works — kept in sync with the code |
 | `config/` | the LIVE game content (constitution, worlds + laws, moods, sites) — hot-loaded into the game prompt; edits change play immediately. Match the register; never leave TODO/meta markers in these files |
-| `research/design/` | game-design law: `undertakings-goals.md` (the G/F/P/A registry), mechanics spec, research receipts, build log (with its decisions log), design↔code audit (owns ids D1–D12) |
+| `research/design/` | game-design law: `undertakings-goals.md` (the G/F/P/A registry), mechanics spec, research receipts, build log (with its decisions log), design↔code audit (owns ids D1–D12), the pi upgrade rite + coupling register (`pi-upgrades.md`) |
 | `research/analysis/` | the playtest method kit; `research/analysis/reports/` is the immutable quality history |
 | `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log, coverage register (what's answered / what's open) |
 | `aitester/` | the AI playtesting harness, its batches and reports |
@@ -43,4 +43,4 @@ Before adopting ANY new research finding, plan, or design change:
 - Audit runs propose; the maintainer rules (`research/analysis/audit-workflow.md` §7). Playtest reports are immutable once written — the next batch gets a new file.
 - Player copies and any public surface exclude `research/` and `aitester/` (decision R4).
 - `research/collaboration/` is the maintainer's self-review corner: OFF-LIMITS — never read, quote, or act on it unless the maintainer invokes `/collab-review` or points to a file there themselves (rationale inside its README; it is evidence-based, not decorative).
-- Verification recipe for engine changes: `node extension/test/unit.ts`, headless RPC smoke, and the pseudo-TTY probe for anything touching widgets/overlays (`research/design/undertakings-build.md`).
+- Verification recipe for engine changes: `node extension/test/unit.ts`, headless RPC smoke, and the pseudo-TTY probe (`bash extension/test/tty-probe.sh`) for anything touching widgets/overlays (`research/design/undertakings-build.md`). A pi version change triggers the full upgrade rite: `research/design/pi-upgrades.md`.

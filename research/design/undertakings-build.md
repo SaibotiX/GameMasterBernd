@@ -479,3 +479,17 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   durable session entries rather than richer notifications, because
   entries alone give persistence + /tree semantics + audit visibility in
   one mechanism, and the entry renderer keeps them out of every prompt.
+- 2026-08-07 · pi 0.84.0 (the footer breakage): the engine's engine is 0.x —
+  every pi bump is treated as breaking until the recipe proves otherwise,
+  and the practice now has a home (research/design/pi-upgrades.md: the
+  upgrade rite + the register of couplings). The judgment calls: drift is
+  absorbed AT THE BOUNDARY (the footer shim learned isUsingSubscription;
+  game modules never touch pi's shapes); per-frame UI keeps a degrade
+  guard (stock-footer drift becomes a ⚠ marker, never a dead boot); the
+  pseudo-TTY probe became a checked-in script (extension/test/tty-probe.sh)
+  because RPC smoke is blind to interactive-only surfaces — and a new
+  detector is proven by a negative control (the probe FAILs on the stashed
+  pre-fix tree before the fix is trusted). Verified: unit 74/74 ·
+  tty-probe ok + negative control · integration 30/30 · wrapper-smoke 9/9.
+  Open to the maintainer: the pin policy (pin-by-record proposed — the
+  doc's §open carries it).
