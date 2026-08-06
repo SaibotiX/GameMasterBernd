@@ -18,7 +18,7 @@ player acts ──→ server: player.rounds > 0 ?
 monthly: provider bills US once, for everyone's aggregate usage
 ```
 
-The player's money never touches Google/Anthropic/OpenAI. There is **one org API account per provider on our side**; the "round" is an internal accounting row whose price is set so `price per round > our average provider cost per round`. Friends & Fables runs five model families behind one credit currency — proof the credit is pure bookkeeping. This is exactly what we build; it is not novel.
+The player's money never touches any model provider. There is **one commercial API account per provider (or one aggregator account) on our side** — the provider mix is the operator's choice, R12's 2026-08-07 ruling; the "round" is an internal accounting row whose price is set so `price per round > our average provider cost per round`. Friends & Fables runs five model families behind one credit currency — proof the credit is pure bookkeeping. This is exactly what we build; it is not novel.
 
 ## New components on top of stage 1
 
@@ -46,7 +46,7 @@ This game runs on open dice, and the law has met purchasable currency near dice 
 
 ## Cost side — why our engine is well-positioned
 
-The engine already splits its LLM work into **separate calls**: keeper (must be strong), guardian truth-checks, fate-plan weaving, GM-table answers, sagas. That is precisely the structure that lets the profitable AI RPGs route models by task (Fables: Gemini/Llama/GPT/Grok/own fine-tune behind one GM). Route the side calls to a Haiku/Flash-class model and only the keeper rides the expensive one. Further cost levers already built: code-side archive recall instead of long context, `/compact`, per-turn cost stamped into every session file (telemetry is free).
+The engine already splits its LLM work into **separate calls**: keeper (must be strong), guardian truth-checks, fate-plan weaving, GM-table answers, sagas. That is precisely the structure that lets the profitable AI RPGs route models by task (Fables: Gemini/Llama/GPT/Grok/own fine-tune behind one GM). Route the side calls to a cheap fast tier — any provider's — and only the keeper rides the expensive one; the engine's own `/ai` surface routes each duty already (2026-08-07), so the gateway only decides which catalogue serves it. Further cost levers already built: code-side archive recall instead of long context, `/compact`, per-turn cost stamped into every session file (telemetry is free).
 
 **Placeholder math — replace with stage 1 telemetry:** keeper turn ≈ 10–20 k tokens in / ~1 k out on a Sonnet-class model ≈ 5–8 ¢, side calls routed cheap ≈ +1–2 ¢ → **~6–10 ¢ per round all-in; cheap-routing target ~3–6 ¢.**
 

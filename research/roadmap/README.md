@@ -9,8 +9,8 @@ This folder is **internal planning** — like the rest of `research/` and `aites
 | Stage | What | Players | Who pays AI | Status |
 |---|---|---|---|---|
 | 0 | Local play + trusted-friend copies | you + a few friends | each their own account | current |
-| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | own key/sign-in per the door table (R11), or the ledgered house lane on our org key (R12) | next |
-| 2 | **Invite-only paid beta** — accounts, credit ledger, LLM gateway, Stripe | waitlist invites | players buy rounds; your org API account underneath | gated |
+| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | own key/sign-in per the door table (R11), or the ledgered house lane on the operator's commercial account (R12 — any provider, aggregator qualifies) | next |
+| 2 | **Invite-only paid beta** — accounts, credit ledger, LLM gateway, Stripe | waitlist invites | players buy rounds; the operator's commercial account underneath | gated |
 | 3 | **Public launch** — open signups, free taste, prepaid rounds | anyone | same as stage 2, at scale | gated |
 | 4 | **Steam launch** — Electron shell around the same client; same servers, accounts, credits | Steam's audience | same as stages 2–3 (Steam MTX in-client) | gated |
 | ⊥ | **Open source** — orthogonal track, can attach after any stage | — | — | option, one-way |
