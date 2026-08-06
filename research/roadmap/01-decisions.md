@@ -278,3 +278,15 @@ the criteria against real use).
 **Rejected:** *Tracking gaps in CLAUDE.md or README §Now* — status tables drift inside prose homes that have other jobs. *Per-session ad-hoc lists* — they die with the session; the register is the durable home. *Restating findings in the register* — forbidden by one-truth-one-home; rows point.
 
 **Revisit when:** the register grows past ~30 rows (split by stage then), or rows go visibly stale across sessions (then the duty isn't binding in practice — tighten the CLAUDE.md wording).
+
+---
+
+## R16 — The names: "World Console" is the game, "Hausregel" is the studio
+
+*(added 2026-08-07, maintainer's ruling pass over the 2026-08-06 register edges; evidence: [06-research-log.md](06-research-log.md) §§ the name's ground + trademark.)*
+
+**Decided:** The game is **World Console**, confirmed against the 2026-08-06 clearance (zero identical marks worldwide on TMview; five collision sweeps clean; the one ⚠ watch item — the Italian class-41 figurative whose device text contains "…THE GAME LAND WORLD CONSOLE" — gets its professional read before any EUTM filing, per the standing trademark plan). The studio name is **Hausregel** — the cleanest candidate on clearance (0 register hits worldwide, no brand collisions), needed as brand only: an Einzelunternehmer starts with no registered fantasy name (founding & tax section; R21), so holding the name costs nothing. With the name fixed, the trademark section's €0 step activates: dated public use of both names starts Austria's free protections (§ 9 UWG business designation, § 80 UrhG title) — **archive first-use evidence from the day the page is live.** Filings stay on the standing timetable — professional search, then the EUTM word mark in classes 41+9 with the SME-Fund voucher, at stage 2→3 — and that timetable remains a proposal, not yet a ruling.
+
+**Rejected (studio):** Terminal Tales (register-clean but terminaltales.com is a live commercial storytelling product — adjacent-space confusion), Open Dice (legally quiet, drowned in dice-app noise), Keeper's House (exact-free inside a crowded "Keeper" games neighborhood).
+
+**Revisit when:** any conflict surfaces (pre-launch the cheap answer is renaming — the Praey lesson: cost, not pride); at the stage-2→3 EUTM step (free TMview re-search first; the Italian mark professionally read).

@@ -21,7 +21,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
 | Hosting provider | ◐ | [06](06-research-log.md) §2026-08-06 hosting | ruling: netcup Vienna vs Hetzner · then purchase + AVV (02 item 1) |
 | Domain, TLD, registrar | ◐ | [06](06-research-log.md) §2026-08-06 name's ground | ruling: .games+.at+.eu vs the .gg variant · then buy at INWX (02 item 1) |
-| Game & studio name | ◐ | [06](06-research-log.md) §§ name's ground + trademark | ruling: confirm "World Console" · studio name (Hausregel leads; an e.U. needs none to start) |
+| Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use + first-use archive start with the page (R16) |
 | Trademark & registrations | ◐ | [06](06-research-log.md) §2026-08-06 trademark | €0 now · professional search + EUTM 41+9 with SME voucher at stage 2→3 · Italian-mark check before filing |
 | Company form & Gewerbe (AT) | ◐ | [06](06-research-log.md) §2026-08-06 founding & tax | maintainer's branch input (employment/age) · registration only pre-stage-2 (03 gate) |
 | Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · any ALG episode · January re-verify of indexed values |
