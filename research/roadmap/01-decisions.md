@@ -290,3 +290,17 @@ the criteria against real use).
 **Rejected (studio):** Terminal Tales (register-clean but terminaltales.com is a live commercial storytelling product — adjacent-space confusion), Open Dice (legally quiet, drowned in dice-app noise), Keeper's House (exact-free inside a crowded "Keeper" games neighborhood).
 
 **Revisit when:** any conflict surfaces (pre-launch the cheap answer is renaming — the Praey lesson: cost, not pride); at the stage-2→3 EUTM step (free TMview re-search first; the Italian mark professionally read).
+
+---
+
+## R17 — The domain: worldconsole.eu, alone
+
+*(added 2026-08-07, same ruling pass; evidence: [06-research-log.md](06-research-log.md) § the name's ground. The buy is [02](02-friends-web-service.md) checklist item 1's errand.)*
+
+**Decided:** One domain: **worldconsole.eu**, registered at **INWX** (≈ €6–9/yr renewal; the honest flat-price registrar, free anycast DNS), DNS plain and unproxied per the hosting evidence; `play.` and `vault.` ride as free subdomains. The maintainer narrowed the proposed three-domain basket to the single .eu — the cheapest possible steady state, EU-flagged for an EU-hosted game, and the naming practice's own caution ("a wall of TLDs is an annual tax a trademark does better") taken to its end: zero defensive TLDs; the eventual EUTM (R16) is the name's real wall.
+
+**Rejected:** the proposed basket — worldconsole.**games** primary + .at defensive (≈ €50/yr steady state; both stay free to add later if a public face ever wants them, ⚠ un-registered means un-reserved) · the .gg image variant · the $3,595 squatted .com (pure squatter tribute; playworldconsole.com stays the free .com-shaped escape hatch) · .game (10× vanity tier) · .io (arcade connotation + Chagos tail-risk).
+
+**Known edges, accepted:** .eu eligibility rides on EU residence/establishment (the Brexit precedent: lose eligibility, lose domain — a non-issue for an Austrian operator); EURid whois is GDPR-masked. worldconsole.com's expiry (2026-10-22) stays a calendar watch, not a plan.
+
+**Revisit when:** stage-3 marketing wants a second public face (.games/.gg — availability re-checked then); or eligibility circumstances would ever change.
