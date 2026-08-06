@@ -288,8 +288,9 @@ the tester side is near-free on a small model.
 
 Flags: `--sittings N --turns 24 --world <id> --personas a,b,c
 --tester-model provider/id --keeper-model provider/id --batch <name>`.
-Tester default: a cheap fast model (haiku-class), overridable by flag or
-`WC_TESTER_MODEL` env; the keeper stays whatever pi is configured to run
+Tester default: pi's own default model (settings.json — the harness names
+no provider itself), overridable by flag or `WC_TESTER_MODEL` env; pick a
+cheap fast tier there. The keeper stays whatever pi is configured to run
 unless `--keeper-model`/`WC_KEEPER_MODEL` passes a `--model` ref to pi.
 Both refs are validated against pi-ai's catalog AT STARTUP (an unknown
 model used to abort sittings mid-batch with a bare "not in pi-ai's
