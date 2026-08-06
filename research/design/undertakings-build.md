@@ -493,3 +493,20 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   tty-probe ok + negative control · integration 30/30 · wrapper-smoke 9/9.
   Open to the maintainer: the pin policy (pin-by-record proposed — the
   doc's §open carries it).
+- 2026-08-07 · /ai — every duty's mind is routable (maintainer's ask, the
+  provider-agnostic round): the engine never chose models — every side
+  call mirrored pi's session model (four ctx.model sites cloning it). Now
+  the five duties are named surfaces (keeper = pi's main loop; table,
+  guardian, fate, saga = the side calls) and /ai routes each: overrides
+  persist in world-console.json beside the /thoughts toggles, side calls
+  resolve through the same pi-ai catalogue they already spoke through,
+  and the keeper case wraps pi.setModel so pi's own /model stays
+  authoritative. Judgment calls: the GM handler's one model split into
+  table (gmAsk) and guardian (both judges) — the fiction's referee and
+  its constitution court are different duties; gmCraftChronicler rides
+  saga (record prose is one duty); unrouted duties keep today's exact
+  behavior (mirror), so the feature is invisible until used. Pure logic
+  lives in aimodels.ts (roles + aliases, refs split on the FIRST slash —
+  OpenRouter ids carry slashes — and pattern resolution exact-ref →
+  exact-id → unique-substring); this is 03's cheap-routing target landed
+  engine-side.

@@ -1309,4 +1309,67 @@ ok("asGameEvent: non-custom entries → null", () => {
 	});
 }
 
+// ---- /ai routing (aimodels.ts) -------------------------------------------
+{
+	const { AI_ROLES, SIDE_ROLES, refOf, resolvePattern, roleFromWord, splitRef } = await import(join(EXT, "aimodels.ts"));
+
+	ok("aimodels: roles and side roles", () => {
+		assert.deepEqual([...AI_ROLES], ["keeper", "table", "guardian", "fate", "saga"]);
+		assert.deepEqual([...SIDE_ROLES], ["table", "guardian", "fate", "saga"]);
+	});
+
+	ok("aimodels: roleFromWord accepts every documented word", () => {
+		assert.equal(roleFromWord("keeper"), "keeper");
+		assert.equal(roleFromWord("GM"), "table");
+		assert.equal(roleFromWord("dm"), "table");
+		assert.equal(roleFromWord("table"), "table");
+		assert.equal(roleFromWord("judge"), "guardian");
+		assert.equal(roleFromWord("weaver"), "fate");
+		assert.equal(roleFromWord("summary"), "saga");
+		assert.equal(roleFromWord("chronicler"), "saga");
+		assert.equal(roleFromWord("Bernd", "Bernd"), "keeper"); // the voice's own name
+		assert.equal(roleFromWord("bernd"), null); // no voice given — not a role word
+		assert.equal(roleFromWord("nonsense"), null);
+		assert.equal(roleFromWord("  "), null);
+	});
+
+	ok("aimodels: splitRef splits on the first slash only", () => {
+		assert.deepEqual(splitRef("anthropic/claude-haiku-4-5"), { provider: "anthropic", id: "claude-haiku-4-5" });
+		assert.deepEqual(splitRef("openrouter/anthropic/claude-sonnet-5"), {
+			provider: "openrouter",
+			id: "anthropic/claude-sonnet-5",
+		});
+		assert.equal(splitRef("no-slash"), null);
+		assert.equal(splitRef("/leading"), null);
+		assert.equal(splitRef("trailing/"), null);
+	});
+
+	ok("aimodels: refOf round-trips through splitRef", () => {
+		const model = { provider: "openrouter", id: "google/gemini-2.5-flash" };
+		assert.deepEqual(splitRef(refOf(model)), model);
+	});
+
+	ok("aimodels: resolvePattern — exact, unique id, substring, ambiguity", () => {
+		const available = [
+			{ provider: "anthropic", id: "claude-haiku-4-5" },
+			{ provider: "anthropic", id: "claude-sonnet-5" },
+			{ provider: "openrouter", id: "anthropic/claude-sonnet-5" },
+			{ provider: "google", id: "gemini-2.5-flash" },
+		];
+		// exact provider/id beats the substring pool (case-insensitive)
+		assert.equal(resolvePattern("Anthropic/Claude-Sonnet-5", available).match, available[1]);
+		// exact bare id, unique
+		assert.equal(resolvePattern("gemini-2.5-flash", available).match, available[3]);
+		// substring, unique
+		assert.equal(resolvePattern("haiku", available).match, available[0]);
+		// ambiguous substring — no match, candidates listed
+		const ambiguous = resolvePattern("sonnet", available);
+		assert.equal(ambiguous.match, undefined);
+		assert.equal(ambiguous.candidates.length, 2);
+		// nothing at all
+		assert.deepEqual(resolvePattern("mistral-large", available), { candidates: [] });
+		assert.deepEqual(resolvePattern("  ", available), { candidates: [] });
+	});
+}
+
 console.log(`\n${passed} checks passed`);
