@@ -10,7 +10,7 @@ World Console: a terminal story game built as extensions on the pi coding agent.
 | `config/` | the LIVE game content (constitution, worlds + laws, moods, sites) — hot-loaded into the game prompt; edits change play immediately. Match the register; never leave TODO/meta markers in these files |
 | `research/design/` | game-design law: `undertakings-goals.md` (the G/F/P/A registry), mechanics spec, research receipts, build log (with its decisions log), design↔code audit (owns ids D1–D12) |
 | `research/analysis/` | the playtest method kit; `research/analysis/reports/` is the immutable quality history |
-| `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log |
+| `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log, coverage register (what's answered / what's open) |
 | `aitester/` | the AI playtesting harness, its batches and reports |
 | `data/`, `*/sessions-in/`, `auth.json` | private play & credentials — gitignored, never committed, never shipped |
 
@@ -22,7 +22,7 @@ Before adopting ANY new research finding, plan, or design change:
 2. **A conflict is never resolved silently.** Mark it in the document where the new material lands — `⚠ DEVIATION (R3): <one line on what deviates and why>` — and surface it to the maintainer for a ruling. Neither adopt nor discard the deviating material before the ruling.
 3. **Record rulings IN the registry entry, dated** — "(revised 2026-08-05: …)" or "superseded by R9" — never rewrite an entry silently. New decisions take the next free id; ids are never reused.
 4. **File new evidence where it belongs:** game mechanics/feel → `research/design/undertakings-research.md`; platform/legal/business/market → `research/roadmap/06-research-log.md` (dated; ⚠-mark fast-moving facts with their re-verify trigger).
-5. **End of session: zero silent deviations** — each one either ruled on, or explicitly listed to the maintainer.
+5. **End of session: zero silent deviations, zero silent unknowns** — every deviation either ruled on or explicitly listed to the maintainer; territory the records don't cover gets a row in the coverage register (`research/roadmap/09-coverage.md`, R15) before the session ends.
 
 ## Committing & pushing (decision R9 — standing authorization, no per-commit asks)
 

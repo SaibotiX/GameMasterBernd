@@ -264,3 +264,17 @@ the criteria against real use).
 **Rejected:** *Terminal-only page as the end state* — hides the chronicle and the glass's media, the artifacts the game is proudest of (kept as the day-one fallback). *IDE-in-browser (code-server)* — wrong register, heavyweight, hands out edit powers v1 withholds. *A web-native client driving pi over RPC* — the sweep's load-bearing fact kills it: all six ceremony overlays, the board's dress and the footer die over RPC (the aitester's `/ai-state` exists because of exactly this); rebuilding the ceremony is the rewrite R1 forbids. *More panes* (quest board, dice history) — every candidate already lives inside the TUI; a web duplicate splits one truth into two homes. *Player editing of `config/`* — deferred deliberately, not rejected forever: a later decision once support costs are understood.
 
 **Revisit when:** stage 2 opens (strangers need onboarding/help surfaces friends don't); or friend feedback shows the panes confusing rather than serving (the layout is cheap to re-cut — that is its point); or the config-editing question is raised for ruling.
+
+---
+
+## R15 — The coverage register: zero silent unknowns
+
+*(added 2026-08-06, business/naming research sitting, on the maintainer's instruction; owning doc: [09-coverage.md](09-coverage.md); root CLAUDE.md guardrail extended the same day.)*
+
+**Decided:** The roadmap carries a standing register of DOMAINS — [09-coverage.md](09-coverage.md) — one row per product-side territory the project will eventually meet: a status (● owned · ◐ evidence landed, ruling/build open · ○ open · ⊘ not yet relevant, trigger named), the owning document, and the next trigger. The register holds **pointers only**, never content — one truth, one home. Two duties bind every session: (1) sessions touching product/distribution territory check the register the way they already check the decision registries; (2) territory the records don't cover — discovered in conversation, research, play, or the news — gets a row **before the session ends**. The guardrail's fifth step grows its sibling: zero silent deviations, **zero silent unknowns**.
+
+**Why:** The maintainer's standing worry, stated 2026-08-06: the unknown unknowns — "so we don't find ourselves in a corner one day." The same sitting demonstrated the mechanism's value in one pass: six research agents surfaced duties no prior record named — the § 13a FAGG Widerrufsbutton binding any shop from 2026-10-01, AI Act Art. 50 applicable since 2026-08-02 with no grace for us, the dead ODR platform turning the once-mandatory link into misleading-practice exposure, the 2026 ALG side-earning ban that can cost benefits at the moment of Gewerbe registration. A register row costs a line; a silent unknown costs a corner.
+
+**Rejected:** *Tracking gaps in CLAUDE.md or README §Now* — status tables drift inside prose homes that have other jobs. *Per-session ad-hoc lists* — they die with the session; the register is the durable home. *Restating findings in the register* — forbidden by one-truth-one-home; rows point.
+
+**Revisit when:** the register grows past ~30 rows (split by stage then), or rows go visibly stale across sessions (then the duty isn't binding in practice — tighten the CLAUDE.md wording).
