@@ -443,18 +443,18 @@ console.log("— Part C: /web command —");
 }
 
 if (process.env.WC_VIDEO === "1") {
-	// C3 (opt-in, slow): /web video end to end — yt-dlp probe + clip download.
+	// C3 (opt-in): /web video end to end — Commons search + whole-clip download.
 	const file = join(WORK, "c3-web-video.jsonl");
 	writeSession(file, [header(), custom(null, { ev: "world", world: "dragon-realm" }, 1)]);
 	const rpc = new Rpc(["--session", file]);
-	await rpc.promptAndWait("/web video komodo dragon", 480_000);
+	await rpc.promptAndWait("/web video komodo dragon", 240_000);
 	const performed = await waitFileEvent(file, (event) => event.ev === "search_performed" && event.kind === "video", 30_000);
 	if (assertNoApiError(file, "C3: /web video")) {
 		softCheck("C3: /web video → GM performed the video search", performed);
 	}
 	await rpc.stop();
 } else {
-	console.log("skip C3 (/web video) — set WC_VIDEO=1 to include the slow yt-dlp download");
+	console.log("skip C3 (/web video) — set WC_VIDEO=1 to include the live Commons clip download");
 }
 
 // ---- Part D: the chronicler round (2026-08-04) — no LLM -------------------

@@ -38,6 +38,7 @@ export interface WorldConfig {
 	moods: Map<string, Mood>;
 	textSites: SiteEntry[];
 	pictureSites: SiteEntry[];
+	videoSites: SiteEntry[];
 }
 
 /** Inherited from the retired app's util.ts parseFrontmatter — same format. */
@@ -114,15 +115,22 @@ export function loadConfig(appDir: string, worldId: string): WorldConfig {
 
 	let textSites: SiteEntry[] = [{ host: "en.wikipedia.org" }];
 	let pictureSites: SiteEntry[] = [{ host: "commons.wikimedia.org" }];
+	let videoSites: SiteEntry[] = [{ host: "commons.wikimedia.org" }];
 	const sitesFile = join(configDir, "sites.json");
 	if (existsSync(sitesFile)) {
-		const sites = JSON.parse(readFileSync(sitesFile, "utf8")) as { text?: SiteEntry[]; picture?: SiteEntry[] };
+		const sites = JSON.parse(readFileSync(sitesFile, "utf8")) as {
+			text?: SiteEntry[];
+			picture?: SiteEntry[];
+			video?: SiteEntry[];
+		};
 		const valid = (list?: SiteEntry[]) =>
 			(list ?? []).filter((s) => typeof s?.host === "string" && s.host.length > 0);
 		textSites = valid(sites.text);
 		if (textSites.length === 0) textSites = [{ host: "en.wikipedia.org" }];
 		pictureSites = valid(sites.picture);
 		if (pictureSites.length === 0) pictureSites = [{ host: "commons.wikimedia.org" }];
+		videoSites = valid(sites.video);
+		if (videoSites.length === 0) videoSites = [{ host: "commons.wikimedia.org" }];
 	}
 
 	return {
@@ -131,6 +139,7 @@ export function loadConfig(appDir: string, worldId: string): WorldConfig {
 		moods: loadMoods(join(configDir, "moods")),
 		textSites,
 		pictureSites,
+		videoSites,
 	};
 }
 

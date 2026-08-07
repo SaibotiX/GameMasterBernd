@@ -5,8 +5,8 @@
  *    game-master prompt (constitution → world → mood → standing → protocol)
  *  - the built-in coding tools are stripped; the model gets the game tools:
  *      find_text / find_picture / find_video — the "scrying glass" lenses
- *        (MediaWiki text and file search, yt-dlp YouTube clip; downloads land
- *        in data/downloads/)
+ *        (MediaWiki text and file search — pictures and free-licensed video
+ *        clips from Commons; downloads land in data/downloads/)
  *      set_mood          — mood shifts; the angriest mood bars the glass (code-owned)
  *      grant_redemption  — lifts the bar after sincere amends (no-op unless barred)
  *      record_name       — stores the seeker's name for the standing layer
@@ -65,7 +65,7 @@ import {
 	type PresentedOption,
 	type QuestShape,
 } from "./ledger.ts";
-import { detectTooling, searchPicture, searchVideo } from "./mediasearch.ts";
+import { searchPicture, searchVideo } from "./mediasearch.ts";
 import { assembleSystemPrompt } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
 import { gridBox, type GridCell } from "./ui.ts";
@@ -153,7 +153,6 @@ export default function (pi: ExtensionAPI) {
 	let config: WorldConfig = loadConfig(BASE_DIR, worldId);
 	let st: DerivedState = derive([], config.world.defaultMood);
 	let resumedFrom: string | undefined;
-	const tooling = detectTooling(BASE_DIR); // vendored yt-dlp + bundled/system ffmpeg
 	// Secret mark of genuine [engine:…] messages. Custom messages reach the
 	// model as plain user turns, so without this a seeker typing "[engine] …"
 	// would be indistinguishable from the engine and could talk the model into
@@ -2654,7 +2653,7 @@ export default function (pi: ExtensionAPI) {
 		name: "find_video",
 		label: "Scrying glass (video)",
 		description:
-			"Search YouTube (via yt-dlp) for a short video of a topic and download it to the local downloads folder — a ~10 second clip when ffmpeg is available, otherwise the shortest matching video. Slow (can take minutes); returns title, URL, duration and saved file path. Use for in-theme glimpses only.",
+			"Search the world's video sites (MediaWiki file archives such as Wikimedia Commons) for a short free-licensed clip of a topic. The best short match is downloaded whole to the local downloads folder; returns its title, source page, duration, license and saved file path. The catalogue leans nature/archival — finding nothing is a common, honest answer. Use for in-theme glimpses only.",
 		parameters: Type.Object({
 			query: Type.String({
 				description: "Short neutral search phrase for the video, e.g. 'komodo dragon hunting'",
@@ -2667,7 +2666,7 @@ export default function (pi: ExtensionAPI) {
 			appendEvents(ctx, [{ ev: "search_requested", query, kind: "video" }]);
 			let result;
 			try {
-				result = await searchVideo(tooling, query, DOWNLOAD_DIR, signal);
+				result = await searchVideo(config.videoSites, query, DOWNLOAD_DIR, signal);
 			} catch (error) {
 				appendEvents(ctx, [
 					{ ev: "search_failed", reason: String((error as Error)?.message ?? error), kind: "video" },
@@ -2678,33 +2677,24 @@ export default function (pi: ExtensionAPI) {
 				appendEvents(ctx, [{ ev: "search_failed", reason: "no result", kind: "video" }]);
 				return {
 					content: [
-						{ type: "text", text: `The scrying glass shows no moving pictures for "${query}".` },
+						{ type: "text", text: `The scrying glass shows no moving pictures for "${query}" on the video sites.` },
 					],
 					details: { query, found: false },
 				};
 			}
 			appendEvents(ctx, [
-				{ ev: "search_performed", query, source: "youtube.com", ref: result.url, title: result.title, kind: "video" },
+				{ ev: "search_performed", query, source: result.site, ref: result.pageUrl, title: result.title, kind: "video" },
 			]);
-			// The player must know each time identity was spent (2026-08-04:
-			// the anonymous client ladder exhausts first, so ANY cookie use —
-			// their export file included — is now a climbed rung worth naming;
-			// silence means the scrying stayed anonymous).
-			if (result.cookieSource && ctx.hasUI) {
-				ctx.ui.notify(
-					result.cookieSource === "file"
-						? "YouTube demanded proof of humanity — the anonymous rungs failed, and your cookie export (config/youtube-cookies.txt) answered for this scrying."
-						: `YouTube demanded proof of humanity — the anonymous rungs failed, and cookies were borrowed from ${result.cookieSource} for this scrying.`,
-					"info",
-				);
-			}
+			// The credit rides the catch: Commons files are free-licensed, and
+			// BY/BY-SA licenses oblige attribution wherever the clip is shown.
+			const credit = [result.license, result.credit && `by ${result.credit}`].filter(Boolean).join(" — ");
 			return {
 				content: [
 					{
 						type: "text",
 						text:
-							`${result.title}\n${result.url}\n` +
-							`${result.clipped ? `~${result.durationSeconds}s clip` : `full video, ${result.durationSeconds}s`}\n` +
+							`${result.title} — ${result.site}\n${result.pageUrl}\n` +
+							`${result.durationSeconds}s clip${credit ? ` · ${credit}` : ""}\n` +
 							`Saved to: ${result.path}`,
 					},
 				],

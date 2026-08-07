@@ -15,8 +15,6 @@ The game running inside the stock [pi coding agent](https://github.com/earendil-
 | `aitester/` | the AI playtesting service: driver + wrapper extension (`/ai-state` headless parity), world persona cards, AI batches and their reports (see `aitester/README.md`) |
 | `data/world/<world>/<chronicle>/` | one folder per STORY: places, personas, quests, items — and `ledger.md`, the readable game log |
 | `data/downloads/` | pictures and video clips the scrying glass fetched |
-| `tools/yt-dlp/` | vendored yt-dlp source (git submodule) — drives `find_video` as a subprocess |
-| `tools/ffmpeg/` | optional static ffmpeg for ~10 s clips (or install system ffmpeg) |
 
 The authoritative ledger is not a database: it lives as custom entries inside pi's session file (append-only JSONL under `~/.pi/agent/sessions/…`). Every game event is mirrored line-by-line into the story's `data/world/<world>/<chronicle>/ledger.md` (with its `*uN*` number), so players can read the log — and argue from it at the GM table.
 
@@ -32,7 +30,7 @@ pi --world star-frontier    # pick a world (default: dragon-realm)
 ```
 /web text basalt              # knowledge from the chronicle sites
 /web picture aurora borealis  # image downloaded to data/downloads/
-/web video komodo dragon      # ~10 s clip via yt-dlp (slow)
+/web video komodo dragon      # short free-licensed clip from Commons
 ```
 
 Typing `/` lists the commands with their descriptions; after `/web ` the first argument autocompletes (`text` / `picture` / `video`). `/web` is not a raw fetch: the engine refuses it outright while the glass is barred (recorded in the ledger, no LLM call), otherwise it hands the request to the game master, who judges it against the world's theme in character and performs it through the matching tool. `/ledger [n]` shows this sitting's game ledger. `/gm <text>` opens the GM table — out-of-character talk with the engine about the game's state and workings — and `/gm truth <fact>` binds a fact as canon (see below). When a task twists mid-work, a four-slot board above the input burns red with the open paths: `/pick <n> [your own words]` (or Alt+number, which prefills the pick so you can add words) commits to one — plain typing stays free conversation and never picks for you, but while a twist or a die stands, **no work anywhere advances** until you decide. The seeker's records: `/quest` (the open-matters board, plus shelved quests and untaken courses — `/quest accept <id>` takes one up again at the right place), `/place [name]` and `/persons [name]` (every chronicled place and soul, list or full page — the chronicler himself answers there too, from his special page), `/history` (a timeline of the majors plus the achievements tally — quests, places, souls, items, dice, perils, wounds, renown), `/history long` (the sitting retold as a short record-grounded saga by one side call), and `/record` (the COMPLETE record compiled to `record.md` beside the ledger: both conversations — the keeper's telling and the table talk — plus quests, souls, places, items and the full *uN*-numbered timeline; the minimalist `ledger.md` stays the append-only mirror). `/thoughts bernd` collapses the keeper's thinking to one label line (pi's own persistent Hide-thinking setting — survives sittings and worlds; toggle again to show); `/thoughts gm` collapses past table talk to one line each, except the latest uninterrupted run, which always stays open (pi's expand key peeks at a collapsed one). GM answers and your questions to the table stay in the transcript as permanent blocks — nothing is replaced by the next notification anymore.
@@ -45,7 +43,7 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
   |---|---|
   | `find_text` | MediaWiki text search over `config/sites.json` text hosts |
   | `find_picture` | MediaWiki file search (Commons by default); best match downloaded to `data/downloads/` |
-  | `find_video` | yt-dlp (vendored source) via YouTube search; ~10 s ffmpeg clip, or shortest video without ffmpeg. Bot checks climb an anonymity-first ladder: three cookieless client rotations before any cookie is touched (your export file, then browser borrowing — every identity use is announced); `WORLD_CONSOLE_YT_PROXY` routes all of it through your own proxy |
+  | `find_video` | MediaWiki video search (Commons by default, `filetype:video` through the same API as pictures); a short free-licensed clip (≤ 4 min, WebM/Ogg, modest transcode) downloaded whole to `data/downloads/`, its license and maker read from the file's metadata and carried in the result |
   | `set_mood` | mood shifts; setting the angriest mood makes the engine bar the glass (code-owned invariant) |
   | `grant_redemption` | lifts the bar after sincere amends; no-op unless barred (code-owned invariant) |
   | `record_name` | stores the seeker's name for the standing layer |
@@ -77,7 +75,7 @@ Typing `/` lists the commands with their descriptions; after `/web ` the first a
 ## Tests
 
 ```bash
-node extension/test/unit.ts          # pure logic, no pi, no LLM (network: Wikipedia)
+node extension/test/unit.ts          # pure logic, no pi, no LLM (network: Wikipedia/Commons)
 node extension/test/integration.ts   # real pi over RPC; Part A costs no LLM tokens
 node aitester/tools/ai-playtest.mjs --selftest   # AI-harness logic, no pi, no LLM
 node aitester/tools/wrapper-smoke.mjs            # /ai-state TUI parity over crafted gates, no LLM
@@ -86,7 +84,7 @@ node aitester/tools/wrapper-smoke.mjs            # /ai-state TUI parity over cra
 - **unit.ts** — ledger derivation, the ban/redemption invariants, branch isolation, config-loader equivalence with the retired app's original loader, prompt layers, search adapter (incl. abort).
 - **integration.ts Part A** (crafted session files, no LLM) — banned-branch derivation, leaf-rewind to a pre-ban branch (the `/tree` mechanism), stamped-world-beats-`--world`.
 - **integration.ts Part B** (live LLM) — no search possible while barred, redemption flow, search after redemption, name recording, `/compact` shrinks context while the ledger survives, `new_session` starts a fresh ledger.
-- **integration.ts Part C** — `/web`: a clean session hands the request to the GM (performed entry recorded), a barred session is refused by the engine with no LLM call; `WC_VIDEO=1` adds the slow end-to-end video download. `extension/test/demo-web.ts` is a watchable demo of the same flows.
+- **integration.ts Part C** — `/web`: a clean session hands the request to the GM (performed entry recorded), a barred session is refused by the engine with no LLM call; `WC_VIDEO=1` adds the end-to-end Commons clip download. `extension/test/demo-web.ts` is a watchable demo of the same flows.
 - **aitester** — beyond the two token-free checks above, `aitester/` runs whole AI-played sittings of the real engine over RPC to hunt bugs and exploits (a live batch costs keeper + tester tokens; see `aitester/README.md`).
 
 Known soft spot: whether the *model* ever attempts `find_text` while barred is model temperament (it is told it is barred and usually refuses in character); the code block behind it shares the exact `banned` check the unit tests cover.
@@ -95,6 +93,6 @@ Known soft spot: whether the *model* ever attempts `find_text` while barred is m
 
 - Mood is per session (branch-aware), not global like the retired app's `data/ledger.jsonl` — a punishment ends with `/new`. If cross-session grudges are ever wanted, add a small global profile file.
 - Adding a mood file mid-session updates prompts on the next turn, but the `set_mood` enum refreshes only on restart or `/reload`.
-- YouTube sometimes meets `find_video` with a "Sign in to confirm you're not a bot" wall (IP-level — it hits every yt-dlp player client). The engine escalates least-invasive first: **1.** your own Netscape export at `config/youtube-cookies.txt`, if present — you decide exactly which cookies it contains; **2.** otherwise a bare attempt — installing the identity-free [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin (a yt-dlp plugin plus its token server/script; more setup) makes this rung pass without any cookies at all; **3.** only if YouTube still refuses: cookies borrowed **live** from an installed browser (auto-detected; `WORLD_CONSOLE_YT_BROWSER=<browser>` names one), kept for the rest of the run — and every scrying that borrowed them says so in a notification. yt-dlp reads the whole browser cookie store locally but sends only the youtube/google-scoped cookies. If even browser cookies are refused, open youtube.com in that browser once (signing in helps most) and try again.
+- The glass's clips come from Wikimedia Commons (R24 — the yt-dlp/YouTube pipeline is retired: no python3, no ffmpeg, no cookies, works the same locally and from a server). Files are WebM/Ogg by Commons policy (no MP4) — browsers, VLC and mpv all play them. Every catch carries its machine-read license and maker, and BY/BY-SA credits belong wherever the clip is shown. The catalogue leans nature/archival/science shorts: for many story queries the glass honestly finds nothing — that is expected, not a bug.
 - `.pi/extensions/usage-limits.ts` is a separate small extension: `/limits` shows which Anthropic usage bucket your requests draw from (plan-limit windows vs. the extra-usage overage lane), read from the `anthropic-ratelimit-*` response headers.
 - pi lists resumable sessions per working directory — always start pi from the repo root so a sitting stays findable in the same list. Any session file opens directly with `pi --session <path>`.

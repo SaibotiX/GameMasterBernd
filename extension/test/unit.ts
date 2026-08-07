@@ -1084,10 +1084,10 @@ ok("asGameEvent: non-custom entries → null", () => {
 	assert.equal(asGameEvent({ type: "compaction", id: "x" } as never), null);
 });
 
-// ---- 7. media search (picture live, video tooling) ------------------------
+// ---- 7. media search (picture and video live, Commons) --------------------
 {
 	const media = await import(join(EXT, "mediasearch.ts"));
-	const { existsSync, mkdirSync, rmSync, statSync, writeFileSync } = await import("node:fs");
+	const { existsSync, rmSync, statSync } = await import("node:fs");
 	const downloadDir = "/tmp/wc-test/downloads-unit";
 	rmSync(downloadDir, { recursive: true, force: true });
 
@@ -1110,35 +1110,24 @@ ok("asGameEvent: non-custom entries → null", () => {
 	console.log("ok  picture: abort propagates the abort reason");
 	passed++;
 
-	const tooling = media.detectTooling(BASE);
-	ok("video: tooling detection matches the filesystem", () => {
-		assert.ok(tooling.ytDlpSource && existsSync(join(tooling.ytDlpSource, "yt_dlp")), "vendored yt-dlp missing");
-		const bundled = join(BASE, "tools", "ffmpeg", "ffmpeg");
-		assert.equal(tooling.ffmpegDir !== null, existsSync(bundled));
-		const cookies = join(BASE, "config", "youtube-cookies.txt");
-		assert.equal(tooling.cookiesFile, existsSync(cookies) ? cookies : null);
+	const vid = await media.searchVideo([{ host: "commons.wikimedia.org" }], "komodo dragon", downloadDir);
+	ok("video: commons hit downloads a real short clip with its credit", () => {
+		assert.ok(vid, "expected a video result");
+		assert.equal(vid!.site, "commons.wikimedia.org");
+		assert.ok(vid!.title.length > 0 && vid!.pageUrl.startsWith("https://"));
+		assert.ok(vid!.durationSeconds > 0 && vid!.durationSeconds <= 240, `duration out of bounds: ${vid!.durationSeconds}`);
+		assert.ok(/\.(webm|ogv|ogg)$/.test(vid!.path), `unexpected container: ${vid!.path}`);
+		assert.ok(existsSync(vid!.path), `file missing: ${vid!.path}`);
+		assert.ok(statSync(vid!.path).size > 50_000, "downloaded clip suspiciously small");
+		assert.ok(vid!.license, "commons files carry a machine-readable license");
 	});
 
-	ok("video: cookie opt-ins picked up from config file and env", () => {
-		const fakeRoot = "/tmp/wc-test/fake-app";
-		rmSync(fakeRoot, { recursive: true, force: true });
-		mkdirSync(join(fakeRoot, "config"), { recursive: true });
-		writeFileSync(join(fakeRoot, "config", "youtube-cookies.txt"), "# Netscape HTTP Cookie File\n");
-		assert.equal(media.detectTooling(fakeRoot).cookiesFile, join(fakeRoot, "config", "youtube-cookies.txt"));
-		const prev = process.env.WORLD_CONSOLE_YT_BROWSER;
-		process.env.WORLD_CONSOLE_YT_BROWSER = "firefox";
-		try {
-			assert.equal(media.detectTooling(fakeRoot).cookiesFromBrowser, "firefox");
-		} finally {
-			if (prev === undefined) delete process.env.WORLD_CONSOLE_YT_BROWSER;
-			else process.env.WORLD_CONSOLE_YT_BROWSER = prev;
-		}
-		const home = process.env.HOME ?? "";
-		const firefoxProfiles =
-			existsSync(join(home, ".mozilla", "firefox")) ||
-			existsSync(join(home, "snap", "firefox", "common", ".mozilla", "firefox"));
-		if (firefoxProfiles) assert.equal(media.detectTooling(fakeRoot).browserFallback, "firefox");
-	});
+	await assert.rejects(
+		() => media.searchVideo([{ host: "commons.wikimedia.org" }], "komodo dragon", downloadDir, controller.signal),
+		(err: unknown) => err === reason,
+	);
+	console.log("ok  video: abort propagates the abort reason");
+	passed++;
 }
 
 // ---- 8. live text search (network) ----------------------------------------
@@ -1261,31 +1250,31 @@ ok("asGameEvent: non-custom entries → null", () => {
 	});
 
 	const media2 = await import(join(EXT, "mediasearch.ts"));
-	ok("scrying ladder: anonymous rungs first, file before browser, absent rungs skipped", () => {
-		const base = {
-			ytDlpSource: null, ffmpegDir: null, hasSystemFfmpeg: false,
-			cookiesFile: null, cookiesFromBrowser: null, browserFallback: null, proxy: null,
-		};
-		const bare = media2.buildLadder(base);
-		assert.deepEqual(bare.map((rung: { label: string }) => rung.label), ["anonymous", "anonymous:tv", "anonymous:web_safari"]);
-		assert.ok(bare.every((rung: { cookieFile?: boolean; browser?: string }) => !rung.cookieFile && !rung.browser));
-		const full = media2.buildLadder({ ...base, cookiesFile: "/tmp/c.txt", browserFallback: "firefox" });
-		assert.deepEqual(full.map((rung: { label: string }) => rung.label), ["anonymous", "anonymous:tv", "anonymous:web_safari", "file", "firefox"]);
-		assert.equal(full[3].cookieFile, true);
-		assert.equal(full[4].browser, "firefox");
-		const named = media2.buildLadder({ ...base, cookiesFromBrowser: "brave", browserFallback: "firefox" });
-		assert.equal(named.at(-1).browser, "brave"); // the env-named browser outranks detection
+	ok("video derivative pick: webm before ogg, largest ≤480p, size ladder honored", () => {
+		const webm240 = { src: "a.240p.webm", type: 'video/webm; codecs="vp9"', height: 240, bandwidth: 400_000 };
+		const webm480 = { src: "a.480p.webm", type: 'video/webm; codecs="vp9"', height: 480, bandwidth: 900_000 };
+		const webm720 = { src: "a.720p.webm", type: 'video/webm; codecs="vp9"', height: 720, bandwidth: 2_000_000 };
+		const ogg316 = { src: "a.ogv", type: 'video/ogg; codecs="theora"', height: 316, bandwidth: 1_300_000 };
+		// browser-ready webm outranks the taller legacy ogg original
+		assert.equal(media2.pickVideoDerivative([ogg316, webm240], 60), webm240);
+		// the largest webm that stays ≤480p wins; 720p is never preferred
+		assert.equal(media2.pickVideoDerivative([webm240, webm480, webm720], 60), webm480);
+		// a long file walks the ladder down until bandwidth × duration fits 30 MB
+		assert.equal(media2.pickVideoDerivative([webm240, webm480], 300), webm240);
+		// nothing fitting → null (caller skips the candidate)
+		assert.equal(media2.pickVideoDerivative([webm720], 3_000), null);
+		// non-video rungs (captions etc.) and missing srcs never surface
+		assert.equal(media2.pickVideoDerivative([{ type: "text/vtt", src: "a.vtt" }, { type: "video/webm" }], 60), null);
 	});
-	ok("scrying ladder: bot-check detection covers the 2026 wordings and rate limits", () => {
-		for (const wording of [
-			"ERROR: Sign in to confirm you're not a bot",
-			"ERROR: confirm you're not a robot",
-			"ERROR: HTTP Error 429: Too Many Requests",
-		]) {
-			assert.ok(media2.BOT_CHECK.test(wording), wording);
-		}
-		assert.ok(!media2.BOT_CHECK.test("ERROR: Video unavailable"));
-		assert.ok(!media2.BOT_CHECK.test("ERROR: Requested format is not available"));
+	ok("video credit: extmetadata license kept, artist HTML stripped, absence stays null", () => {
+		const credit = media2.videoCredit({
+			LicenseShortName: { value: "CC BY-SA 3.0" },
+			Artist: { value: '<a href="https://example.org/">The Bearded Filmer</a>' },
+		});
+		assert.equal(credit.license, "CC BY-SA 3.0");
+		assert.equal(credit.credit, "The Bearded Filmer");
+		assert.deepEqual(media2.videoCredit(undefined), { license: null, credit: null });
+		assert.deepEqual(media2.videoCredit({}), { license: null, credit: null });
 	});
 
 	ok("prompt: unpaged names ride the standing layer; venture gate holds; chronicler layer appears", () => {

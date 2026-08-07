@@ -11,5 +11,10 @@
     {
       "host": "commons.wikimedia.org"
     }
+  ],
+  "video": [
+    {
+      "host": "commons.wikimedia.org"
+    }
   ]
 }
