@@ -11,11 +11,6 @@ credentials.json
 # The ledger and everything the game downloads. Recreated on first run.
 data/
 
-# --- Vendored binaries -----------------------------------------------------
-# Static ffmpeg (~420 MB); place a build at tools/ffmpeg/ffmpeg.
-# (tools/yt-dlp is a tracked git submodule — do not widen this to tools/.)
-tools/ffmpeg/
-
 # --- Dependencies ----------------------------------------------------------
 node_modules/
 dist/

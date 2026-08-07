@@ -8,7 +8,7 @@ Personal play by invitation is welcome. Please don't copy, modify,
 publish, or redistribute the game or its files without written
 permission.
 
-Third-party components keep their own licenses: tools/yt-dlp (the
-vendored yt-dlp submodule) is released into the public domain under
-the Unlicense; the pi coding agent (installed separately) is
-MIT-licensed, © 2025 Mario Zechner.
+Third-party components keep their own licenses: the pi coding agent
+(installed separately) is MIT-licensed, © 2025 Mario Zechner. Media
+fetched in play from Wikimedia Commons stays under each file's own
+free license, credited where shown.

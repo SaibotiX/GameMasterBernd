@@ -1,4 +1,0 @@
-[submodule "yt-dlp"]
-	path = tools/yt-dlp
-	url = https://github.com/yt-dlp/yt-dlp.git
-	branch = master
