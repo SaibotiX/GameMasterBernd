@@ -27,6 +27,8 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 **The 2026-08-07 provider round** (second sitting the same day) closed the R11/R12 pair and re-grounded the AI lane: the maintainer confirmed the constrained doors (R11 — API keys everywhere plus OpenRouter's PKCE) and made the funded lane provider-agnostic (R12 — any commercial account, aggregator qualifies). [06](06-research-log.md) §2026-08-07 carries the two-class Anthropic correction with a measured probe (local play bills to extra-usage credits, not plan limits — the sanctioned lane), and the OpenRouter fact sheet (one key, whole catalogue, PKCE, image/audio/video modalities). The engine grew `/ai` — per-duty model routing, 03's cheap-routing target landed early. Deliberately still open: the stage-2 payments branch (deferred 2026-08-07) · mail on the domain (Migadu proposed, un-ruled) · the generative-media design question (new register row).
 
+**The 2026-08-07 workflow sitting** (third of the day) made prompt triage law — **R22**: a packed multi-topic prompt is mapped into ordered threads before any work (coupled topics together, blockers jump the queue, deferrals get the maintainer's nod); the method lives in `.claude/commands/triage.md` (`/triage`), bound on every session via CLAUDE.md.
+
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.

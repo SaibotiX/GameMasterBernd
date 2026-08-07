@@ -360,3 +360,58 @@ the criteria against real use).
 **Rejected:** nothing — the other branches are not wrong, just not the maintainer's today; pruning them was explicitly declined.
 
 **Revisit when:** the pre-stage-2 registration point (re-confirm the branch + the January-indexed values); any change in study/employment/benefit status before then (ALG especially: AMS consultation *before* any Gewerbe move).
+
+---
+
+## R22 — The packed prompt is a capture, not a work order: triage into threads first
+
+*(added 2026-08-07, on the maintainer's instruction; operational rule
+binds every session via CLAUDE.md "Prompt triage"; the method is owned
+by `.claude/commands/triage.md` — `/triage`.)*
+
+**Decided:** The maintainer writes prompts the way thoughts arrive —
+many undertakings in one message, connections sometimes marked, asides
+buried, kinds mixed (rulings beside blockers beside research beside
+build). That capture format is CORRECT and stays; the cost moves to the
+session's side. Before any work, a packed prompt is mapped into
+THREADS: inventory every ask (the numbering is evidence, not truth) ·
+classify (ruling / blocker / question / research / design / build) ·
+cluster by coupling · order (rulings, then blockers, then dependency) ·
+place each thread (this session / subagents / a deferred round parked
+in its owning doc first). The coupling tie-breaker is TOGETHER:
+arguable siblings share a thread so architecture is designed in sight
+of what its neighbors do; context is recovered by placement — subagents
+for bounded sweeps, deferral for independent rounds — never by
+splitting coupled work. The map is presented before work begins;
+deferrals need the maintainer's nod; mid-session arrivals get the same
+test out loud. Full method: the command file.
+
+**Why:** Both failure modes are real and opposite. One window grinding
+a six-topic prompt in arrival order interleaves unrelated work — R10's
+evidence (context degradation begins well before window limits) applies
+within a session exactly as across them — and prompt order is not
+dependency order: the 2026-08-07 provider prompt carried its blocker (a
+pi upgrade crash) as item 3, behind two design items it blocked.
+Maximal splitting is the opposite failure: that same prompt's items 1,
+2 and 6 were one architecture — subscription-policy ground, per-duty
+model routing, provider-agnostic design — and the maintainer marked
+part of the coupling themselves ("Connection: 1) + 2)"); threads split
+per number would have designed the doors, the routing and the funding
+lane without sight of each other. The workflow's job is to honor the
+marked connections and find the unmarked ones.
+
+**Rejected:** *Asking the maintainer to pre-split prompts* — moves the
+cost to the human side and fights the natural capture format; the
+packed prompt is a feature. *Every numbered item its own thread* —
+shreds coupled architecture (above). *A standing auto-fan-out to
+subagents per prompt* — placement is a per-thread judgment; subagents
+are one option with a bounded diet (conclusions in, file dumps never),
+not a default. *Doing all threads in one session regardless* — the
+status quo this decision retires; the R10 opener machinery exists
+precisely so independent rounds can start fresh.
+
+**Revisit when:** a few rounds of real use grade the maps — too eager
+to defer, or too timid to split — and the tie-breaker or placement
+rules need tuning against practice (R10's own tuning clause); or the
+harness gains multi-session orchestration that changes what a deferred
+round costs.
