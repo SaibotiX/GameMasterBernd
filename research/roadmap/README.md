@@ -32,7 +32,7 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
-2. **aitester Batch 2** (game track, `research/design/undertakings-build.md` Phase 2.9) — Phase 3 waits for two consecutive clean batches in both worlds.
+2. **aitester** (game track, `research/design/undertakings-build.md` Phase 2.9) — the batch-3 rulings (`aitester/reports/2026-08-05-3.md`), then Batch 4; Phase 3 waits for two consecutive clean batches in both worlds.
 3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
 ## The files
