@@ -1,0 +1,27 @@
+# The local end-to-end check's Caddyfile (localcheck.sh drives it): the
+# production shape — TLS, secret path, basic auth, WebSocket proxy — with
+# self-signed certs and one fixed test doorway. The token and password here
+# are TEST FIXTURES, deliberately public; real doors are minted by
+# new-friend.sh and never look like this.
+
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+localhost, 127.0.0.1 {
+	encode zstd gzip
+
+	redir /f/localtest00000000000000000000 /f/localtest00000000000000000000/ 308
+	handle_path /f/localtest00000000000000000000/* {
+		basic_auth {
+			# test / local-test-password
+			test $2a$14$Z/1Vc95yNgexVZApQgZHbOkDfgPwBKiwYF2fFp9w8LHQS3supWk8u
+		}
+		reverse_proxy wc-test:7681
+	}
+
+	handle {
+		respond "World Console — by invitation." 404
+	}
+}

@@ -6,6 +6,10 @@
 //
 //   node ws-probe.mjs [http://127.0.0.1:7681]
 //
+// Through a proxy door: WS_PROBE_AUTH="user:pass" adds basic auth, and the
+// caller sets NODE_TLS_REJECT_UNAUTHORIZED=0 for self-signed local TLS —
+// localcheck.sh drives exactly that shape.
+//
 // This proves pipe-level truth only — pi booted, the TUI rendered, bytes
 // reached a web client. Whether the dress LOOKS right in a real browser
 // (dice overlay, board colors, bell) stays the first-deploy eyeball check
@@ -13,9 +17,17 @@
 const base = (process.argv[2] ?? "http://127.0.0.1:7681").replace(/\/$/, "");
 const deadlineMs = 30_000;
 
-const { token } = await (await fetch(`${base}/token`)).json();
+const auth = process.env.WS_PROBE_AUTH;
+const headers = auth
+	? { authorization: `Basic ${Buffer.from(auth).toString("base64")}` }
+	: {};
 
-const ws = new WebSocket(`${base.replace(/^http/, "ws")}/ws`, ["tty"]);
+const { token } = await (await fetch(`${base}/token`, { headers })).json();
+
+const ws = new WebSocket(`${base.replace(/^http/, "ws")}/ws`, {
+	protocols: ["tty"],
+	...(auth ? { headers } : {}),
+});
 ws.binaryType = "arraybuffer";
 
 const decoder = new TextDecoder("utf-8", { fatal: false });

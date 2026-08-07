@@ -1,0 +1,40 @@
+# Stage-1 Caddyfile — worldconsole.eu at INWX, DNS plain and unproxied (R17).
+# TLS is automatic (Let's Encrypt); WebSocket pass-through is Caddy's normal
+# reverse_proxy behavior, nothing to configure. Each friend gets one
+# long-random secret path plus a basic-auth pair — both minted by
+# new-friend.sh, pasted under the marker.
+
+{
+	# ACME account mailbox; set ACME_EMAIL in .env beside compose.yaml.
+	email {$ACME_EMAIL}
+}
+
+play.worldconsole.eu {
+	encode zstd gzip
+
+	# -- friends (minted by new-friend.sh; exemplar): -----------------------
+	# redir /f/<token> /f/<token>/ 308
+	# handle_path /f/<token>/* {
+	# 	basic_auth {
+	# 		alice <bcrypt-hash>
+	# 	}
+	# 	reverse_proxy wc-alice:7681
+	# }
+
+	# Unmatched paths, including / — there is no directory of doors.
+	handle {
+		respond "World Console — by invitation." 404
+	}
+}
+
+# R11's isolated credential origin: reserved from day one, served only when
+# the vault round builds it. Nothing else may ever share this origin.
+vault.worldconsole.eu {
+	respond "not yet" 404
+}
+
+worldconsole.eu {
+	# The landing/disclosure page (02 item 9) lands here before the first
+	# friend plays; until then the root only proves the name resolves.
+	respond "World Console" 200
+}
