@@ -39,9 +39,10 @@ A license controls copying of *expression* (files, prose, code). It cannot prote
 | Component | License | Our duties |
 |---|---|---|
 | pi (`@earendil-works/pi-coding-agent`) | MIT | include copyright + license text **when redistributing** (bundles, images we hand out). Merely *hosting* it triggers nothing — MIT has no network clause |
-| yt-dlp (vendored submodule) | Unlicense (public domain) | none; shipping its text alongside is courtesy |
-| ffmpeg (system or static) | LGPL/GPL depending on build | fine to use and host; only if we ever *distribute* ffmpeg binaries do the build's terms matter (offline bundle case — see [05-offline-distribution.md](05-offline-distribution.md)) |
+| Commons media shown in play | per-file (PD / CC BY / CC BY-SA …) | the engine reads each file's license machine-readably and carries the credit with the catch (R24); BY/BY-SA attribution belongs wherever a clip or picture is shown |
 | Model output / provider terms | — | as stage 2–3 operator we answer for usage-policy compliance of traffic under our org key |
+
+*(yt-dlp and ffmpeg left this table with R24 — no longer vendored, executed, or distributed.)*
 
 ## Leakage reality (accepted residuals)
 

@@ -96,6 +96,8 @@ Decisions taken 2026-08-04. Each entry: what was decided, why, what was rejected
 
 **Rejected:** purchased rerolls/boons/healing; ad-subsidized rounds (Steam rule 14 bans ad-based models, and it is a poor fit regardless).
 
+*(noted 2026-08-07, R24: video scrying left the premium-call examples — a Commons clip costs what a picture costs. The law itself — credits buy AI usage only, never mechanics — is untouched.)*
+
 ---
 
 ## R9 — Commit per revertible change, push per verified checkpoint
@@ -265,6 +267,8 @@ the criteria against real use).
 
 **Revisit when:** stage 2 opens (strangers need onboarding/help surfaces friends don't); or friend feedback shows the panes confusing rather than serving (the layout is cheap to re-cut — that is its point); or the config-editing question is raised for ruling.
 
+*(noted 2026-08-07, R24: the `youtube-cookies.txt` exclusion is moot — the file no longer exists, and nothing in the game tree is credential material anymore. The panes' scope law is untouched; [08](08-stage1-web-ui.md) carries the updated exclusion list.)*
+
 ---
 
 ## R15 — The coverage register: zero silent unknowns
@@ -409,3 +413,31 @@ to defer, or too timid to split — and the tie-breaker or placement
 rules need tuning against practice (R10's own tuning clause); or the
 harness gains multi-session orchestration that changes what a deferred
 round costs.
+
+---
+
+## R23 — (id retired with the reverted generative-media round)
+
+*R23 was minted 2026-08-06 for the generative-media ruling and unwound
+when the maintainer reverted that round (the tree returned to e1cc447,
+2026-08-07). Commit history still cites R23 by that meaning, so the id
+stays retired — ids are never reused.*
+
+---
+
+## R24 — The video lens looks through Commons: one API for the whole glass
+
+*(added 2026-08-07, on the maintainer's ruling over the same-day
+evidence — [06-research-log.md](06-research-log.md) § "real video with
+legal APIs". Built and verified the same day; the build log's decisions
+entry carries the verification.)*
+
+**Decided:** `find_video` sources from **Wikimedia Commons** through the same MediaWiki API the glass already speaks for text and pictures (`filetype:video`; `videoinfo`'s browser-ready transcode ladder and machine-readable `extmetadata`), and the YouTube download pipeline is **shed whole**: the yt-dlp submodule, the python3 and ffmpeg dependencies, the cookie/identity escalation ladder, `config/youtube-cookies.txt` and both env levers (`WORLD_CONSOLE_YT_BROWSER`, `WORLD_CONSOLE_YT_PROXY`) all leave the engine — the last system dependencies beyond node/pi go with them. Catches are free-licensed by Commons policy; the engine reads each file's license and maker machine-readably and carries the BY/BY-SA credit with every result (and the keeper is prompted to speak it). Clips download whole — ≤ 4 min, ≤ 30 MB, a modest (≤ 480p, WebM-preferred) transcode — no clipping machinery. The shared MediaWiki User-Agent became contact-bearing (the compliant tier of Commons's 2026 rate limits).
+
+**Why:** Legal by design where the retired pipeline was ToS-exposed (03's old media-compliance bullet priced exactly that risk); one HTTP API instead of a subprocess ecology with an identity ladder; and the datacenter problem dissolves structurally — Commons serves a VPS like a laptop, so hosted video scrying stops being a stage-1 limitation (02's former known-limitation section). The accepted trade is the catalogue: nature/archival/science shorts, patchy for arbitrary story queries — "the glass finds nothing" stays an honest answer, and the friend intro sets that expectation.
+
+**Rejected (from the same evidence, kept as revival shapes):** *YouTube's sanctioned search+embed* — 100 searches/day free with no paid tier, embed-only playback that may never sit behind premium credits (III.F.3.a), GDPR two-click facade, hosted-only by nature. *Stock b-roll (Pexels/Pixabay)* — legal but generic; mood, not specificity. *Internet Archive / Openverse / Coverr* — ruled out by the evidence itself; *NASA / Europeana* stay noted as clean niche flavor.
+
+**Consequences recorded the same day:** 03's find_video→credits line dissolved (a clip costs what a picture costs — noted at R8); the `youtube-cookies.txt` file-API exclusion became moot (noted at R14); 02's image lost python3/ffmpeg and its datacenter-video limitation; 04's third-party table lost yt-dlp/ffmpeg and gained the per-file Commons credit duty; 05's zip lost the submodule and both install caveats.
+
+**Revisit when:** the catalogue's patchiness draws real player complaints — the research log § holds the verified revival shapes; or Commons's experimental rate limits change (⚠ marked changeable by their owner; re-verify at the stage-1 build step per the log's standing trigger).

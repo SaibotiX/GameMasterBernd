@@ -19,6 +19,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Session recording & consent | ● | R13 · [06](06-research-log.md) 2026-08-05 | deletion dry-run before the first friend (02 checklist 9) |
 | Stage-1 page | ● | R14 · [08](08-stage1-web-ui.md) | build |
 | Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
+| In-game media sourcing (the glass's legality) | ● | R24 · [06](06-research-log.md) §2026-08-07 real video | catalogue complaints → the revival shapes (06 §) · ⚠ Commons rate limits changeable — re-verify at stage-1 build |
 | Hosting provider | ● | R18 · [06](06-research-log.md) §2026-08-06 hosting | purchase + AVV (02 item 1) · re-compare the field at renewal |
 | Domain, TLD, registrar | ● | R17 · [06](06-research-log.md) §2026-08-06 name's ground | buy worldconsole.eu at INWX (02 item 1) · premium-tier check at the cart · .com expiry watch late Oct 2026 |
 | Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use + first-use archive start with the page (R16) |

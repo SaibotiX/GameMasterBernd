@@ -493,3 +493,20 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   tty-probe ok + negative control · integration 30/30 · wrapper-smoke 9/9.
   Open to the maintainer: the pin policy (pin-by-record proposed — the
   doc's §open carries it).
+- 2026-08-07 · The video lens re-grounds to Commons (R24, the maintainer's
+  ruling on the same-day evidence): find_video speaks the MediaWiki API
+  like its sibling lenses (filetype:video; videoinfo's derivatives +
+  extmetadata), a modest browser-ready transcode ≤ 4 min / ≤ 30 MB
+  downloads whole, and the credit (license + maker, machine-read) rides
+  every catch into the result — the keeper is prompted to speak it. The
+  whole yt-dlp ecology left the engine: submodule, python3, ffmpeg, the
+  cookie/identity ladder, both env levers — the last system dependencies
+  beyond node/pi. The judgment calls: video is config-driven like its
+  siblings (sites.json "video" list, Commons default); candidates are
+  walked in search-rank order because the duration cap and the size
+  ladder can reject the top hits ("the glass finds nothing" stays an
+  honest answer); the shared MediaWiki User-Agent became contact-bearing
+  (Commons's compliant rate-limit tier). Verified: unit 74/74 (live
+  Commons clip with credit · pure derivative/credit picks) · integration
+  30/30 incl. the WC_VIDEO C3 end-to-end (GM → Commons → webm on disk) ·
+  tty-probe not triggered (no widget/overlay change).
