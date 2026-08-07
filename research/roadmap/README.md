@@ -25,6 +25,8 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 **The 2026-08-07 ruling pass closed those edges as R16–R21:** the names (**World Console**; studio **Hausregel**) · the domain (**worldconsole.eu alone**, INWX) · the box (**netcup Vienna**, Hetzner the prepared runner-up) · the Impressum (private address, ⚠ re-ruled before stage-3 public) · **18+** for stages 1–2 · the founding branch (student, 18+ — the e.U. kit confirmed, every branch kept documented). Deliberately still open: the stage-2 payments branch (deferred by the same pass) · mail on the domain (Migadu proposed, un-ruled) · R11/R12's two ⚠ rulings (door constraint; funding vehicle). Stage-1 build item 1 is unblocked.
 
+**The 2026-08-07 workflow sitting** (third of the day) made prompt triage law — **R22**: a packed multi-topic prompt is mapped into ordered threads before any work (coupled topics together, blockers jump the queue, deferrals get the maintainer's nod); the method lives in `.claude/commands/triage.md` (`/triage`), bound on every session via CLAUDE.md.
+
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.

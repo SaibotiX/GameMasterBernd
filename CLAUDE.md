@@ -36,6 +36,11 @@ Before adopting ANY new research finding, plan, or design change:
 - **Recommending the end of a session is YOUR job, unprompted.** When a round closes per R9 (wrapped, green, pushed, zero deviations, no open tasks) and the next item is a substantial new round — or you notice real strain (re-reading known files, unsure of your own earlier decisions, heavy compaction behind you) — say so and recommend a fresh session. Never cut mid-round (that's `wip:` + compaction).
 - **Before recommending: the cold-start test.** Could a fresh session reconstruct everything from this file + the owning docs alone? A "no" is a records bug — fix the records, then cut. End with a paste-ready opener that POINTS at the owning documents (build log next-step, report, registry) — it never restates their content.
 
+## Prompt triage (decision R22 — the packed prompt maps into threads first)
+
+- A prompt carrying several separable undertakings gets TRIAGED before any work: inventory every ask → classify → cluster by coupling → order (rulings, blockers, then dependency) → place (this session / subagents / deferred round). Method: `.claude/commands/triage.md` (`/triage`) — apply it unprompted whenever the shape appears.
+- Coupled topics never split (arguable = together); deferrals need the maintainer's nod; the map is presented before work begins; mid-session arrivals get the same test out loud.
+
 ## House rules
 
 - **One truth, one home:** every fact, rule, or workflow has exactly ONE owning document; everything else points to it, never restates it. New material that would duplicate or contradict a standing home is a ⚠ DEVIATION for the maintainer's ruling — two documents must never answer the same question differently.
