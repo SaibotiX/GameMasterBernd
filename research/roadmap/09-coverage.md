@@ -14,8 +14,8 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Domain | St | Truth lives | Open edge / next trigger |
 |---|---|---|---|
 | Distribution architecture & stages | ● | R1–R2, R6 · [02](02-friends-web-service.md)–[08](08-stage1-web-ui.md) | stage gates inside each spec |
-| Auth doors & credential custody | ● | R11 (ruled 2026-08-07; R5 retired into it) · door table in [06](06-research-log.md) | door-table re-run at login-build week · Anthropic pause-watch monthly (06 §2026-08-07) |
-| House lane & ledger | ● | R12 (vehicle ruled 2026-08-07: any provider's commercial account; aggregator qualifies) · [02](02-friends-web-service.md) | provider chosen at gateway build · Gemini EEA-paid-tier fact (06, 2026-08-06) feeds the model mix |
+| Auth doors & credential custody | ● | R5/R11 · door table in [06](06-research-log.md) | ⚠ R11 ruling pending (door constraint) · door-table re-run at login-build week |
+| House lane & ledger | ● | R12 · [02](02-friends-web-service.md) | ⚠ R12 ruling pending (funding vehicle) · Gemini EEA-paid-tier fact (06, 2026-08-06) feeds the model mix |
 | Session recording & consent | ● | R13 · [06](06-research-log.md) 2026-08-05 | deletion dry-run before the first friend (02 checklist 9) |
 | Stage-1 page | ● | R14 · [08](08-stage1-web-ui.md) | build |
 | Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
@@ -29,7 +29,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
 | Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |
 | Privacy papers beyond R13 | ◐ | same section | VVZ · threshold assessment · DPA collection · breach runbook — stage-1 build items |
-| AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · `/content` marks its emissions at the instrument (R23) · ⚠ AT authority designation watch |
+| AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · ⚠ AT authority designation watch |
 | Age policy | ● | R20 | 18+ assertion into invite-acceptance (stage-1 build) + the purchase flow (stage 2) · revisit at stage-3 planning |
 | Accessibility (EAA/BaFG) | ⊘ | compliance section | trigger: ≥10 persons or >€2 M — or stage 4 |
 | Product liability (PLD 2024/2853) | ⊘ | compliance section | trigger: public availability past 2026-12-09 |
@@ -41,5 +41,4 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
 | Mail on the domain | ◐ | hosting section (Migadu proposed) | ruling still open (not covered by R18, 2026-08-07) · needed for the published privacy/support contact before the first friend |
-| Generative media (image · sound · video) | ● | R23 · G18 · [06](06-research-log.md) §2026-08-07 modalities | sequencing ruled 2026-08-07 (R23 amendment): in-phase stage-1 deliverable — 02 item 15 + the exit-gate media-telemetry tooth · find_video disabled (errand landed 2026-08-07); legal real-video revival shapes evidenced (06 §2026-08-07 real video), ruling open · audio is the layer's deferred half |
 | Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · stage-1 Dockerfile pins the exact pi version (02 item 2) |

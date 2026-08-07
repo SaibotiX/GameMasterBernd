@@ -99,19 +99,6 @@ undertakings-research.md, progress in undertakings-build.md.)
   damage (F5 — a venture's setback never costs more than one wound, and
   only when flesh was declared at stake). G8 still governs: no dice where
   nothing is uncertain or nothing is at cost.
-- **G18 — The glass shows the real; conjuring is its own instrument**
-  (2026-08-07, maintainer's ruling; product side R23). The scrying glass
-  stays what it is: text and pictures fetched from the REAL web, always
-  on for every seeker — its grounding in the actual world is the whole
-  point of a find. Generated media — images and video now, audio later —
-  is a SECOND instrument (`/content`), never mixed into the glass and
-  never on by default: the seeker opts in knowingly before the first
-  conjured frame exists, because conjuring spends real coin at media
-  rates and video costs many images. Generated TEXT is a non-feature
-  forever: the keeper already is the game's voice, and find_text's worth
-  is precisely that it is NOT the keeper speaking. Lane availability,
-  the separate video gate, cost consent and the synthetic-media marking
-  are product law: R23 in the roadmap registry.
 
 ## Fairness invariants (from the research — see research doc "fair" list)
 

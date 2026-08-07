@@ -66,8 +66,6 @@ Decisions taken 2026-08-04. Each entry: what was decided, why, what was rejected
 
 *(revised 2026-08-05, stage-1 design round: extended and part-superseded by R11/R12. Sign-in widens from "their own Anthropic account" to every pi provider door the provider's policy leaves open in a hosted app, and durable credential custody moves into the player's browser (R11); an operator-funded lane exists from stage 1 on the org API key under Commercial Terms (R12) — the "org API key enters the picture only in stage 2" clause is superseded. ⚠ The 2026-08-04 "June-15 Agent SDK credit pool" status is stale: Anthropic PAUSED that plan June 15–16 before it took effect, and separately prohibits hosted third-party apps from offering Claude.ai login at all — full re-check in the 2026-08-05 sections of [06-research-log.md](06-research-log.md).)*
 
-*(2026-08-07: with the R11 and R12 rulings landed, R5 is fully superseded — R11 owns the auth doors, R12 the funded lane; this entry remains as the record of the original decision.)*
-
 ---
 
 ## R6 — One roadmap, evidence-gated
@@ -221,8 +219,6 @@ the criteria against real use).
 
 **⚠ DEVIATION note, surfaced for the maintainer (2026-08-05):** the instruction that seeded this entry envisioned subscription sign-in with "Anthropic, Google, ChatGPT…". The verified August-2026 policy ground prohibits exactly those three subscription doors in a hosted app. This entry adopts the compliant subset under R5's own "for as long as policy allows" bound. Ruling requested: confirm the constrained shape (doors reopen the day a provider permits them — the table is standing law for which are open), or direct otherwise; shipping prohibited doors is one enforcement sweep away from banned player accounts and is not recommended.
 
-**Ruled 2026-08-07 (maintainer): the constrained shape is confirmed as the design** — players bring **API keys for every provider plus OpenRouter's OAuth (PKCE)**; the door table stays standing law for which doors are open, and a prohibited door reopens only when its provider's policy does. The ⚠ above is resolved. Evidence refreshed the same day: [06](06-research-log.md) §2026-08-07 (hosted prohibitions re-confirmed verbatim on the live legal page; OpenRouter's PKCE flow and one-key catalogue verified).
-
 **Rejected:** *A central encrypted key store* (the LibreChat/OpenRouter shape) — one breach is every player's provider keys, and it makes us a standing credential custodian, the exact liability the ruling removes. *Plaintext browser localStorage* (the TypingMind default) — OWASP's flat "do not": one XSS reads every key; the vault is the hardened version of the same custody idea. *Split custody* (ciphertext on our server, key client-side) — buys device roaming, but a durable copy still sits with us, against the ruling's letter. *Per-session re-authorization, zero storage anywhere* — maximal security, worst friction, and it converges on the vault the moment anything is cached.
 
 **Revisit when:** the login flow is built (re-run the door table — and monthly for Anthropic's paused Agent SDK credit plan, which could resume in any shape); WebAuthn PRF support at implementation start (the fastest-moving fact in the custody research); the IETF browser-apps BCP when it lands as an RFC (~Jan 2027); WAICT quarterly — if it ships, the threat-model note upgrades.
@@ -238,8 +234,6 @@ the criteria against real use).
 **Why:** It removes the last onboarding wall — a friend with no AI account plays in one click, which is exactly the population whose playtest data the test phase exists to collect. And it front-loads stage 2's riskiest component: by the time real money touches the ledger, grants, caps, metering and reconciliation (pi's per-turn cost lines, R6) have run for months on friends.
 
 **Rejected:** *Funding from the personal subscription* (the instruction's literal reading — surfaced for the maintainer with the ruling request in the summary of 2026-08-05) — prohibited three ways by consumer terms (account sharing, resale, automated access) and one enforcement action from losing the maintainer's own account; the funding intent survives, the vehicle changes. *Unmetered friend play on the org key* (the old 02 "interim alternative") — R2's lesson gates every expensive path from day one; the real ledger replaces the interim hack entirely. *A throwaway test-phase mechanism* — it would be rebuilt for tokens within months; building the ledger once is cheaper than twice.
-
-**Ruled 2026-08-07 (maintainer): the funding VEHICLE is provider-agnostic.** "The maintainer's org API key under the provider's commercial terms" names a shape, not a provider: **a commercial API account of the operator's choosing — any provider pi speaks, or an aggregator account (OpenRouter-class) that reaches many catalogues through one key.** Anthropic's Commercial Terms §A.1 was the evidenced instance, not a commitment; whichever account is chosen at gateway-build time, that provider's commercial terms play the §A.1 role (aggregator duties, if that branch is taken, are recorded in [06](06-research-log.md) §2026-08-07: DPA, prompt-logging opt-in stays off, AUP pass-through, no-SLA tolerance). The personal subscription stays rejected as the vehicle; house-lane model routing stays ours (the cheap-routing target, [03](03-public-launch.md)). The surfaced ruling request is resolved.
 
 **Revisit when:** stage 2's payment integration starts (processor, prices, top-up shapes — derived from real stage-1 telemetry per R6); if Anthropic's paused credit plan resumes in an operator-allocable shape (as proposed it was subscriber-self-claimed only — useless to us; a true allocation mechanism would add a fourth door); if test-phase spend breaches the monthly cap twice — the cap is the experiment's budget, not a suggestion.
 
@@ -360,74 +354,3 @@ the criteria against real use).
 **Rejected:** nothing — the other branches are not wrong, just not the maintainer's today; pruning them was explicitly declined.
 
 **Revisit when:** the pre-stage-2 registration point (re-confirm the branch + the January-indexed values); any change in study/employment/benefit status before then (ALG especially: AMS consultation *before* any Gewerbe move).
-
----
-
-## R22 — The packed prompt is a capture, not a work order: triage into threads first
-
-*(added 2026-08-07, on the maintainer's instruction; operational rule
-binds every session via CLAUDE.md "Prompt triage"; the method is owned
-by `.claude/commands/triage.md` — `/triage`.)*
-
-**Decided:** The maintainer writes prompts the way thoughts arrive —
-many undertakings in one message, connections sometimes marked, asides
-buried, kinds mixed (rulings beside blockers beside research beside
-build). That capture format is CORRECT and stays; the cost moves to the
-session's side. Before any work, a packed prompt is mapped into
-THREADS: inventory every ask (the numbering is evidence, not truth) ·
-classify (ruling / blocker / question / research / design / build) ·
-cluster by coupling · order (rulings, then blockers, then dependency) ·
-place each thread (this session / subagents / a deferred round parked
-in its owning doc first). The coupling tie-breaker is TOGETHER:
-arguable siblings share a thread so architecture is designed in sight
-of what its neighbors do; context is recovered by placement — subagents
-for bounded sweeps, deferral for independent rounds — never by
-splitting coupled work. The map is presented before work begins;
-deferrals need the maintainer's nod; mid-session arrivals get the same
-test out loud. Full method: the command file.
-
-**Why:** Both failure modes are real and opposite. One window grinding
-a six-topic prompt in arrival order interleaves unrelated work — R10's
-evidence (context degradation begins well before window limits) applies
-within a session exactly as across them — and prompt order is not
-dependency order: the 2026-08-07 provider prompt carried its blocker (a
-pi upgrade crash) as item 3, behind two design items it blocked.
-Maximal splitting is the opposite failure: that same prompt's items 1,
-2 and 6 were one architecture — subscription-policy ground, per-duty
-model routing, provider-agnostic design — and the maintainer marked
-part of the coupling themselves ("Connection: 1) + 2)"); threads split
-per number would have designed the doors, the routing and the funding
-lane without sight of each other. The workflow's job is to honor the
-marked connections and find the unmarked ones.
-
-**Rejected:** *Asking the maintainer to pre-split prompts* — moves the
-cost to the human side and fights the natural capture format; the
-packed prompt is a feature. *Every numbered item its own thread* —
-shreds coupled architecture (above). *A standing auto-fan-out to
-subagents per prompt* — placement is a per-thread judgment; subagents
-are one option with a bounded diet (conclusions in, file dumps never),
-not a default. *Doing all threads in one session regardless* — the
-status quo this decision retires; the R10 opener machinery exists
-precisely so independent rounds can start fresh.
-
-**Revisit when:** a few rounds of real use grade the maps — too eager
-to defer, or too timid to split — and the tie-breaker or placement
-rules need tuning against practice (R10's own tuning clause); or the
-harness gains multi-session orchestration that changes what a deferred
-round costs.
-
----
-
-## R23 — Generative media: the real-web floor stands, conjuring is a second instrument — opt-in, gated, marked
-
-*(added 2026-08-07, the maintainer's media ruling — closes the register's generative-media row; the design-side law lands the same day as G18 in [undertakings-goals.md](../design/undertakings-goals.md). Evidence: [06](06-research-log.md) §2026-08-07, the OpenRouter modalities line; the video→premium-credits sketch is [03](03-public-launch.md)'s.)*
-
-**Decided:** Two layers, permanently distinct. The **floor** is the scrying glass as it exists — `/web` text + picture scrying of the real web, always on for every player, identity untouched. **Generated media is a second instrument** — command **`/content`** — images and video at adoption, audio later, behind an explicit **per-player opt-in**. The opt-in is **cost consent**: no grant and no BYO credit ever spends on media the player didn't ask for. Inside the layer, **video gates separately from images** — a video cast runs 3–30× an image at the evidenced budget tiers, and [03](03-public-launch.md)'s sketch already routes video to premium credits. The layer is **offered only on lanes whose key can serve it** — the house lane (media-capable operator account) and the OpenRouter door; a bare API key without media endpoints is never shown the instrument. **AI-Act Art. 50 marking attaches at the instrument:** everything `/content` emits is synthetic by construction, so the marking is structural, not forensic (the compliance section owns the duty; the R14 build carries the text-side disclosure either way). And **"AI text" is a non-feature:** the keeper already *is* the game's generated text; `find_text`'s whole value is grounding in the real. Build items follow at their own pace; the stage question — before or during the friends phase — went to debate the same day and takes the maintainer's ruling (recorded here when it lands).
-
-**Why:** The text-only premise died in the evidence (one OpenRouter-class key now serves image, audio and video), which made the question unavoidable — and the floor+layer shape answers it without touching the game's identity. The glass keeps meaning "the real world, reachable from inside the fiction"; conjured media becomes a chosen instrument with its own meter. The cost asymmetry does the rest of the design: media rates are real money per cast, so consent and the separate video gate ride the architecture, never trust.
-
-**Rejected:** *Generated media inside the glass, replacing or mixed with scrying* — a synthetic picture in the same instrument dissolves what a find means. *"AI text" as a feature* — the keeper is the AI text. *Default-on or opt-out media* — spend the player didn't ask for breaks the lanes' metering honesty (R12). *Offering the instrument on lanes that can't serve it* — a dead door in the player's face.
-
-**Ruled 2026-08-07 (maintainer), the same sitting — the sequencing:** the roadmap's order STANDS; `/content` is never a stage-1 entry condition. It is a **named in-phase deliverable** ([02](02-friends-web-service.md) checklist item 15 — built after the core rung, arriving as a hot update, house-lane pilot first, widening per the capability gate), the **stage-1 exit telemetry must include real media casts** so [03](03-public-launch.md)'s premium-credit pricing enters stage 2 measured, not estimated (the exit-gate tooth, R6's own logic), and **item 8's house-lane account choice weighs media capability from now** — the one consequence that arrives before the build does, because the account is chosen during the stage-1 build regardless. The engine piece may be built at any time (stage-0 local play exercises it); the friends launch never waits on it. **And the glass's real-video rung retires: `find_video` is disabled for now.** Nothing stood against it — the floor above is ruled text + picture, the VPS bot-wall and the commercial ToS exposure were already documented ([02](02-friends-web-service.md) limitation note, [03](03-public-launch.md) media compliance), and the stage-1 image sheds python3/yt-dlp/ffmpeg; the one cost, a working local luxury, the maintainer priced knowingly. The disable is an open engine errand (roadmap [README](README.md) §Now); the code stays for revival, and if real-video scrying ever returns it is 03's BYO-cookies / local-play shape — a separate question from `/content`'s *generated* video, which keeps its own gate here.
-
-**Revisit when:** audio's turn comes (the deferred half of the layer); any door gains or loses media endpoints (the capability gate re-derives from the door table); Art. 50 guidance or the AT authority designation moves (compliance watch, standing); the find_video errand lands (02's and the main README's video mentions sweep with it) *(landed 2026-08-07 — engine disabled, both sweeps done; the decisions-log line is in the build log)*.

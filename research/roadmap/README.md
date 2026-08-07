@@ -9,8 +9,8 @@ This folder is **internal planning** — like the rest of `research/` and `aites
 | Stage | What | Players | Who pays AI | Status |
 |---|---|---|---|---|
 | 0 | Local play + trusted-friend copies | you + a few friends | each their own account | current |
-| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | own key/sign-in per the door table (R11), or the ledgered house lane on the operator's commercial account (R12 — any provider, aggregator qualifies) | next |
-| 2 | **Invite-only paid beta** — accounts, credit ledger, LLM gateway, Stripe | waitlist invites | players buy rounds; the operator's commercial account underneath | gated |
+| 1 | **Friends web service** — the game streamed to the browser, per-friend containers on a VPS | invited friends, secret links | own key/sign-in per the door table (R11), or the ledgered house lane on our org key (R12) | next |
+| 2 | **Invite-only paid beta** — accounts, credit ledger, LLM gateway, Stripe | waitlist invites | players buy rounds; your org API account underneath | gated |
 | 3 | **Public launch** — open signups, free taste, prepaid rounds | anyone | same as stage 2, at scale | gated |
 | 4 | **Steam launch** — Electron shell around the same client; same servers, accounts, credits | Steam's audience | same as stages 2–3 (Steam MTX in-client) | gated |
 | ⊥ | **Open source** — orthogonal track, can attach after any stage | — | — | option, one-way |
@@ -23,20 +23,13 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 **The 2026-08-06 business/naming sitting** answered the commercial unknowns in six evidence sections of [06](06-research-log.md) — hosting · domain/TLD · trademark · Austrian founding & tax · payments · compliance gaps — and made the coverage register law ([09-coverage.md](09-coverage.md), R15: zero silent unknowns). Its proposals went to the maintainer **as the register's ◐/○ rows**: the name (clearance clean; worldconsole.com squatted at $3,595, every other TLD free) · the TLD basket (.games + .at + .eu ≈ €50/yr at INWX proposed) · the box (netcup Vienna ≈ €6/mo proposed, cross-provider backups) · the Impressum address strategy · the age policy (18+ proposed) · the stage-2 payments branch (Stripe direct vs Stripe-MoR) · the maintainer's founding branch (employment/age — input only they can give). Nothing was adopted against standing law; the one would-be deviation (a non-Stripe merchant of record) is flagged inside the payments section and arises only if that branch is ever chosen.
 
-**The 2026-08-07 ruling pass closed those edges as R16–R21:** the names (**World Console**; studio **Hausregel**) · the domain (**worldconsole.eu alone**, INWX) · the box (**netcup Vienna**, Hetzner the prepared runner-up) · the Impressum (private address, ⚠ re-ruled before stage-3 public) · **18+** for stages 1–2 · the founding branch (student, 18+ — the e.U. kit confirmed, every branch kept documented). Stage-1 build item 1 is unblocked.
-
-**The 2026-08-07 provider round** (second sitting the same day) closed the R11/R12 pair and re-grounded the AI lane: the maintainer confirmed the constrained doors (R11 — API keys everywhere plus OpenRouter's PKCE) and made the funded lane provider-agnostic (R12 — any commercial account, aggregator qualifies). [06](06-research-log.md) §2026-08-07 carries the two-class Anthropic correction with a measured probe (local play bills to extra-usage credits, not plan limits — the sanctioned lane), and the OpenRouter fact sheet (one key, whole catalogue, PKCE, image/audio/video modalities). The engine grew `/ai` — per-duty model routing, 03's cheap-routing target landed early. Deliberately still open: the stage-2 payments branch (deferred 2026-08-07) · mail on the domain (Migadu proposed, un-ruled).
-
-**The 2026-08-07 workflow sitting** (third of the day) made prompt triage law — **R22**: a packed multi-topic prompt is mapped into ordered threads before any work (coupled topics together, blockers jump the queue, deferrals get the maintainer's nod); the method lives in `.claude/commands/triage.md` (`/triage`), bound on every session via CLAUDE.md.
-
-**The 2026-08-07 clearing** (fourth of the day) closed the aitester's open loop: the batch-3 rulings are declined without adoption and no batch is planned — the findings rest in the immutable `aitester/reports/2026-08-05-3.md`, adoptable if a batch is ever run again, and the harness stays ready. The ruling and the closed loop: `research/design/undertakings-build.md` Phase 2.9.
-
-**The 2026-08-07 media ruling** (fifth of the day) closed the register's generative-media row as **R23/G18**: the real-web glass stays the always-on floor for every player; generated media (images + video now, audio later) becomes the **`/content`** instrument behind per-player cost consent — video gated apart from images, offered only on media-capable lanes (house lane, OpenRouter door), Art.-50-marked at the source; "AI text" is a non-feature. The sequencing was **ruled the same sitting** (R23's dated amendment): the roadmap's order stands — `/content` is a named in-phase stage-1 deliverable (02 item 15) with an exit-gate media-telemetry tooth and a media-aware item-8 account choice, never an entry condition. **And `find_video` retires for now** — the glass's floor is text + picture (G18); the disable errand landed the same day (engine + sweep verified green; the decisions-log line is in the build log).
+**The 2026-08-07 ruling pass closed those edges as R16–R21:** the names (**World Console**; studio **Hausregel**) · the domain (**worldconsole.eu alone**, INWX) · the box (**netcup Vienna**, Hetzner the prepared runner-up) · the Impressum (private address, ⚠ re-ruled before stage-3 public) · **18+** for stages 1–2 · the founding branch (student, 18+ — the e.U. kit confirmed, every branch kept documented). Deliberately still open: the stage-2 payments branch (deferred by the same pass) · mail on the domain (Migadu proposed, un-ruled) · R11/R12's two ⚠ rulings (door constraint; funding vehicle). Stage-1 build item 1 is unblocked.
 
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
-2. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
+2. **aitester Batch 2** (game track, `research/design/undertakings-build.md` Phase 2.9) — Phase 3 waits for two consecutive clean batches in both worlds.
+3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
 ## The files
 

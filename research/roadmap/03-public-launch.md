@@ -18,7 +18,7 @@ player acts ──→ server: player.rounds > 0 ?
 monthly: provider bills US once, for everyone's aggregate usage
 ```
 
-The player's money never touches any model provider. There is **one commercial API account per provider (or one aggregator account) on our side** — the provider mix is the operator's choice, R12's 2026-08-07 ruling; the "round" is an internal accounting row whose price is set so `price per round > our average provider cost per round`. Friends & Fables runs five model families behind one credit currency — proof the credit is pure bookkeeping. This is exactly what we build; it is not novel.
+The player's money never touches Google/Anthropic/OpenAI. There is **one org API account per provider on our side**; the "round" is an internal accounting row whose price is set so `price per round > our average provider cost per round`. Friends & Fables runs five model families behind one credit currency — proof the credit is pure bookkeeping. This is exactly what we build; it is not novel.
 
 ## New components on top of stage 1
 
@@ -37,7 +37,7 @@ The player's money never touches any model provider. There is **one commercial A
 
 A round bundles the keeper turn **and** its hidden side calls (guardian checks, fate weaving, table answers within the turn). Genuinely expensive extras map to a separate credit unit, exactly the Fables pattern of gating premium work behind credits:
 
-- `/history long` (the saga call) → costs credits, not rounds. (`find_video` — slow, bandwidth-heavy — sat here too until the lens retired, R23 2026-08-07; it rejoins this line only if revived. `/content`'s generated media has its own premium-credit sketch below.)
+- `/history long` (the saga call), `find_video` (slow, bandwidth-heavy) → cost credits, not rounds.
 - Old Greg's equivalent trick: their round is a *whole party cycle*; their guest-players ride free while the host pays. We are single-seeker, so our simpler unit works.
 
 ### The hard rule: money buys compute, never advantage (decision R8)
@@ -46,7 +46,7 @@ This game runs on open dice, and the law has met purchasable currency near dice 
 
 ## Cost side — why our engine is well-positioned
 
-The engine already splits its LLM work into **separate calls**: keeper (must be strong), guardian truth-checks, fate-plan weaving, GM-table answers, sagas. That is precisely the structure that lets the profitable AI RPGs route models by task (Fables: Gemini/Llama/GPT/Grok/own fine-tune behind one GM). Route the side calls to a cheap fast tier — any provider's — and only the keeper rides the expensive one; the engine's own `/ai` surface routes each duty already (2026-08-07), so the gateway only decides which catalogue serves it. Further cost levers already built: code-side archive recall instead of long context, `/compact`, per-turn cost stamped into every session file (telemetry is free).
+The engine already splits its LLM work into **separate calls**: keeper (must be strong), guardian truth-checks, fate-plan weaving, GM-table answers, sagas. That is precisely the structure that lets the profitable AI RPGs route models by task (Fables: Gemini/Llama/GPT/Grok/own fine-tune behind one GM). Route the side calls to a Haiku/Flash-class model and only the keeper rides the expensive one. Further cost levers already built: code-side archive recall instead of long context, `/compact`, per-turn cost stamped into every session file (telemetry is free).
 
 **Placeholder math — replace with stage 1 telemetry:** keeper turn ≈ 10–20 k tokens in / ~1 k out on a Sonnet-class model ≈ 5–8 ¢, side calls routed cheap ≈ +1–2 ¢ → **~6–10 ¢ per round all-in; cheap-routing target ~3–6 ¢.**
 
@@ -59,7 +59,7 @@ Modeled on the two live businesses (Old Greg's: $5 one-time/50 rounds, $15/mo/20
 | Free taste | small **daily** round allowance on the cheap-routed path (e.g. 5–10 rounds/day per verified account), hard-capped | bounded like Fables' 25 turns/day — and a *recurring* taste beats a once-only trial: the live-AI genre's top review-collapse pattern is walling off the core experience (Whispers from the Star went recent-negative over exactly this). A free player stays a real, rate-limited player; never unbounded |
 | Starter pack | ~€5 one-time / ~50 rounds | low-friction entry, proven by Old Greg's original flat price |
 | Regular | monthly pack of rounds at better unit price | prepaid, expires-or-rolls decision later |
-| Premium credits | separate small currency for sagas / `/content` video (R23; real-video scrying would rejoin only if revived) | Fables' credits pattern |
+| Premium credits | separate small currency for sagas / video scrying | Fables' credits pattern |
 
 Start with **prepaid packs only** — no "unlimited" promise until cheap-routing is proven against real usage curves. Margin target: price per round ≥ 2× measured cost per round (covers free taste, refunds, VPS, Stripe fees). Three standing constraints from the migrated platform research: **never advertising-subsidized rounds** (Steam's rule 14 bans ad-based models, and it is a poor fit regardless); pack prices must still clear margin **after Steam's 30 % MTX cut** once stage 4 exists ([07-steam-launch.md](07-steam-launch.md)); and wherever rounds are sold, **the credit model gets explained in plain words** — opaque AI paywalls are the genre's #1 review complaint.
 
@@ -70,7 +70,7 @@ Start with **prepaid packs only** — no "unlimited" promise until cheap-routing
 - **Moderation duty:** strangers chatting with an LLM under our key makes us the operator under the provider's usage policies — abuse reporting path, ban switch per account (stop container + freeze ledger).
 - **Reports & DSA:** storing players' chronicles makes us a hosting service under the EU DSA, and the Art. 16 notice-and-action duty applies regardless of company size — a report button/address that reaches a human, plus a statement of reasons when we act. Cheap to build; wire it into the account page from day one.
 - **Minors:** the age policy is **ruled (2026-08-07, R20): 18+ through stages 1–2**, asserted at invite-acceptance and at purchase; stage-3 planning revisits it as its own decision. The constitution's content bounds are explicit as of 2026-08-04 — rule 4 binds both the scrying glass and the keeper's own telling — so the ToS and Steam's guardrail description reuse its wording ([07-steam-launch.md](07-steam-launch.md)). (Noted 2026-08-05: the age policy and the house-lane model mix must be decided *together* — Google's Gemini API terms prohibit services "likely to be accessed by" under-18s outright; door table in [06-research-log.md](06-research-log.md). R20 satisfies that constraint.)
-- **Media compliance:** hosted `find_video` would mean shipping YouTube-scraped clips to paying customers — ToS exposure we should not carry commercially, and datacenter IPs hit YouTube's bot-walls anyway (both now recorded in R23's retirement of the lens, 2026-08-07 — the lens is disabled as of stage 0). If it ever revives, the standing decision holds: hosted tiers run **wiki-media only** (text + pictures), with video as a BYO-cookies opt-in or a local-play-only feature. No user uploads exist anywhere in the product, so CSAM-reporting and DMCA-agent duties do not attach — true only while nothing player-uploaded is ever stored; any future upload feature re-opens that gate deliberately.
+- **Media compliance:** hosted `find_video` means shipping YouTube-scraped clips to paying customers — ToS exposure we should not carry commercially, and datacenter IPs hit YouTube's bot-walls anyway (stage 1 limitation note). Decision before stage 3: hosted tiers run **wiki-media only** (text + pictures), with video as a BYO-cookies opt-in or a local-play-only feature. No user uploads exist anywhere in the product, so CSAM-reporting and DMCA-agent duties do not attach — true only while nothing player-uploaded is ever stored; any future upload feature re-opens that gate deliberately.
 - **Support:** a contact address and a "the keeper is stuck" repair path (the GM table's repair hands already cover most of it in-game).
 
 ## Stage gates

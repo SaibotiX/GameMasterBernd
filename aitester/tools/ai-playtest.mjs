@@ -54,9 +54,8 @@ function parseFlags(argv) {
 		world: "dragon-realm",
 		personas: ["squire"],
 		// The tester model is switchable three ways, most specific first:
-		// --tester-model provider/id → WC_TESTER_MODEL env → pi's own default
-		// model (settings.json) — the harness names no provider of its own.
-		testerModel: process.env.WC_TESTER_MODEL || null,
+		// --tester-model provider/id → WC_TESTER_MODEL env → this default.
+		testerModel: process.env.WC_TESTER_MODEL || "anthropic/claude-haiku-4-5",
 		// The keeper (game) model: --keeper-model provider/id → WC_KEEPER_MODEL
 		// env → pi's own settings default (flag omitted from the spawn then).
 		keeperModel: process.env.WC_KEEPER_MODEL || null,
@@ -291,21 +290,6 @@ async function loadCatalog() {
 	if (!found) throw new Error(`cannot find pi-ai under pi's install — looked at:\n  ${candidates.join("\n  ")}`);
 	const mod = await import(pathToFileURL(found).href);
 	return mod.builtinModels({ credentials: new PiAuthStore() });
-}
-
-/** The last-resort tester model is pi's own default (settings.json) — the
- * harness stays provider-agnostic; every model it runs is the operator's
- * choice somewhere (flag, env, or pi's own setting). */
-function piDefaultModelRef() {
-	try {
-		const settings = JSON.parse(readFileSync(join(homedir(), ".pi", "agent", "settings.json"), "utf8"));
-		if (settings?.defaultProvider && settings?.defaultModel) {
-			return `${settings.defaultProvider}/${settings.defaultModel}`;
-		}
-	} catch {
-		// fall through — the caller names the three ways to set one
-	}
-	return null;
 }
 
 /** Resolve a "provider/id" ref against pi-ai's catalog, with a message that
@@ -799,15 +783,7 @@ const catalog = flags.script ? null : await loadCatalog();
 // Fail fast on model refs too — an unknown tester model used to surface only
 // MID-BATCH as a dead sitting ("…is not in pi-ai's catalog", the Gemini
 // stumble); now the batch refuses to start.
-if (catalog) {
-	flags.testerModel ||= piDefaultModelRef();
-	if (!flags.testerModel) {
-		throw new Error(
-			"no tester model — pass --tester-model provider/id, set WC_TESTER_MODEL, or pick pi's default model (/settings) first",
-		);
-	}
-	resolveModelRef(catalog, flags.testerModel, "tester");
-}
+if (catalog) resolveModelRef(catalog, flags.testerModel, "tester");
 const batchDir = join(SESSIONS_IN, flags.batch);
 mkdirSync(batchDir, { recursive: true });
 

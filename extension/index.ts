@@ -4,10 +4,9 @@
  *  - pi's coding system prompt is replaced every turn with the layered
  *    game-master prompt (constitution → world → mood → standing → protocol)
  *  - the built-in coding tools are stripped; the model gets the game tools:
- *      find_text / find_picture — the "scrying glass" lenses (MediaWiki text
- *        and file search; downloads land in data/downloads/). The video lens
- *        (find_video, yt-dlp YouTube clip) is retired for now — registered
- *        below but never offered (roadmap R23: the floor is text + picture)
+ *      find_text / find_picture / find_video — the "scrying glass" lenses
+ *        (MediaWiki text and file search, yt-dlp YouTube clip; downloads land
+ *        in data/downloads/)
  *      set_mood          — mood shifts; the angriest mood bars the glass (code-owned)
  *      grant_redemption  — lifts the bar after sincere amends (no-op unless barred)
  *      record_name       — stores the seeker's name for the standing layer
@@ -32,17 +31,6 @@ import { FooterComponent, SettingsManager, type ExtensionAPI, type ExtensionCont
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import {
-	AI_ROLES,
-	refOf,
-	resolvePattern,
-	ROLE_DUTY,
-	roleFromWord,
-	SIDE_ROLES,
-	splitRef,
-	type ModelListing,
-	type SideRole,
-} from "./aimodels.ts";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
 import {
@@ -120,11 +108,8 @@ const DOWNLOAD_DIR = join(BASE_DIR, "data", "downloads");
 /** Persistent world chronicle (places/personas/quests/items); overridable for tests. */
 const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(BASE_DIR, "data", "world");
 const DEFAULT_WORLD = "dragon-realm";
-/** find_video is retired for now (roadmap R23, 2026-08-07: the glass's floor
- * is text + picture) — its registration and the yt-dlp machinery stay for
- * revival, but the tool is never offered and /web takes no video kind. */
 const GAME_TOOLS = [
-	"find_text", "find_picture",
+	"find_text", "find_picture", "find_video",
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
@@ -144,7 +129,7 @@ const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "age
 /** Extension settings that survive sessions and worlds (thoughts collapse).
  * WORLD_CONSOLE_SETTINGS_FILE overrides for tests (like WORLD_CONSOLE_DATA_DIR). */
 const WC_SETTINGS_FILE = process.env.WORLD_CONSOLE_SETTINGS_FILE || join(AGENT_DIR, "world-console.json");
-const SEARCH_KINDS = ["text", "picture"] as const;
+const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
 	find_text: "text",
 	find_picture: "picture",
@@ -195,20 +180,13 @@ export default function (pi: ExtensionAPI) {
 	// ---- extension settings (survive sessions and worlds) ------------------
 	interface WcSettings {
 		thoughts: { bernd: boolean; gm: boolean }; // true = collapsed
-		/** /ai side-duty overrides ("provider/id" per role); absent = mirror the keeper. */
-		models: Partial<Record<SideRole, string>>;
 	}
 	function loadWcSettings(): WcSettings {
 		try {
 			const parsed = JSON.parse(readFileSync(WC_SETTINGS_FILE, "utf8"));
-			const models: Partial<Record<SideRole, string>> = {};
-			for (const role of SIDE_ROLES) {
-				const ref = parsed?.models?.[role];
-				if (typeof ref === "string" && splitRef(ref)) models[role] = ref;
-			}
-			return { thoughts: { bernd: !!parsed?.thoughts?.bernd, gm: !!parsed?.thoughts?.gm }, models };
+			return { thoughts: { bernd: !!parsed?.thoughts?.bernd, gm: !!parsed?.thoughts?.gm } };
 		} catch {
-			return { thoughts: { bernd: false, gm: false }, models: {} };
+			return { thoughts: { bernd: false, gm: false } };
 		}
 	}
 	function saveWcSettings(settings: WcSettings): void {
@@ -220,20 +198,6 @@ export default function (pi: ExtensionAPI) {
 		}
 	}
 	let wcSettings = loadWcSettings();
-
-	/** The model a side duty speaks through: its /ai override, else whatever
-	 * the keeper (pi's main loop) currently runs. Null = nothing to call. */
-	function sideModel(
-		role: SideRole,
-		ctx: { model?: { provider: string; id: string } | null },
-	): { provider: string; id: string } | null {
-		const ref = wcSettings.models[role];
-		if (ref) {
-			const split = splitRef(ref);
-			if (split) return split;
-		}
-		return ctx.model ? { provider: ctx.model.provider, id: ctx.model.id } : null;
-	}
 
 	// ---- the chronicler's identity (G16) -----------------------------------
 	/** The voice's leading proper name — "Bernd" from "Bernd, Keeper of the
@@ -338,8 +302,7 @@ export default function (pi: ExtensionAPI) {
 		if (chroniclerCrafting || st.dead || st.chats < CHRONICLER_CRAFT_AFTER_CHATS) return;
 		const files = worldFiles();
 		if (st.chronicle === undefined || chroniclerExists(files)) return;
-		const model = sideModel("saga", ctx);
-		if (!model) return;
+		if (!ctx.model) return;
 		chroniclerCrafting = true;
 		const opening = archiveLinesOf(ctx)
 			.filter((line) => line.who === "seeker" || line.who === "game")
@@ -347,7 +310,7 @@ export default function (pi: ExtensionAPI) {
 			.map(formatArchiveLine);
 		gmCraftChronicler({
 			config,
-			model,
+			model: { provider: ctx.model.provider, id: ctx.model.id },
 			opening,
 			standing: { place: st.place?.title, mood: st.mood, seeker: st.playerName },
 		})
@@ -1205,12 +1168,12 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	// /web <text|picture> <query> — the seeker invokes the scrying glass
+	// /web <text|picture|video> <query> — the seeker invokes the scrying glass
 	// directly. The engine enforces the ban without an LLM call; everything
 	// else is handed to the game master, who judges the request in character
 	// and performs it through the matching find_* tool.
 	pi.registerCommand("web", {
-		description: "World Console: scry the web — /web <text|picture> <query>",
+		description: "World Console: scry the web — /web <text|picture|video> <query>",
 		getArgumentCompletions: (prefix: string) => {
 			if (prefix.includes(" ")) return null; // kind chosen — the query is free-form
 			const bare = prefix.replace(/^-/, "");
@@ -1226,7 +1189,7 @@ export default function (pi: ExtensionAPI) {
 			const kind = (rawKind ?? "").replace(/^-/, "").toLowerCase();
 			const query = rest.join(" ").trim();
 			if (!(SEARCH_KINDS as readonly string[]).includes(kind) || !query) {
-				ctx.ui.notify("Usage: /web <text|picture> <query>", "warning");
+				ctx.ui.notify("Usage: /web <text|picture|video> <query>", "warning");
 				return;
 			}
 			if (st.banned) {
@@ -2224,108 +2187,6 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	// /ai — which mind serves each duty (2026-08-07). The keeper is pi's own
-	// model (this wraps pi.setModel; pi's /model works unchanged); the four
-	// side duties mirror the keeper unless a standing override routes them to
-	// another model — any provider pi speaks, resolved at call time through
-	// the same catalogue the side calls use. Overrides persist like the
-	// /thoughts toggles: across sittings and worlds, per this machine.
-	pi.registerCommand("ai", {
-		description:
-			"World Console: which mind serves each duty — /ai (roster) · /ai <role> <model|mirror> (keeper table guardian fate saga)",
-		getArgumentCompletions: (prefix: string) => {
-			const bare = prefix.trim().toLowerCase();
-			if (bare.includes(" ")) return null; // model patterns come from /model's catalogue
-			const options = AI_ROLES.filter((role) => role.startsWith(bare)).map((role) => ({
-				value: role,
-				label: `${role} — ${ROLE_DUTY[role]}`,
-			}));
-			return options.length > 0 ? options : null;
-		},
-		handler: async (args, ctx) => {
-			const keeper = ctx.model ? { provider: ctx.model.provider, id: ctx.model.id } : null;
-			const parts = (args ?? "").trim().split(/\s+/).filter(Boolean);
-			if (parts.length === 0) {
-				const lines = [
-					"⟡ the minds at work — /ai <role> <model> reroutes one, /ai <role> mirror follows the keeper again:",
-					`  keeper: ${keeper ? refOf(keeper) : "(none — pick one with /model)"} — ${ROLE_DUTY.keeper}`,
-				];
-				for (const role of SIDE_ROLES) {
-					const ref = wcSettings.models[role];
-					const shown = ref ?? (keeper ? `${refOf(keeper)} (mirrors the keeper)` : "(mirrors the keeper — none picked)");
-					lines.push(`  ${role}: ${shown} — ${ROLE_DUTY[role]}`);
-				}
-				ctx.ui.notify(lines.join("\n"), "info");
-				return;
-			}
-			const role = roleFromWord(parts[0], chroniclerName());
-			if (!role) {
-				ctx.ui.notify(
-					`Unknown duty "${parts[0]}" — roles: ${AI_ROLES.join(" · ")} (gm, dm, judge, weaver, summary and the voice's own name work too).`,
-					"warning",
-				);
-				return;
-			}
-			const pattern = parts.slice(1).join(" ");
-			if (!pattern) {
-				const current =
-					role === "keeper" ? (keeper ? refOf(keeper) : "(none)") : (wcSettings.models[role] ?? "(mirrors the keeper)");
-				ctx.ui.notify(
-					`⟡ ${role}: ${current} — ${ROLE_DUTY[role]}\n` +
-						`Set with /ai ${role} <provider/model-id or a unique part of it>` +
-						(role === "keeper" ? "; pi's /model picker works too." : `; /ai ${role} mirror follows the keeper again.`),
-					"info",
-				);
-				return;
-			}
-			if (role !== "keeper" && /^(mirror|clear|default)$/i.test(pattern)) {
-				delete wcSettings.models[role];
-				saveWcSettings(wcSettings);
-				ctx.ui.notify(`⟡ the ${role} mirrors the keeper again${keeper ? ` (${refOf(keeper)})` : ""} — persisted.`, "info");
-				return;
-			}
-			const registry = (ctx as { modelRegistry?: { getAvailable?: () => ModelListing[] } }).modelRegistry;
-			const available: ModelListing[] = (() => {
-				try {
-					return registry?.getAvailable?.() ?? [];
-				} catch {
-					return [];
-				}
-			})();
-			if (available.length === 0) {
-				ctx.ui.notify("No model catalogue is available — sign a provider in first (/login).", "error");
-				return;
-			}
-			const { match, candidates } = resolvePattern(pattern, available);
-			if (!match) {
-				const shown = candidates.slice(0, 8).map((candidate) => `  ${refOf(candidate)}`);
-				ctx.ui.notify(
-					candidates.length === 0
-						? `No available model matches "${pattern}" — /model lists the catalogue.`
-						: `"${pattern}" is ambiguous — ${candidates.length} match:\n${shown.join("\n")}${candidates.length > 8 ? "\n  …" : ""}`,
-					"warning",
-				);
-				return;
-			}
-			if (role === "keeper") {
-				// match came from the registry's own catalogue, so it IS pi's model object.
-				const success = await pi.setModel(match as Parameters<typeof pi.setModel>[0]);
-				if (!success) {
-					ctx.ui.notify(`No credentials serve ${refOf(match)} — /login its provider or set its API key first.`, "error");
-					return;
-				}
-				ctx.ui.notify(`⟡ the keeper now speaks through ${refOf(match)} — unrouted side duties follow along.`, "info");
-				return;
-			}
-			wcSettings.models[role] = refOf(match);
-			saveWcSettings(wcSettings);
-			ctx.ui.notify(
-				`⟡ the ${role} now speaks through ${refOf(match)} — persisted (/ai ${role} mirror returns it to the keeper).`,
-				"info",
-			);
-		},
-	});
-
 	/** The events worth a timeline line (ticks and machinery stay out). */
 	function historyLine(event: GameEvent): string | null {
 		switch (event.ev) {
@@ -2362,16 +2223,15 @@ export default function (pi: ExtensionAPI) {
 				`  the glass: ${st.searches} scryings granted · ${st.refusals} refused · ${st.chats} words spoken`,
 			].join("\n");
 			if (wantLong) {
-				const model = sideModel("saga", ctx);
-				if (!model) {
-					ctx.ui.notify("The chronicler needs a model — pick one with /model (or route the duty with /ai saga).", "error");
+				if (!ctx.model) {
+					ctx.ui.notify("The chronicler needs a model — pick one with /model first.", "error");
 					return;
 				}
 				try {
 					const lines = withTail(archiveLinesOf(ctx).map(formatArchiveLine), 400);
 					const saga = await gmChronicle({
 						config,
-						model,
+						model: { provider: ctx.model.provider, id: ctx.model.id },
 						lines,
 					});
 					ctx.ui.notify(`${saga}\n\n${achievements}`, "info");
@@ -2433,14 +2293,11 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.notify(GM_USAGE, "info");
 			return;
 		}
-		// The table and the guardian are separate duties — /ai may route each
-		// to its own model; both mirror the keeper when unrouted.
-		const tableModel = sideModel("table", ctx);
-		const guardianModel = sideModel("guardian", ctx);
-		if (!tableModel || !guardianModel) {
-			ctx.ui.notify("The GM table needs a model — pick one with /model (or route the duty with /ai table).", "error");
+		if (!ctx.model) {
+			ctx.ui.notify("The GM table needs a model — pick one with /model first.", "error");
 			return;
 		}
+		const model = { provider: ctx.model.provider, id: ctx.model.id };
 
 		// Amendment: the record itself is the proof that an evaluation erred.
 		const amendMatch = trimmed.match(/^amend_truth\s+(.+)$/is);
@@ -2478,7 +2335,7 @@ export default function (pi: ExtensionAPI) {
 			let verdict;
 			try {
 				verdict = await gmJudgeAmendment(
-					{ config, model: guardianModel, truths: st.truths, referenced: { uid: uref, text: clip(referencedText, 1500) } },
+					{ config, model, truths: st.truths, referenced: { uid: uref, text: clip(referencedText, 1500) } },
 					text,
 				);
 			} catch (error) {
@@ -2516,7 +2373,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			let verdict;
 			try {
-				verdict = await gmJudgeTruth({ config, model: guardianModel, evidence: truthEvidence(ctx, text) }, text);
+				verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx, text) }, text);
 			} catch (error) {
 				ctx.ui.notify(
 					`The guardian could not be reached — nothing was bound. (${(error as Error).message})`,
@@ -2585,7 +2442,7 @@ export default function (pi: ExtensionAPI) {
 					answerSheets: resolvedAnswerSheets(),
 					chronicleIndex,
 					entryCensus: `${totalEntries} entries so far (u1–u${totalEntries}); game events and spoken turns are the numbered minority among them.`,
-					model: tableModel,
+					model,
 				},
 				gmThread,
 				trimmed,
@@ -2603,7 +2460,7 @@ export default function (pi: ExtensionAPI) {
 			} else {
 				let verdict = null;
 				try {
-					verdict = await gmJudgeTruth({ config, model: guardianModel, evidence: truthEvidence(ctx, text) }, text);
+					verdict = await gmJudgeTruth({ config, model, evidence: truthEvidence(ctx, text) }, text);
 				} catch (error) {
 					out += `\n\nThe engine could not check the record — nothing was bound. (${(error as Error).message})`;
 				}
@@ -3340,15 +3197,14 @@ export default function (pi: ExtensionAPI) {
 			// Clues beat: weave the fate now, hand the keeper the warning signs.
 			if (u.twist > 0 && !u.plan && nextBeat >= u.twist - 1) {
 				let plan: FatePlan | null = null;
-				const fateModel = sideModel("fate", ctx);
-				if (fateModel) {
+				if (ctx.model) {
 					try {
 						// The planner grounds the twist in the place's own page —
 						// what the record already knows, never thin air (A5).
 						const page = st.place ? clip(placePage(files, st.place.slug), 1200) : "";
 						plan = await gmPlanFate({
 							config,
-							model: fateModel,
+							model: { provider: ctx.model.provider, id: ctx.model.id },
 							quest: { title: quest.title, task: quest.task, reward: quest.reward, giver: quest.giver },
 							placeTitle: st.place?.title ?? "the road",
 							placeBody: page || undefined,
