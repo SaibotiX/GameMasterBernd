@@ -415,3 +415,17 @@ to defer, or too timid to split — and the tie-breaker or placement
 rules need tuning against practice (R10's own tuning clause); or the
 harness gains multi-session orchestration that changes what a deferred
 round costs.
+
+---
+
+## R23 — Generative media: the real-web floor stands, conjuring is a second instrument — opt-in, gated, marked
+
+*(added 2026-08-07, the maintainer's media ruling — closes the register's generative-media row; the design-side law lands the same day as G18 in [undertakings-goals.md](../design/undertakings-goals.md). Evidence: [06](06-research-log.md) §2026-08-07, the OpenRouter modalities line; the video→premium-credits sketch is [03](03-public-launch.md)'s.)*
+
+**Decided:** Two layers, permanently distinct. The **floor** is the scrying glass as it exists — `/web` text + picture scrying of the real web, always on for every player, identity untouched. **Generated media is a second instrument** — command **`/content`** — images and video at adoption, audio later, behind an explicit **per-player opt-in**. The opt-in is **cost consent**: no grant and no BYO credit ever spends on media the player didn't ask for. Inside the layer, **video gates separately from images** — a video cast runs 3–30× an image at the evidenced budget tiers, and [03](03-public-launch.md)'s sketch already routes video to premium credits. The layer is **offered only on lanes whose key can serve it** — the house lane (media-capable operator account) and the OpenRouter door; a bare API key without media endpoints is never shown the instrument. **AI-Act Art. 50 marking attaches at the instrument:** everything `/content` emits is synthetic by construction, so the marking is structural, not forensic (the compliance section owns the duty; the R14 build carries the text-side disclosure either way). And **"AI text" is a non-feature:** the keeper already *is* the game's generated text; `find_text`'s whole value is grounding in the real. Build items follow at their own pace; the stage question — before or during the friends phase — went to debate the same day and takes the maintainer's ruling (recorded here when it lands).
+
+**Why:** The text-only premise died in the evidence (one OpenRouter-class key now serves image, audio and video), which made the question unavoidable — and the floor+layer shape answers it without touching the game's identity. The glass keeps meaning "the real world, reachable from inside the fiction"; conjured media becomes a chosen instrument with its own meter. The cost asymmetry does the rest of the design: media rates are real money per cast, so consent and the separate video gate ride the architecture, never trust.
+
+**Rejected:** *Generated media inside the glass, replacing or mixed with scrying* — a synthetic picture in the same instrument dissolves what a find means. *"AI text" as a feature* — the keeper is the AI text. *Default-on or opt-out media* — spend the player didn't ask for breaks the lanes' metering honesty (R12). *Offering the instrument on lanes that can't serve it* — a dead door in the player's face.
+
+**Revisit when:** the sequencing ruling lands (checklist consequences then); audio's turn comes (the deferred half of the layer); any door gains or loses media endpoints (the capability gate re-derives from the door table); Art. 50 guidance or the AT authority designation moves (compliance watch, standing).

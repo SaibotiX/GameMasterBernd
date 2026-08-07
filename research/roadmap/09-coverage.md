@@ -29,7 +29,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
 | Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |
 | Privacy papers beyond R13 | ◐ | same section | VVZ · threshold assessment · DPA collection · breach runbook — stage-1 build items |
-| AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · ⚠ AT authority designation watch |
+| AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · `/content` marks its emissions at the instrument (R23) · ⚠ AT authority designation watch |
 | Age policy | ● | R20 | 18+ assertion into invite-acceptance (stage-1 build) + the purchase flow (stage 2) · revisit at stage-3 planning |
 | Accessibility (EAA/BaFG) | ⊘ | compliance section | trigger: ≥10 persons or >€2 M — or stage 4 |
 | Product liability (PLD 2024/2853) | ⊘ | compliance section | trigger: public availability past 2026-12-09 |
@@ -41,5 +41,5 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
 | Mail on the domain | ◐ | hosting section (Migadu proposed) | ruling still open (not covered by R18, 2026-08-07) · needed for the published privacy/support contact before the first friend |
-| Generative media (image · sound · video) | ◐ | [06](06-research-log.md) §2026-08-07 modalities | design ruling open (surfaced 2026-08-07): real-web scrying vs. generated media — the glass's identity and find_video's fate ride it; G/F territory, the maintainer rules |
+| Generative media (image · sound · video) | ● | R23 · G18 · [06](06-research-log.md) §2026-08-07 modalities | build sequencing under the maintainer's ruling (debated 2026-08-07: before vs. during the friends phase); build items follow it · audio is the layer's deferred half |
 | Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · stage-1 Dockerfile pins the exact pi version (02 item 2) |
