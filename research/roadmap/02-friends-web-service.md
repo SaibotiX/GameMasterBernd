@@ -78,6 +78,8 @@ pi is a terminal app whose heavy lifting happens at the model provider; expect ~
 
 `find_video` will degrade on a VPS: YouTube's bot-wall hits datacenter IPs hardest, and the escalation ladder documented in the main README loses its strongest rung here — there is no installed browser in a headless container to borrow cookies from. The identity-free PO-token plugin route has weakened too: upstream notes PO tokens alone no longer clear the bot check in most cases (re-checked 2026-08-04, [06-research-log.md](06-research-log.md)). What remains per friend: their own Netscape export at `config/youtube-cookies.txt` inside their volume, or accepting that `/web video` is a local-play luxury. Text and picture scrying (MediaWiki hosts) are unaffected. Set the expectation in the friend intro rather than debugging it live — and note the stage 3 compliance angle recorded in [03-public-launch.md](03-public-launch.md).
 
+*(Ruled 2026-08-07 — R23's amendment: `find_video` is **disabled for now**; the errand is open in the roadmap [README](README.md) §Now. When it lands, this limitation goes moot, the image sheds python3/yt-dlp/ffmpeg, and items 3 and 11 lose their video-expectation lines.)*
+
 ## What can still leak, accepted
 
 - A friend can try to talk the keeper into reciting its prompt (the AI Dungeon precedent). Dampen, don't chase elimination — the full corpus and engine never leave the server either way.

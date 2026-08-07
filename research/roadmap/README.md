@@ -31,12 +31,13 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 **The 2026-08-07 clearing** (fourth of the day) closed the aitester's open loop: the batch-3 rulings are declined without adoption and no batch is planned — the findings rest in the immutable `aitester/reports/2026-08-05-3.md`, adoptable if a batch is ever run again, and the harness stays ready. The ruling and the closed loop: `research/design/undertakings-build.md` Phase 2.9.
 
-**The 2026-08-07 media ruling** (fifth of the day) closed the register's generative-media row as **R23/G18**: the real-web glass stays the always-on floor for every player; generated media (images + video now, audio later) becomes the **`/content`** instrument behind per-player cost consent — video gated apart from images, offered only on media-capable lanes (house lane, OpenRouter door), Art.-50-marked at the source; "AI text" is a non-feature. The sequencing was **ruled the same sitting** (R23's dated amendment): the roadmap's order stands — `/content` is a named in-phase stage-1 deliverable (02 item 15) with an exit-gate media-telemetry tooth and a media-aware item-8 account choice, never an entry condition.
+**The 2026-08-07 media ruling** (fifth of the day) closed the register's generative-media row as **R23/G18**: the real-web glass stays the always-on floor for every player; generated media (images + video now, audio later) becomes the **`/content`** instrument behind per-player cost consent — video gated apart from images, offered only on media-capable lanes (house lane, OpenRouter door), Art.-50-marked at the source; "AI text" is a non-feature. The sequencing was **ruled the same sitting** (R23's dated amendment): the roadmap's order stands — `/content` is a named in-phase stage-1 deliverable (02 item 15) with an exit-gate media-telemetry tooth and a media-aware item-8 account choice, never an entry condition. **And `find_video` retires for now** — the glass's floor is text + picture (G18); the disable errand sits in the list below.
 
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
-2. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
+2. **Engine errand, any session — worth taking before the Dockerfile:** disable `find_video` (R23's 2026-08-07 amendment). Stop offering the tool (code stays for revival); sweep the main README's video-ladder section, 02's video mentions (items 3/11, the image's python3/ffmpeg rows, the limitation note), and any `config/` scrying text that promises video; decisions-log line in the build log when done.
+3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
 ## The files
 
