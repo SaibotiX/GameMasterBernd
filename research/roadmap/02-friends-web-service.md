@@ -17,12 +17,12 @@ friend's browser ── the three-pane page: terminal + viewer + files (R14, [08
                           └─ pi + game folder (copy)      ← the whole game, as on this machine
                               ├─ /data volume             ← worlds, chronicles  (persists)
                               ├─ /home/player/.pi volume  ← sessions (persist); auth.json = tmpfs, per-session (R11)
-                              └─ outbound: model-provider APIs, MediaWiki hosts, YouTube
+                              └─ outbound: model-provider APIs, MediaWiki hosts
 ```
 
 - **Terminal streaming:** xterm.js in the page, fed over a WebSocket by the per-container **app server** (node-pty spawning pi) — promoted from 02's original "DIY alternative" because the panes, the auth injection (R11) and the shipper hooks (R13) need a server inside the container anyway ([08-stage1-web-ui.md](08-stage1-web-ui.md), decision R14). ttyd (xterm.js + libwebsockets) stays the day-one fallback: the game is playable in a bare terminal page before any pane exists. R1 is untouched either way — same streamed TUI, no rewrite.
 - **The page around the stream:** three panes — terminal · viewer (tabs, markdown, media) · file manager — serving `config/` + `data/` read-only from inside the container. Nothing served is secret by design (invariant A5); the session files that *do* hold secrets (sealed fates, engine nonce) are never served. Spec, interaction laws and the login screen's face: [08-stage1-web-ui.md](08-stage1-web-ui.md).
-- **One container per friend, always.** pi has **no built-in permission system** — it runs with the launching user's rights. Our game strips the coding tools, so the model itself can only reach the game tools, but the container is the actual security boundary: no shared volumes, no docker socket, read-only image, CPU/memory/disk limits, block RFC-1918 egress (the scrying glass needs open internet for its configured wiki hosts and YouTube, so a strict allowlist would fight `config/sites.json` — block the local network instead).
+- **One container per friend, always.** pi has **no built-in permission system** — it runs with the launching user's rights. Our game strips the coding tools, so the model itself can only reach the game tools, but the container is the actual security boundary: no shared volumes, no docker socket, read-only image, CPU/memory/disk limits, block RFC-1918 egress (the scrying glass needs open internet for its configured wiki hosts, so a strict allowlist would fight `config/sites.json` — block the local network instead).
 - **State that must survive:** the friend's `data/` (worlds — the irreplaceable part) and `~/.pi` (session files carrying the ledger, plus their `auth.json`). Both live in named volumes; nightly tar to off-box storage.
 - **Updates:** `git pull` → rebuild image → recreate containers. Volumes untouched; chronicles survive by construction. This retires the scariest failure mode of the zip-distribution plan.
 
@@ -33,9 +33,7 @@ Base: debian/ubuntu slim. Contents:
 | Piece | Note |
 |---|---|
 | pi | npm install of `@earendil-works/pi-coding-agent` (known-good extension loading), **or** the standalone Bun binary — verify once that the binary loads our `.ts` extensions identically, then prefer it (fewer moving parts) |
-| game folder | `README.md`, `.pi/`, `extension/`, `config/`, `tools/yt-dlp` — never `research/` or `aitester/`, never any `auth.json` or `data/`; build the copy from a whitelist (`git archive`), not by copying the live working folder |
-| python3 | required by `find_video` (`extension/mediasearch.ts` execs `python3 -m yt_dlp` against the vendored source) |
-| ffmpeg | system package — enables the ~10 s clips without vendoring the 420 MB static build |
+| game folder | `README.md`, `.pi/`, `extension/`, `config/` — never `research/` or `aitester/`, never any `auth.json` or `data/`; build the copy from a whitelist (`git archive`), not by copying the live working folder. `tools/yt-dlp` and python3/ffmpeg shed with the retired video lens (R23) — the image regains them only if `find_video` ever revives |
 | ttyd | the terminal-to-web bridge |
 
 ## Auth: any provider's open door, keys in the player's custody (decisions R5 → R11)
@@ -72,13 +70,7 @@ The shipper is a small allowlist job inside each container; the store is ours an
 
 ## Sizing & cost
 
-pi is a terminal app whose heavy lifting happens at the model provider; expect ~150–400 MB RAM per live container, spiking on yt-dlp runs. A 4 GB VPS (~$5–10/month) comfortably carries ~5 concurrent friends with an idle-reaper: stop a container after ~30 min without a WebSocket, start it again on connect (worlds persist; pi resumes the sitting).
-
-## Known limitation — video scrying from a datacenter
-
-`find_video` will degrade on a VPS: YouTube's bot-wall hits datacenter IPs hardest, and the escalation ladder documented in the main README loses its strongest rung here — there is no installed browser in a headless container to borrow cookies from. The identity-free PO-token plugin route has weakened too: upstream notes PO tokens alone no longer clear the bot check in most cases (re-checked 2026-08-04, [06-research-log.md](06-research-log.md)). What remains per friend: their own Netscape export at `config/youtube-cookies.txt` inside their volume, or accepting that `/web video` is a local-play luxury. Text and picture scrying (MediaWiki hosts) are unaffected. Set the expectation in the friend intro rather than debugging it live — and note the stage 3 compliance angle recorded in [03-public-launch.md](03-public-launch.md).
-
-*(Ruled 2026-08-07 — R23's amendment: `find_video` is **disabled for now**; the errand is open in the roadmap [README](README.md) §Now. When it lands, this limitation goes moot, the image sheds python3/yt-dlp/ffmpeg, and items 3 and 11 lose their video-expectation lines.)*
+pi is a terminal app whose heavy lifting happens at the model provider; expect ~150–400 MB RAM per live container. A 4 GB VPS (~$5–10/month) comfortably carries ~5 concurrent friends with an idle-reaper: stop a container after ~30 min without a WebSocket, start it again on connect (worlds persist; pi resumes the sitting).
 
 ## What can still leak, accepted
 
@@ -91,7 +83,7 @@ Two rungs, deliberately. The **fallback rung** — bare ttyd page, own-API-key p
 
 1. [ ] Domain + Caddy: TLS, one long-random secret path + basic-auth pair per friend, WebSocket pass-through; reserve the `vault.` subdomain (R11's isolated credential origin). (Securing the eventual name's domain is 04's standing cheap move — same errand. Ruled 2026-08-07: the domain is **worldconsole.eu** at INWX — R17 — on the **netcup Vienna** box, AVV day 1, Hetzner the prepared runner-up — R18.)
 2. [ ] Dockerfile as specified; game copy from a whitelist; no credentials in layers/args ever (BuildKit secret mounts only); host hardening that makes R11's wipe real: core dumps off, no (or encrypted) swap, `auth.json` path on tmpfs.
-3. [ ] In-container verify: the TUI's dress renders in a real browser terminal — dice overlay, four-slot board, red urgency, bell (the pseudo-TTY probe's checklist, now behind xterm.js); a full sitting; `find_text` / `find_picture`; `find_video` expectation set (datacenter bot-wall; limitation note above).
+3. [ ] In-container verify: the TUI's dress renders in a real browser terminal — dice overlay, four-slot board, red urgency, bell (the pseudo-TTY probe's checklist, now behind xterm.js); a full sitting; `find_text` / `find_picture`.
 4. [ ] Keybinding check in real browsers: Alt+number is browser-sensitive (Firefox on Linux switches tabs) — `/pick` and `/roll` cover everything; space-to-cast must reach the terminal *through the page* (R14's focus laws).
 5. [ ] App server + panes ([08-stage1-web-ui.md](08-stage1-web-ui.md)): node-pty ↔ pi, file API scoped to `config/` + `data/` with `youtube-cookies.txt` excluded, watcher → hot-reload, tabs, media auto-open; meet 08's smoothness acceptance numbers on the VPS.
 6. [ ] The vault (R11): enroll (paste key / terminal OAuth with export-down), passkey-PRF wrap with Argon2id fallback, isolated origin + CSP + Trusted Types, inject → tmpfs, rotation sync-back, and a verified wipe: after teardown, no `auth.json` in any volume, backup, or image layer.
@@ -99,8 +91,8 @@ Two rungs, deliberately. The **fallback rung** — bare ttyd page, own-API-key p
 8. [ ] House lane (R12): the operator's commercial API account — provider chosen at this step per the 2026-08-07 ruling (aggregator accounts qualify; duties in [06](06-research-log.md) §2026-08-07) — with a provider-side spend cap; gateway with per-friend virtual keys (budget + rate limit); ledger with grants, the global daily alarm, the monthly kill-switch; rounds visible in the status strip; nightly reconciliation against pi's per-turn cost lines. House-lane model mix chosen with provider terms in view (Gemini's under-18 clause — door table; the age policy is ruled 18+, R20). The account choice is **media-aware** (R23, ruled 2026-08-07): the house lane can later offer `/content` only if this key serves image/video generation — an aggregator account does, a text-only provider account doesn't; weigh it now, migrate never.
 9. [ ] Disclosure live **before the first friend plays** (R13): landing/privacy note + first-run notice (drafts in [06-research-log.md](06-research-log.md)), consent + the 18+ assertion (R20) recorded at invite-acceptance; deletion runbook written and dry-run once.
 10. [ ] Shipper (R13): checkpoint mirror, seal-at-end with manifest + hashes, sweep-on-connect + daily cron; central store private and EU-located; the analysis machine's mirror pull lands in the kit's `sessions-in` layout; ship-twice idempotency tested.
-11. [ ] The friend intro (two paragraphs, plus the LICENSE line — R3's trigger fires at first hosted access): what it is, the trust prompt, the three doors, scoped-key + spend-limit advice, that play is recorded (link to the note), `/limits`, the video-scrying expectation, the phone caveat, who to ping when the keeper misbehaves.
-12. [ ] Idle reaper wired to the seams: a stop is *both* R11's wipe and R13's seal; `docker stats` watch; disk quota per volume (downloads grow — clips and pictures).
+11. [ ] The friend intro (two paragraphs, plus the LICENSE line — R3's trigger fires at first hosted access): what it is, the trust prompt, the three doors, scoped-key + spend-limit advice, that play is recorded (link to the note), `/limits`, the phone caveat, who to ping when the keeper misbehaves.
+12. [ ] Idle reaper wired to the seams: a stop is *both* R11's wipe and R13's seal; `docker stats` watch; disk quota per volume (downloads grow — pictures, and `/content` media once item 15 lands).
 13. [ ] Nightly volume backup to off-box storage, excluding `auth.json` by construction; test one restore. The central session store backs up separately (it is the research record).
 14. [ ] Per-friend smoke sitting with each of the first 2–3 friends, watching latency and rendering (desktop first; phones work via xterm.js but the on-screen-keyboard experience is poor — say so upfront).
 15. [ ] `/content` — **in-phase, never an entry condition** (R23 + its 2026-08-07 sequencing ruling): the opt-in generated-media instrument lands during the friends phase as a hot update once the core rung serves friends. House-lane pilot first with the meter in view, widening to the OpenRouter door per the capability gate; the opt-in recorded per player as cost consent before the first cast; video gated apart from images; Art.-50 marking at the instrument. Its arrival doubles as one of the exit gates' update-path exercises.

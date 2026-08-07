@@ -675,13 +675,15 @@ ok("config: angriest mood is last in severity order", () => {
 	});
 	ok("prompt: protocol names every game tool and the anti-theater rule", () => {
 		for (const tool of [
-			"set_mood", "find_text", "find_picture", "find_video", "grant_redemption", "record_name",
+			"set_mood", "find_text", "find_picture", "grant_redemption", "record_name",
 			"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 			"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item", "offer_choices",
 			"shelve_quest", "heal_wounds",
 		]) {
 			assert.match(p, new RegExp(tool));
 		}
+		// The retired video lens (roadmap R23) must never be promised to the model.
+		assert.doesNotMatch(p, /find_video/);
 		assert.match(p, /it has NOT happened/);
 		assert.match(p, /set_mood\("angry"\)/);
 		assert.match(p, /\[engine:t3stn0nc3\]/);

@@ -523,3 +523,22 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   closes — the harness stays ready, unchanged. The findings rest in the
   immutable aitester/reports/2026-08-05-3.md, adoptable if a batch is
   ever run again; a future batch starts fresh with a new entry.
+- 2026-08-07 · find_video retires (R23's amendment — the roadmap's open
+  errand, landed): the glass's floor is text + picture. The tool is no
+  longer offered — struck from GAME_TOOLS and from /web's kinds — and
+  the protocol names two lenses, telling the keeper to offer a still
+  image in character when moving pictures are asked for;
+  dragon-realm's glass text now promises knowledge and images only.
+  The code stays for revival: registerTool(find_video), the whole
+  mediasearch ladder and the vendored yt-dlp remain, registered but
+  never offered, one comment at GAME_TOOLS carrying the constraint.
+  Retired with the rung: the C3 /web-video integration leg and the
+  demo's WC_VIDEO leg (git history keeps them); kept: the unit tests
+  of the dormant machinery (tooling detection, cookie opt-ins,
+  bot-check wordings) plus a new tooth — the assembled prompt must
+  never name find_video. The doc sweep rode with it: main README
+  (repo map, /web examples, tools table, the Notes ladder bullet),
+  02 (image sheds python3/yt-dlp/ffmpeg, YouTube egress gone, items
+  3/11/12 trimmed, the moot datacenter-limitation section removed).
+  Verified (full recipe): unit 79/79 · tty-probe ok · integration
+  30/30 (+1 standing soft-skip) · selftest 30/30 · wrapper-smoke 9/9.

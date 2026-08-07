@@ -1,10 +1,10 @@
 /**
  * Live demo of the /web command:
  *   node extension/test/demo-web.ts            # text + picture
- *   WC_VIDEO=1 node extension/test/demo-web.ts # + video (slow)
  *
  * Boots real pi (RPC mode, fresh session, dragon-realm), runs /web commands,
  * and prints the game master's in-character replies plus the ledger.
+ * (The video leg retired with find_video — roadmap R23; see git history.)
  */
 import { spawn } from "node:child_process";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -109,7 +109,6 @@ function show(title: string, text: string) {
 	console.log(text.length > 900 ? text.slice(0, 900).trimEnd() + " …" : text);
 }
 
-const wantVideo = process.env.WC_VIDEO === "1";
 mkdirSync(APP_DOWNLOADS, { recursive: true }); // fresh clone: nothing downloaded yet
 const before = new Set(readdirSync(APP_DOWNLOADS).filter(Boolean));
 
@@ -118,11 +117,6 @@ show("Bernd answers", assistantText(await runCommand("/web text basalt", true, 1
 
 show("player types", "/web picture aurora borealis");
 show("Bernd answers", assistantText(await runCommand("/web picture aurora borealis", true, 240_000)));
-
-if (wantVideo) {
-	show("player types", "/web video komodo dragon");
-	show("Bernd answers", assistantText(await runCommand("/web video komodo dragon", true, 480_000)));
-}
 
 const ledgerLines = await runCommand("/ledger 30", false, 20_000);
 const ledgerText = ledgerLines

@@ -442,20 +442,8 @@ console.log("— Part C: /web command —");
 	await rpc.stop();
 }
 
-if (process.env.WC_VIDEO === "1") {
-	// C3 (opt-in, slow): /web video end to end — yt-dlp probe + clip download.
-	const file = join(WORK, "c3-web-video.jsonl");
-	writeSession(file, [header(), custom(null, { ev: "world", world: "dragon-realm" }, 1)]);
-	const rpc = new Rpc(["--session", file]);
-	await rpc.promptAndWait("/web video komodo dragon", 480_000);
-	const performed = await waitFileEvent(file, (event) => event.ev === "search_performed" && event.kind === "video", 30_000);
-	if (assertNoApiError(file, "C3: /web video")) {
-		softCheck("C3: /web video → GM performed the video search", performed);
-	}
-	await rpc.stop();
-} else {
-	console.log("skip C3 (/web video) — set WC_VIDEO=1 to include the slow yt-dlp download");
-}
+// C3 (/web video end to end) retired with find_video — roadmap R23: the
+// glass's floor is text + picture. The test lives in git history for revival.
 
 // ---- Part D: the chronicler round (2026-08-04) — no LLM -------------------
 // Ventures (/roll on a staged trial), durable GM entries feeding /record,

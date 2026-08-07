@@ -4,9 +4,10 @@
  *  - pi's coding system prompt is replaced every turn with the layered
  *    game-master prompt (constitution → world → mood → standing → protocol)
  *  - the built-in coding tools are stripped; the model gets the game tools:
- *      find_text / find_picture / find_video — the "scrying glass" lenses
- *        (MediaWiki text and file search, yt-dlp YouTube clip; downloads land
- *        in data/downloads/)
+ *      find_text / find_picture — the "scrying glass" lenses (MediaWiki text
+ *        and file search; downloads land in data/downloads/). The video lens
+ *        (find_video, yt-dlp YouTube clip) is retired for now — registered
+ *        below but never offered (roadmap R23: the floor is text + picture)
  *      set_mood          — mood shifts; the angriest mood bars the glass (code-owned)
  *      grant_redemption  — lifts the bar after sincere amends (no-op unless barred)
  *      record_name       — stores the seeker's name for the standing layer
@@ -119,8 +120,11 @@ const DOWNLOAD_DIR = join(BASE_DIR, "data", "downloads");
 /** Persistent world chronicle (places/personas/quests/items); overridable for tests. */
 const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(BASE_DIR, "data", "world");
 const DEFAULT_WORLD = "dragon-realm";
+/** find_video is retired for now (roadmap R23, 2026-08-07: the glass's floor
+ * is text + picture) — its registration and the yt-dlp machinery stay for
+ * revival, but the tool is never offered and /web takes no video kind. */
 const GAME_TOOLS = [
-	"find_text", "find_picture", "find_video",
+	"find_text", "find_picture",
 	"set_mood", "grant_redemption", "record_name",
 	"set_place", "chronicle_place", "update_place", "record_persona", "move_persona",
 	"grant_quest", "attempt_quest", "update_quest", "redeem_quest", "add_item",
@@ -140,7 +144,7 @@ const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "age
 /** Extension settings that survive sessions and worlds (thoughts collapse).
  * WORLD_CONSOLE_SETTINGS_FILE overrides for tests (like WORLD_CONSOLE_DATA_DIR). */
 const WC_SETTINGS_FILE = process.env.WORLD_CONSOLE_SETTINGS_FILE || join(AGENT_DIR, "world-console.json");
-const SEARCH_KINDS = ["text", "picture", "video"] as const;
+const SEARCH_KINDS = ["text", "picture"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
 	find_text: "text",
 	find_picture: "picture",
@@ -1201,12 +1205,12 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	// /web <text|picture|video> <query> — the seeker invokes the scrying glass
+	// /web <text|picture> <query> — the seeker invokes the scrying glass
 	// directly. The engine enforces the ban without an LLM call; everything
 	// else is handed to the game master, who judges the request in character
 	// and performs it through the matching find_* tool.
 	pi.registerCommand("web", {
-		description: "World Console: scry the web — /web <text|picture|video> <query>",
+		description: "World Console: scry the web — /web <text|picture> <query>",
 		getArgumentCompletions: (prefix: string) => {
 			if (prefix.includes(" ")) return null; // kind chosen — the query is free-form
 			const bare = prefix.replace(/^-/, "");
@@ -1222,7 +1226,7 @@ export default function (pi: ExtensionAPI) {
 			const kind = (rawKind ?? "").replace(/^-/, "").toLowerCase();
 			const query = rest.join(" ").trim();
 			if (!(SEARCH_KINDS as readonly string[]).includes(kind) || !query) {
-				ctx.ui.notify("Usage: /web <text|picture|video> <query>", "warning");
+				ctx.ui.notify("Usage: /web <text|picture> <query>", "warning");
 				return;
 			}
 			if (st.banned) {
