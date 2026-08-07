@@ -321,7 +321,7 @@ six personas of a world) per world is the standard batch.
 - [x] batch 1 (wanderer + careless, 24 turns each, 2026-08-03): harness flawless, testers in character, and the record delivered the goods — zero quest ticks in 48 turns; unvoiced peril trials pinned both sittings (the keeper never said "roll", "trial" or "die" once); the testers noticed nothing, exactly as Jin et al. predicts
 - [x] v2 rebuild after batch 1 (maintainer's rulings): everything moved to its own folder; wrapper extension with `/ai-state` headless parity (wrapper-smoke 9/9 over crafted gates); world-specific personas (dragon-realm + star-frontier files); TASKS-FIRST guide; driver pulls the standing board every turn; selftest 30/30
 - [x] v3 merge (2026-08-03): the separate harness repo retired into `aitester/` in the game repo — the split had broken the meta.md commit stamp (`git log` in a non-repo parent aborted every batch after play) and hid the `../../` engine-import layout assumption; environment probes now degrade to `(unavailable)` instead of costing a played sitting its artifacts; selftest 30/30 + wrapper-smoke 9/9 + a scripted end-to-end batch re-proven from the new home
-- [ ] batch 2 with the v2 harness → report → rulings → fixes → re-test (the RITE loop, unchanged)
+- [x] batch 2 with the v2 harness → report → rulings → fixes → re-test (the RITE loop) — ran as batches 2 and 3 (reports beside them in `aitester/reports/`); the loop's open tail cleared 2026-08-07 by the maintainer's decision, batch-3 rulings declined without adoption (`research/design/undertakings-build.md` Phase 2.9); a future batch starts fresh
 
 ## 9. Order of work — recommendation (APPROVED by the maintainer 2026-08-03)
 

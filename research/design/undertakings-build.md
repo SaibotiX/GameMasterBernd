@@ -222,7 +222,7 @@ and ALL fixed + verified:
 - [x] Verified: 65/65 unit (twist_dropped folding, repair-kind parsing, new
       protocol lines) + 18/18 headless RPC smoke + the TTY widget probe.
 
-## Phase 2.9 — the AI playtester: test first (maintainer's ruling, 2026-08-03)
+## Phase 2.9 — the AI playtester: test first (maintainer's ruling, 2026-08-03; cleared 2026-08-07 — the harness stays ready)
 
 TEST FIRST — Phase 3 waits, and shrinks (full reasoning and the harness
 design: `aitester/ai-playtester.md`). Four human playtests, four
@@ -261,18 +261,23 @@ live, at an evening's cost.
       WC-10 theater at 6/6 (clocks starved — two sittings 0/N after full
       on-task play), a G9 engine hole (finale consumed on setback →
       completion untrialed), unvoiced gates (a blind DC-20 death), and
-      keeper-authored player turns. Awaiting rulings on the report's top
-      rows + the NEW-3 scoping question (turn-baton interrogatives vs
-      G15's letter).
-- [ ] Batch 4: after rulings/fixes — re-test the WC-10 ground (the
-      closer/signoff scenarios must reach done), the persistent name
-      sweep, and the re-armed finale.
+      keeper-authored player turns. Rulings on the report's top rows +
+      the NEW-3 scoping question (turn-baton interrogatives vs G15's
+      letter): declined without adoption (the maintainer, 2026-08-07) —
+      the findings rest in the immutable report, adoptable if a batch is
+      ever run again.
+- [—] Batch 4 (was planned: re-test the WC-10 ground with the
+      closer/signoff scenarios, the persistent name sweep, the re-armed
+      finale) — cleared 2026-08-07, never run; a future batch starts
+      fresh with a new entry, nothing resumes.
 
 **Exit criterion to start Phase 3**: two consecutive batches in which every
 sitting closes at least two tasks (or dies honestly) with zero S1/S2
 findings, in both worlds. **Status after batch 3: not close** — one
-sitting closed one task; S2 classes stand in all six sittings; the fix
-loop continues.
+sitting closed one task; S2 classes stand in all six sittings.
+(2026-08-07: the open loop — the pending rulings, the planned Batch 4,
+the fix loop — is cleared by the maintainer's decision; the harness
+stays ready, and a future batch starts fresh with a new entry.)
 
 ## Phase 2.95 — the chronicler round (2026-08-04: batch-2 rulings, built)
 
@@ -511,3 +516,10 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   exact-id → unique-substring); this is 03's cheap-routing target landed
   engine-side. Verified (full recipe, 2026-08-07): unit 79/79 · tty-probe
   ok · integration 30/30 (+1 standing soft-skip) · wrapper-smoke 9/9.
+- 2026-08-07 · The clearing (maintainer's ruling): the batch-3 report's
+  pending rulings — the top rows + the NEW-3 scoping question — are
+  declined without adoption, and the aitester's open loop (rulings, the
+  planned Batch 4, the fix loop) is cleared with them; Phase 2.9 above
+  closes — the harness stays ready, unchanged. The findings rest in the
+  immutable aitester/reports/2026-08-05-3.md, adoptable if a batch is
+  ever run again; a future batch starts fresh with a new entry.

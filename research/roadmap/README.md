@@ -29,11 +29,12 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 **The 2026-08-07 workflow sitting** (third of the day) made prompt triage law — **R22**: a packed multi-topic prompt is mapped into ordered threads before any work (coupled topics together, blockers jump the queue, deferrals get the maintainer's nod); the method lives in `.claude/commands/triage.md` (`/triage`), bound on every session via CLAUDE.md.
 
+**The 2026-08-07 clearing** (fourth of the day) closed the aitester's open loop: the batch-3 rulings are declined without adoption and no batch is planned — the findings rest in the immutable `aitester/reports/2026-08-05-3.md`, adoptable if a batch is ever run again, and the harness stays ready. The ruling and the closed loop: `research/design/undertakings-build.md` Phase 2.9.
+
 Next, in order:
 
 1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
-2. **aitester** (game track, `research/design/undertakings-build.md` Phase 2.9) — the batch-3 rulings (`aitester/reports/2026-08-05-3.md`), then Batch 4; Phase 3 waits for two consecutive clean batches in both worlds.
-3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
+2. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
 ## The files
 
