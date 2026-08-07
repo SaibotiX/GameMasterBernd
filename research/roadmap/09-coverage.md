@@ -37,9 +37,9 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | DSA duties | ◐ | [03](03-public-launch.md) + compliance section | Art. 11/12/14/16 land at stage-2 build |
 | Steam | ● | R7/R8 · [07](07-steam-launch.md) | re-verify all policy facts at stage-4 planning |
 | Offline copies | ● | [05](05-offline-distribution.md) | on demand |
-| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals | land the proposals in the stage-1 build |
+| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals · built in `deploy/` | container/door/firewall/backup halves landed & locally verified (2026-08-08) · box-side execution + restore test at first deploy |
 | Ops runbooks (support · breach · deletion) | ◐ | [03](03-public-launch.md) §support · compliance §breach · R13 deletion | write with the stage-1 build; exercise per the exit gates |
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
 | Mail on the domain | ◐ | hosting section (Migadu proposed) | ruling still open (not covered by R18, 2026-08-07) · needed for the published privacy/support contact before the first friend |
-| Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · stage-1 Dockerfile pins the exact pi version (02 item 2) |
+| Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · Dockerfile pin landed (0.84.1, `deploy/image/`, 2026-08-08) |
