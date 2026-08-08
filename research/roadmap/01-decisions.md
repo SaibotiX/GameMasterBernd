@@ -165,6 +165,12 @@ fixes, refactors, records) stay exempt. This closes the third
 — which no intake gate can catch: it needs the philosopher's eyes on
 the result, not the plan. Covenant context: R26.)*
 
+*(noted 2026-08-08: the salvage rite — R27, `/salvage` — is the
+standing forward-only answer to "return to a past state but keep
+chosen commits": full-range revert proving the return, keepers
+re-earning their place as adapted picks. Reset, rebase of pushed
+history and force-push stay ask-first exactly as above.)*
+
 ---
 
 ## R10 — Sessions end at round boundaries, by the session's own judgment
@@ -500,3 +506,17 @@ entry carries the verification.)*
 **Rejected:** *Judge-only roles* (gatekeeping) — forbidden by the instruction itself ("don't gatekeep new ideas; be open but judgmental"). *Ask-about-everything* — the gate distinguishes its lanes: intent gaps ask, design gaps propose; a session that only asks does no judging. *Roles as unwritten vibes* — unwritten roles drift; these bind via CLAUDE.md.
 
 **Revisit when:** the roles chafe in practice — the philosopher wants design authority back on some surface, or clarify-loops grow so frequent the covenant itself is the friction (that is R10's breakdown-cut territory: take the break, then re-cut the roles).
+
+---
+
+## R27 — The salvage rite: the revert that keeps its keepers
+
+*(added 2026-08-08, governance round, on the maintainer's instruction; method owned by `.claude/commands/salvage.md` (`/salvage`); R9 carries the pointer note. Evidence: [06-research-log.md](06-research-log.md) §2026-08-08. Precedent: the 2026-08-07 unwind — 3329946 returned the tree to e1cc447 forward-only, then /triage and the Commons video work re-earned their places, R23→R24.)*
+
+**Decided:** When the maintainer rules a past round wrong but names commits worth keeping, the session runs the salvage rite, forward-only: **preflight** (clean tree; enumerate the range; map every keeper's dependencies — `git log -S`, blame over its hunks — and surface the choice per entangled keeper: widen the keep-set / hand-adapt with the dependency stripped / declare unsalvageable and reimplement) → **return** (revert the full range newest-first, one revert commit per commit, then PROVE it: `git diff <checkpoint> HEAD` empty; selective in-place reverts rejected — interleaved hunks conflict and keepers would stand unvalidated on reverted ground) → **re-land** (cherry-pick keepers oldest-first with `-x`, each ADAPTED so comments, references and logic are true to the new tree, unit gate green after every pick) → **semantic sweep** (a clean apply can still lie: grep survivors for reverted symbols; `git range-diff` originals against replays, review the deltas like patches) → **records** (retired ids stay retired; changed meaning takes a new id — the R23→R24 precedent; the wrap names reverted / kept / abandoned). Full recipe, one push, when the whole series is green. Heavy adaptation may rebuild on an unpushed scratch branch from the checkpoint (rebase legal there) and land forward when green. Reset, force-push and rebase of pushed history stay behind R9's ask-first door. Repo salvage never touches deployed state or player data — the deploy runbook owns rollbacks there.
+
+**Why:** R9 made the commit the unit of revert; this rite is that law's payoff — and the 2026-08-07 unwind proved the shape by hand before it had a name. The research says the same: full-revert-then-reapply is the forward-only pattern protected branches use industry-wide, keepers re-earn their place explicitly, and the dangers are exactly what the rite checks — semantic conflicts that apply cleanly and lie, keepers on reverted ground, merge reverts poisoning re-merges.
+
+**Rejected:** *rebase --onto / reset to the checkpoint* — rewrites pushed history (R9). *Selective revert in place* — above. *Squash-revert of the range* — loses per-item re-revertibility; allowed only for a genuinely entangled round, said out loud. *Salvage-by-memory* (re-typing the good parts) — loses the origin-hash trail that `-x` and adapted-from lines preserve for archaeology.
+
+**Revisit when:** the first real salvage run grades the rite (preflight too heavy? dependency mapping too manual — `git-deps` exists if needed); or deployment reality raises the stakes (data migrations make "return" mean more than the repo).

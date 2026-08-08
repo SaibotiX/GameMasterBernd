@@ -37,6 +37,7 @@ Before adopting ANY new research finding, plan, or design change:
 - **Push at verified checkpoints, not per commit:** after a task-group lands verified · ALWAYS before launching an AI batch (meta.md stamps `git log -1`; never commit mid-batch) · at round/session end (no session ends with unpushed work; a marked `wip:` commit is allowed if truly interrupted) · before anything sweeping.
 - **Seen before done (R9, revised 2026-08-08):** player-visible or judgment-heavy changes count done only once the maintainer has seen the result (a played turn, a transcript, a screenshot) — offered unprompted before the round wraps and pushes; mechanical changes (test fixes, refactors, records) exempt.
 - **Plan commit boundaries when planning tasks** (say them with the task list), close the round with a wrap commit carrying the build-log/round records. Messages: house narrative register, scoped — `<surface>: <what and why in one breath>`. History-rewriting git (amend-after-push, rebase, force-push, reset) stays ask-first.
+- **Reverting with keepers:** `/salvage` (R27) — full-range revert proving return to the checkpoint, keepers re-landed oldest-first as adapted `-x` picks, gated per pick, forward-only; the maintainer pastes the hashes to keep.
 
 ## Session cut points (decision R10 — the session's own duty)
 
