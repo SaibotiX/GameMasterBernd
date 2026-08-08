@@ -25,13 +25,18 @@ iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
 # Container-to-container (caddy → wc-*) lives inside docker's own pools.
 iptables -A DOCKER-USER -s 172.16.0.0/12 -d 172.16.0.0/12 -j RETURN
 
-# The local network is unreachable from any container: RFC-1918, link-local
-# (cloud metadata lives there when it exists at all), and the CGN range.
-iptables -A DOCKER-USER -d 10.0.0.0/8      -j DROP
-iptables -A DOCKER-USER -d 172.16.0.0/12   -j DROP
-iptables -A DOCKER-USER -d 192.168.0.0/16  -j DROP
-iptables -A DOCKER-USER -d 169.254.0.0/16  -j DROP
-iptables -A DOCKER-USER -d 100.64.0.0/10   -j DROP
+# The local network is unreachable from any container — RFC-1918, link-local
+# (cloud metadata lives there when it exists at all), and the CGN range —
+# with every drop scoped by SOURCE to container-originated traffic: an
+# inbound connection to a published port arrives DNAT'd with a public
+# source and a container destination, and an unscoped drop kills it (the
+# first external ACME touch proved it; host-local clients enter with a
+# 172.x source and never showed it). 172→172 needs no drop: the RETURN
+# above already owns docker's own pools.
+iptables -A DOCKER-USER -s 172.16.0.0/12 -d 10.0.0.0/8      -j DROP
+iptables -A DOCKER-USER -s 172.16.0.0/12 -d 192.168.0.0/16  -j DROP
+iptables -A DOCKER-USER -s 172.16.0.0/12 -d 169.254.0.0/16  -j DROP
+iptables -A DOCKER-USER -s 172.16.0.0/12 -d 100.64.0.0/10   -j DROP
 
 # Everything else continues through docker's normal chains.
 iptables -A DOCKER-USER -j RETURN
