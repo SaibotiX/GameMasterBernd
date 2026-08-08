@@ -17,7 +17,7 @@ This folder is **internal planning** — like the rest of `research/` and `aites
 
 Each stage is cheap enough to abandon, and every gate must be passed by evidence, not enthusiasm — the gates are listed in each stage's document.
 
-## Now (updated 2026-08-07)
+## Now (updated 2026-08-08)
 
 Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated, guardrail live (root `CLAUDE.md` + registry protocol), `LICENSE` in place, constitution content bounds explicit, repo pushed to GitHub (verified private). **The 2026-08-05 stage-1 design round landed R11–R14** — multi-provider doors with player-side credential custody · the ledgered house lane on the org key · session shipping with loud disclosure · the three-pane page — and corrected the policy ground: the June-15 **Agent SDK credit pool was paused before it ever took effect**, and hosted third-party apps may not offer Claude.ai login at all; the per-provider **door table** in [06-research-log.md](06-research-log.md) is the standing record. Two ⚠ rulings await the maintainer, recorded in the R11/R12 entries (the door constraint; the funding vehicle).
 
@@ -26,6 +26,8 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 **The 2026-08-07 ruling pass closed those edges as R16–R21:** the names (**World Console**; studio **Hausregel**) · the domain (**worldconsole.eu alone**, INWX) · the box (**netcup Vienna**, Hetzner the prepared runner-up) · the Impressum (private address, ⚠ re-ruled before stage-3 public) · **18+** for stages 1–2 · the founding branch (student, 18+ — the e.U. kit confirmed, every branch kept documented). Deliberately still open: the stage-2 payments branch (deferred by the same pass) · mail on the domain (Migadu proposed, un-ruled) · R11/R12's two ⚠ rulings (door constraint; funding vehicle). Stage-1 build item 1 is unblocked.
 
 **The 2026-08-07 workflow sitting** (third of the day) made prompt triage law — **R22**: a packed multi-topic prompt is mapped into ordered threads before any work (coupled topics together, blockers jump the queue, deferrals get the maintainer's nod); the method lives in `.claude/commands/triage.md` (`/triage`), bound on every session via CLAUDE.md.
+
+**The 2026-08-08 governance round** — seeded by the 2026-08-07 revert — closed the intake-to-push chain as **R25–R28** with three dated revisions: the **judge** (R25: every ask earns a verdict — implement / clarify / spike / park / icebox / won't-do / duplicate — inside `/triage`; declined ideas keep cold in `research/icebox.md`) · the **covenant** (R26: maintainer as philosopher, session as judge-and-gardener; blanks never filled silently) · the **salvage rite** (R27, `/salvage`: revert to a checkpoint keeping pasted commits, forward-only) · the **guardrail audit** (R28, `/audit-guardrails`: standing law re-earns its place, proposals only) — plus R9 growing acceptance (player-visible work counts done once the maintainer has *seen* it) and R10 the breakdown cut (talking past each other ends the session with the open questions in hand). Evidence: [06](06-research-log.md) §2026-08-08.
 
 Next, in order:
 
