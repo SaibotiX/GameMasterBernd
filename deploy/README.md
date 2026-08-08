@@ -20,6 +20,8 @@ Both verify scripts fail loudly; green means what the headers say and nothing mo
 
 Prerequisites, all maintainer errands (rulings R17/R18 name them): **worldconsole.eu** registered at INWX with A/AAAA records for `worldconsole.eu`, `play.` and `vault.` pointing at the box, DNS plain and unproxied; the **netcup VPS 500 G12 Vienna** on hourly billing, **click-AVV signed day 1**; the Hetzner runner-up account created and verified before it is ever needed.
 
+*(State 2026-08-08: every errand done — domain, box, AVV, Hetzner account; receipts in [06](../research/roadmap/06-research-log.md) §hosting. A records live and verified: apex, `play.`, `vault.` → **152.53.51.13**. **AAAA still pending** — read the global IPv6 off the box first (`ip -6 addr`; the SCP shows the prefix `2a0a:4cc0:80:189b::/64` — never DNS the link-local `fe80::…`), then add the three records. Access: `ssh -i ~/.ssh/worldconsole root@152.53.51.13` — the key lives on the maintainer's machine, public half installed via ssh-copy-id.)*
+
 On the box (Debian stable assumed):
 
 1. Base: `apt install docker.io docker-compose-v2 git` (or Docker's own repo), a non-root deploy user in the `docker` group, SSH keys only.
@@ -73,7 +75,7 @@ The central session store (R13's shipper, its own round) backs up separately —
 | Image + in-container verify | built & green on this machine (2026-08-08) |
 | Host stack + local door check | built & green on this machine (2026-08-08) |
 | Purchases (domain, box, AVV) | done (2026-08-08) — worldconsole.eu at INWX, netcup Vienna box, click-AVV concluded |
-| First deploy + eyeball sitting | next — needs A/AAAA records at INWX + SSH onto the box |
+| First deploy + eyeball sitting | next — A records live (2026-08-08); AAAA + the deploy run once the SSH key lands (§first-deploy state note) |
 | App server & panes (02 item 5, R14) | next build round |
 | Vault, house lane, shipper, disclosure, intro (items 6–11) | own rounds; R11/R12 rulings pending |
 | Idle reaper, disk quotas (item 12) | with the app-server round (stop = wipe + seal) |
