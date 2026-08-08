@@ -42,5 +42,5 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | Ops runbooks (support · breach · deletion) | ◐ | [03](03-public-launch.md) §support · compliance §breach · R13 deletion | write with the stage-1 build; exercise per the exit gates |
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
-| Mail on the domain | ◐ | hosting section (Migadu proposed) | stage 1 runs on the maintainer's personal gmail (2026-08-08: Impressum + ACME; same address for the privacy-note contact awaits their nod) · Migadu stays the stage-2 shape |
+| Mail on the domain | ◐ | hosting section (Migadu proposed) | stage 1 runs on the maintainer's personal gmail for every contact duty — Impressum, ACME, privacy-note/support (nod 2026-08-08) · Migadu stays the stage-2 shape |
 | Upstream engine dependency (pi, 0.x) | ◐ | [pi-upgrades.md](../design/pi-upgrades.md) — the rite + coupling register | pin-policy ruling open (§open there) · Dockerfile pin landed (0.84.1, `deploy/image/`, 2026-08-08) |
