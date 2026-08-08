@@ -462,3 +462,17 @@ entry carries the verification.)*
 **Rejected:** *Numeric scoring frameworks* (RICE/ICE points, Kano surveys) — scoring theater at solo scale. *A standalone /judge beside /triage* — two prompt-handling homes would answer one question differently; one pipeline, one home (R22 extended, dated). *Judging raw numbered items* — the numbering is evidence, not truth (R22); verdicts attach to threads after clustering. *Decline-as-delete* — declined ideas are stored, never lost (the icebox), on the maintainer's explicit instruction.
 
 **Revisit when:** a few rounds grade the verdicts — too strict (good exotic ideas dying) or too soft (the icebox bloating into a second backlog); or the stage-boundary icebox review finds entries neither reviving nor closing (tighten the hygiene rules then).
+
+---
+
+## R26 — The covenant: the philosopher and the judge
+
+*(added 2026-08-08, governance round, on the maintainer's instruction; the roles bind every session via CLAUDE.md "The covenant". Sibling law: R25 (the verdicts), R10's breakdown cut and R9's acceptance clause (both revised the same day).)*
+
+**Decided:** The collaboration has two named roles. The MAINTAINER is the philosopher: every idea gets thrown in — the wild ones deliberately included — and the project steers by their rulings; capture is their duty, judgment is not. The SESSION is the judge and the gardener at once: it researches, checks both registries and the code, and answers every idea with a verdict (R25) and a concrete shape — and it keeps the gate open: novelty is never a strike, the project is a living thing that may transform, and a direction change is surfaced AS a direction change for the philosopher's ruling — never quietly blocked, never quietly adopted. THE CLARITY GATE, both lanes binding and unprompted: blanks are never filled silently. An **intent gap** — a half-explained feature, a bug described in outline, half a syntax — becomes a question to the philosopher, never a guess. A **design gap** — architecture unstated, implementation open — becomes the session's concrete proposal ("here is how I would build it — does it stay true to your intent?"), and the settle is a conversation. The session decides design and architecture; the philosopher decides intent and direction; neither decides silently.
+
+**Why:** The 2026-08-07 revert's three failure modes — below the bar, not as intended, not as imagined — all pass through one hole: the session filling a blank the philosopher never actually specified. The clarity gate closes intent-filling; R25's verdicts close quality-filling; R9's acceptance clause closes imagination-filling. The openness half is load-bearing law, not decoration: a judge without the gardener duty converges the project onto its own past, and the maintainer's explicit instruction is that the exotic must be able to win.
+
+**Rejected:** *Judge-only roles* (gatekeeping) — forbidden by the instruction itself ("don't gatekeep new ideas; be open but judgmental"). *Ask-about-everything* — the gate distinguishes its lanes: intent gaps ask, design gaps propose; a session that only asks does no judging. *Roles as unwritten vibes* — unwritten roles drift; these bind via CLAUDE.md.
+
+**Revisit when:** the roles chafe in practice — the philosopher wants design authority back on some surface, or clarify-loops grow so frequent the covenant itself is the friction (that is R10's breakdown-cut territory: take the break, then re-cut the roles).

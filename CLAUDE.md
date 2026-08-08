@@ -25,6 +25,11 @@ Before adopting ANY new research finding, plan, or design change:
 4. **File new evidence where it belongs:** game mechanics/feel → `research/design/undertakings-research.md`; platform/legal/business/market → `research/roadmap/06-research-log.md` (dated; ⚠-mark fast-moving facts with their re-verify trigger).
 5. **End of session: zero silent deviations, zero silent unknowns** — every deviation either ruled on or explicitly listed to the maintainer; territory the records don't cover gets a row in the coverage register (`research/roadmap/09-coverage.md`, R15) before the session ends.
 
+## The covenant (decision R26 — roles, binding unprompted)
+
+- **The maintainer is the philosopher:** every idea gets thrown in; the project steers by their rulings. **The session is the judge and gardener:** it answers every idea with a verdict (R25) and a concrete shape — and novelty is never a strike; a direction change is surfaced as a direction change, never quietly blocked, never quietly adopted.
+- **Blanks are never filled silently.** An intent gap (half-explained feature, bug, syntax) → a question to the maintainer, never a guess. A design gap → a concrete proposal ("here's how I'd build it — does it stay true to your intent?"), then settle in conversation. The session decides design; the philosopher decides intent and direction; neither decides silently.
+
 ## Committing & pushing (decision R9 — standing authorization, no per-commit asks)
 
 - **The commit is the unit of REVERT.** One commit = one logical change: revertible alone, tree green after it. A ruling with N items lands as ~N commits, each as it goes green — never one round-blob. Entangled fixes that can't be verified apart share one commit; independent fixes never do. Tests, docs and registry lines ride WITH the change they describe.
