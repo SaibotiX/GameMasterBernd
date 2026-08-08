@@ -154,6 +154,17 @@ food); a gating reviewer slots into the existing commit≠push gap
 still no branches); only a reviewer that also WRITES in parallel with the
 main thread brings worktrees/branches back.
 
+*(revised 2026-08-08, governance round: VERIFIED CHECKPOINT grows
+ACCEPTANCE — the shape this entry's revisit clause anticipated, with
+the maintainer as the reviewer. For player-visible or judgment-heavy
+changes, done means the maintainer has SEEN the result — a played
+turn, a transcript, a screenshot — before the round wraps and pushes;
+the session offers the look unprompted. Mechanical changes (test
+fixes, refactors, records) stay exempt. This closes the third
+2026-08-07 failure mode — "the results differed as to what I thought"
+— which no intake gate can catch: it needs the philosopher's eyes on
+the result, not the plan. Covenant context: R26.)*
+
 ---
 
 ## R10 — Sessions end at round boundaries, by the session's own judgment
