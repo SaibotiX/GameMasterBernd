@@ -72,8 +72,8 @@ The central session store (R13's shipper, its own round) backs up separately —
 |---|---|
 | Image + in-container verify | built & green on this machine (2026-08-08) |
 | Host stack + local door check | built & green on this machine (2026-08-08) |
-| Purchases (domain, box, AVV) | open — maintainer errand |
-| First deploy + eyeball sitting | waits on purchases |
+| Purchases (domain, box, AVV) | done (2026-08-08) — worldconsole.eu at INWX, netcup Vienna box, click-AVV concluded |
+| First deploy + eyeball sitting | next — needs A/AAAA records at INWX + SSH onto the box |
 | App server & panes (02 item 5, R14) | next build round |
 | Vault, house lane, shipper, disclosure, intro (items 6–11) | own rounds; R11/R12 rulings pending |
 | Idle reaper, disk quotas (item 12) | with the app-server round (stop = wipe + seal) |

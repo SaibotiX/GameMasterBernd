@@ -31,7 +31,7 @@ Stage 0 housekeeping is **complete**: roadmap decided, `research/` consolidated,
 
 Next, in order:
 
-1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist, fallback rung first: buy **worldconsole.eu** + order the **netcup Vienna** box + sign the AVV (item 1's errand, R17/R18), then Dockerfile → in-container smoke → Caddy + secret links, with disclosure and the LICENSE line from day one; then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)). First artifact: the Dockerfile.
+1. **Stage 1 build** — the [02](02-friends-web-service.md) checklist. The errand is done (2026-08-08: **worldconsole.eu** bought, the **netcup Vienna** box ordered, the AVV signed — R17/R18 executed) and the local halves are green (image + in-container verify, host stack + door check, `deploy/`). Next: A/AAAA records at INWX → **first deploy + eyeball sitting** (`deploy/README.md` §first-deploy), then disclosure before any friend plays, then vault · house lane · shipper · panes ([08](08-stage1-web-ui.md)).
 2. **aitester Batch 2** (game track, `research/design/undertakings-build.md` Phase 2.9) — Phase 3 waits for two consecutive clean batches in both worlds.
 3. Optional, whenever a local copy is wanted: the whitelist packaging script ([05](05-offline-distribution.md)).
 
