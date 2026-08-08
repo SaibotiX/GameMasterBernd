@@ -27,7 +27,7 @@ PASS="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 20)"
 HASH="$(docker run --rm "$CADDY_IMG" caddy hash-password --plaintext "$PASS")"
 
 cat <<EOF
-── Caddyfile → under "friends" in play.worldconsole.eu ─────────────────────
+── caddy/Caddyfile → under "friends" in play.worldconsole.eu ───────────────
 	redir /f/$TOKEN /f/$TOKEN/ 308
 	handle_path /f/$TOKEN/* {
 		basic_auth {

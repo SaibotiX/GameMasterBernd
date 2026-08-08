@@ -42,7 +42,11 @@ services:
       # ACME account mailbox — set in .env on the box (gitignored), never here.
       ACME_EMAIL: ${ACME_EMAIL:-}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Directory mount on purpose: a single-FILE bind mount pins the inode,
+      # and any editor or sed that writes-and-renames leaves the container
+      # reading the OLD file after every reload (the first onboarding found
+      # it: valid config on the host, phantom 404 behind the door).
+      - ./caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     networks: [web]

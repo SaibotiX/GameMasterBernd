@@ -37,7 +37,7 @@ On the box (Debian stable assumed):
 
 ```bash
 deploy/host/new-friend.sh alice        # mints token + basic-auth pair
-# paste the three printed blocks into Caddyfile / compose.yaml, then:
+# paste the three printed blocks into caddy/Caddyfile / compose.yaml, then:
 docker compose up -d wc-alice
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 # send the printed door + pair to alice out of band, once
