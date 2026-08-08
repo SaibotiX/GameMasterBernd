@@ -414,6 +414,13 @@ rules need tuning against practice (R10's own tuning clause); or the
 harness gains multi-session orchestration that changes what a deferred
 round costs.
 
+*(extended 2026-08-08, governance round: triage grows a fifth duty —
+the VERDICT stage, R25. After clustering, every thread is judged —
+implement / needs-clarification / spike first / park / icebox /
+won't-do / duplicate — before ordering and placement; the map presents
+the verdicts with the threads. The command file carries the amended
+method.)*
+
 ---
 
 ## R23 — (id retired with the reverted generative-media round)
@@ -441,3 +448,17 @@ entry carries the verification.)*
 **Consequences recorded the same day:** 03's find_video→credits line dissolved (a clip costs what a picture costs — noted at R8); the `youtube-cookies.txt` file-API exclusion became moot (noted at R14); 02's image lost python3/ffmpeg and its datacenter-video limitation; 04's third-party table lost yt-dlp/ffmpeg and gained the per-file Commons credit duty; 05's zip lost the submodule and both install caveats.
 
 **Revisit when:** the catalogue's patchiness draws real player complaints — the research log § holds the verified revival shapes; or Commons's experimental rate limits change (⚠ marked changeable by their owner; re-verify at the stage-1 build step per the log's standing trigger).
+
+---
+
+## R25 — The judge: every ask earns a verdict before work
+
+*(added 2026-08-08, governance round, on the maintainer's instruction — seeded by the 2026-08-07 revert (R23's tombstone): rounds landed that missed the maintainer's bar, their intent, or their imagined result. Evidence: [06-research-log.md](06-research-log.md) §2026-08-08. The verdict stage lives in `.claude/commands/triage.md`; declined ideas live in `research/icebox.md`.)*
+
+**Decided:** Triage (R22) grows a verdict stage: after clustering, every thread and standalone item is JUDGED before any work — the map says not only what is being asked and in what order, but **whether at all, and now or later or never**. The verdicts: **implement** (this session or a planned round — placement stays triage's job) · **needs-clarification** (bounced to the philosopher; nothing is judged while intent is ambiguous — R26's gate as a verdict) · **spike first** (a timeboxed experiment when promising but unproven) · **park** (a real future task, filed in its owning document with a named trigger — never the icebox) · **icebox** (declined but revivable → `research/icebox.md`, with a revival condition) · **won't-do** (closed permanently, one-line reason, recorded in the icebox's Closed section) · **duplicate** (folded into its standing entry, recurrence count +1). The judge's questions, in order, plain words and no scores: Is intent clear? Does it conflict with standing law (both registries — the ⚠ machinery run early)? Does it serve a core pillar or the current stage — or open a **new direction**, which is never a strike but is surfaced as exactly that for the philosopher's ruling? Is the need demonstrated by play or build evidence, or speculative (YAGNI)? Impact against effort, in words? Does deferring kill it? Has it resurfaced (the icebox's recurrence count is the evidence)? The verdict line names a category — **core / enhancement / exotic / infrastructure** — exotic is a value class, not a smell (this project wants the exotic to win sometimes); infrastructure is judged on enablement, not player impact. Teeth: mid-session arrivals get the same one-line verdict (R22's out-loud rule); the session's OWN ideas pass the same judge; easy calls cost one line, never ceremony.
+
+**Why:** The 2026-08-07 revert is the receipt: work that should have been parked, clarified, or declined was implemented instead, and unwinding it cost a day. The research consensus for solo scale: numeric scoring produces invented numbers that rationalize pre-made decisions, then gets abandoned — a handful of plain questions applied consistently beats every abandoned framework. The documented gate-killers are designed against directly: the gate hardening into a stage-gate (one-line verdicts for easy calls) · parking as guilt-free yes (park requires an owning document and a trigger; the icebox is not a backlog) · the solo bypass (the judge binds unprompted, mid-session, and on the session's own ideas).
+
+**Rejected:** *Numeric scoring frameworks* (RICE/ICE points, Kano surveys) — scoring theater at solo scale. *A standalone /judge beside /triage* — two prompt-handling homes would answer one question differently; one pipeline, one home (R22 extended, dated). *Judging raw numbered items* — the numbering is evidence, not truth (R22); verdicts attach to threads after clustering. *Decline-as-delete* — declined ideas are stored, never lost (the icebox), on the maintainer's explicit instruction.
+
+**Revisit when:** a few rounds grade the verdicts — too strict (good exotic ideas dying) or too soft (the icebox bloating into a second backlog); or the stage-boundary icebox review finds entries neither reviving nor closing (tighten the hygiene rules then).

@@ -1,5 +1,5 @@
 ---
-description: Map a packed multi-topic prompt into ordered threads before any work — coupled topics stay together, blockers jump the queue, deferrals get the maintainer's nod
+description: Map a packed multi-topic prompt into ordered threads before any work — every thread judged (implement / clarify / spike / park / icebox / won't-do), coupled topics stay together, blockers jump the queue, deferrals get the maintainer's nod
 ---
 
 Triage the maintainer's prompt given as: $ARGUMENTS
@@ -40,11 +40,33 @@ The prompt is a capture, not a work order. Before ANY work:
    of what its siblings do; context is bought back by placement, never
    by splitting coupled work.
 
-5. **Order**: rulings first (instant to record, and they gate work
+5. **Judge each thread — the verdict (R25).** Before ordering or
+   placement, every thread and standalone item earns its verdict:
+   **implement** (now or a planned round) · **needs-clarification**
+   (bounce to the maintainer — nothing is judged while intent is
+   ambiguous; R26's gate) · **spike first** (a timeboxed experiment
+   when promising but unproven) · **park** (a real future task → its
+   owning document, with a named trigger — never the icebox) ·
+   **icebox** (declined but revivable → `research/icebox.md`, with a
+   revival condition) · **won't-do** (closed, one-line reason → the
+   icebox's Closed section) · **duplicate** (fold into its standing
+   entry, recurrence +1). The judge's questions, in order, plain
+   words and no scores: intent clear? · conflict with standing law
+   (both registries — the ⚠ machinery run early)? · core-pillar or
+   stage fit — or a NEW DIRECTION, surfaced as exactly that, never a
+   silent strike? · need demonstrated by play/build evidence, or
+   speculative (YAGNI)? · impact against effort, in words? · does
+   deferring kill it? · resurfaced before (check the icebox —
+   recurrence is the revival signal)? The verdict line names a
+   category — core / enhancement / exotic / infrastructure — exotic
+   is a value class, not a smell. Easy calls cost one line, never
+   ceremony; the session's own ideas pass the same judge.
+
+6. **Order**: rulings first (instant to record, and they gate work
    downstream) · blockers next (a broken gate blocks every thread that
    must verify) · then threads in dependency order.
 
-6. **Place each thread**:
+7. **Place each thread**:
    - **This session** — the coupled core the maintainer is here to
      steer, whatever needs their back-and-forth, and the blockers.
    - **Subagents, this session** — bounded sweeps and research with a
@@ -56,19 +78,21 @@ The prompt is a capture, not a work order. Before ANY work:
      something to point at. Deferral changes what the maintainer gets
      today — it needs their nod.
 
-7. **Present the map, then work**: the threads with their items and
-   kinds, the order, the placement, the commit boundaries (R9 wants
-   them said with the task list), every QUESTION found, and any
-   ⚠ DEVIATION the registries raise against an item. If a thread is
-   being deferred or a coupling call was genuinely close, get the
+8. **Present the map, then work**: the threads with their items,
+   kinds and VERDICTS, the order, the placement, the commit
+   boundaries (R9 wants them said with the task list), every QUESTION
+   found, and any ⚠ DEVIATION the registries raise against an item.
+   If a thread is being deferred or verdicted away (park / icebox /
+   won't-do), or a coupling call was genuinely close, get the
    maintainer's go before starting; otherwise state the map and begin.
    A single-thread prompt is said in one line — triage that finds
    nothing costs a paragraph, not a ceremony.
 
-8. **Mid-session arrivals** get the same test, immediately: coupled to
+9. **Mid-session arrivals** get the same test, immediately: coupled to
    a live thread → absorbed, said out loud; independent → parked on the
    deferred list, said out loud. Never silently absorbed, never
-   silently dropped.
+   silently dropped — and "just this small tweak" is an arrival like
+   any other: it gets its one-line verdict before it gets code.
 
 Hard rules: the map adopts nothing — the decision guardrail runs inside
 each thread as it executes. Every QUESTION in the prompt is answered in

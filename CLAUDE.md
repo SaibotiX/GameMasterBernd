@@ -11,6 +11,7 @@ World Console: a terminal story game built as extensions on the pi coding agent.
 | `research/design/` | game-design law: `undertakings-goals.md` (the G/F/P/A registry), mechanics spec, research receipts, build log (with its decisions log), design↔code audit (owns ids D1–D12), the pi upgrade rite + coupling register (`pi-upgrades.md`) |
 | `research/analysis/` | the playtest method kit; `research/analysis/reports/` is the immutable quality history |
 | `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log, coverage register (what's answered / what's open) |
+| `research/icebox.md` | declined ideas, kept cold (R25): On ice (revival conditions, recurrence counts) and Closed (won't-dos with reasons) — the judge checks it on every new idea |
 | `aitester/` | the AI playtesting harness, its batches and reports |
 | `data/`, `*/sessions-in/`, `auth.json` | private play & credentials — gitignored, never committed, never shipped |
 
@@ -38,8 +39,9 @@ Before adopting ANY new research finding, plan, or design change:
 
 ## Prompt triage (decision R22 — the packed prompt maps into threads first)
 
-- A prompt carrying several separable undertakings gets TRIAGED before any work: inventory every ask → classify → cluster by coupling → order (rulings, blockers, then dependency) → place (this session / subagents / deferred round). Method: `.claude/commands/triage.md` (`/triage`) — apply it unprompted whenever the shape appears.
-- Coupled topics never split (arguable = together); deferrals need the maintainer's nod; the map is presented before work begins; mid-session arrivals get the same test out loud.
+- A prompt carrying several separable undertakings gets TRIAGED before any work: inventory every ask → classify → cluster by coupling → judge (R25) → order (rulings, blockers, then dependency) → place (this session / subagents / deferred round). Method: `.claude/commands/triage.md` (`/triage`) — apply it unprompted whenever the shape appears.
+- **Every thread earns a verdict before work (R25):** implement · needs-clarification · spike first · park (owning doc + named trigger) · icebox · won't-do · duplicate. Declined ideas live in `research/icebox.md` — checked on every new idea; recurrence is the revival signal. The session's own ideas and mid-session "small tweaks" pass the same judge.
+- Coupled topics never split (arguable = together); deferrals and verdicted-away asks need the maintainer's nod; the map is presented before work begins; mid-session arrivals get the same test out loud.
 
 ## House rules
 
