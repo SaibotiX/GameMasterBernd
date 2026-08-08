@@ -5,7 +5,7 @@ Created 2026-08-08 (decision R25). Two kinds of no live here: **On ice** — dec
 **How it works (binding):**
 
 - The judge (R25, `/triage` step 5) checks this file on every new idea: a returning idea increments its entry's recurrence count instead of getting a fresh entry — independent resurfacing is the strongest revival signal there is.
-- Full review at stage boundaries: each On-ice entry either revives (its condition fired), stays (condition named and still live), or — after surviving two reviews untouched — moves to Closed or gets re-argued on the spot. The icebox stays small or it stops being true.
+- Full review at stage boundaries, and riding every `/audit-guardrails` sweep (R28): each On-ice entry either revives (its condition fired), stays (condition named and still live), or — after surviving two reviews untouched — moves to Closed or gets re-argued on the spot. The icebox stays small or it stops being true.
 - Reviving an idea is a normal triage entry: it re-enters as an ask and gets judged fresh, with its icebox context in hand.
 - Entries are one block each; depth lives in the documents the entry points at.
 
@@ -13,7 +13,11 @@ Created 2026-08-08 (decision R25). Two kinds of no live here: **On ice** — dec
 
 ## On ice
 
-*(nothing yet)*
+### Automated guardrail-freshness runs · infrastructure · iced 2026-08-08 · recurrence 0
+Cron- or hook-driven `/audit-guardrails` sweeps, firing without the maintainer invoking them.
+Prompted by: the R28 design round — "checked automatically" was half the original ask.
+Why not now: the on-command sweep plus the round-wrap trigger question cover the need while sessions run frequently; harness cron is machinery without a demonstrated miss.
+**Revive when:** a fired Revisit-when trigger goes unnoticed across two consecutive rounds (lane two failed), or sessions go dormant for months.
 
 ## Closed
 
