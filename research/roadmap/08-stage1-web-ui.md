@@ -49,6 +49,8 @@ Player *editing* of `config/` (a live surface in local play — hot-reloaded int
 
 ## The login screen
 
+*(2026-08-08, R11 revised: for now **one door** — play on the house (R12). The sign-in and API-key doors are on ice with the vault — `research/icebox.md`; the paragraph below stays their prepared face.)*
+
 One screen before the terminal, three doors, no account database (stage 1 has no accounts — the secret link is the identity): **sign in with a provider** (the pi OAuth flows), **paste an API key**, or **play on the house** (decision R12's funded path, plainly labeled with what it is and its cap). Below the doors, the session-recording disclosure and the "don't type personal details" line (decision R13). Mechanics, custody, and injection are owned by [02-friends-web-service.md](02-friends-web-service.md) §Auth — this screen is only their face.
 
 ## Implementation shape

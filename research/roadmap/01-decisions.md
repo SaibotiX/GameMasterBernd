@@ -66,6 +66,8 @@ Decisions taken 2026-08-04. Each entry: what was decided, why, what was rejected
 
 *(revised 2026-08-05, stage-1 design round: extended and part-superseded by R11/R12. Sign-in widens from "their own Anthropic account" to every pi provider door the provider's policy leaves open in a hosted app, and durable credential custody moves into the player's browser (R11); an operator-funded lane exists from stage 1 on the org API key under Commercial Terms (R12) — the "org API key enters the picture only in stage 2" clause is superseded. ⚠ The 2026-08-04 "June-15 Agent SDK credit pool" status is stale: Anthropic PAUSED that plan June 15–16 before it took effect, and separately prohibits hosted third-party apps from offering Claude.ai login at all — full re-check in the 2026-08-05 sections of [06-research-log.md](06-research-log.md).)*
 
+*(noted 2026-08-08: the widened doors closed again for now — R11's same-day revision puts every BYO door on ice (`research/icebox.md`); the private beta serves R12's house lane alone. This entry's principle — players on their own credentials wherever policy allows — sleeps with the icebox entry and wakes with it.)*
+
 ---
 
 ## R6 — One roadmap, evidence-gated
@@ -255,6 +257,8 @@ compaction path stands. Covenant context: R26.)*
 
 **Revisit when:** the login flow is built (re-run the door table — and monthly for Anthropic's paused Agent SDK credit plan, which could resume in any shape); WebAuthn PRF support at implementation start (the fastest-moving fact in the custody research); the IETF browser-apps BCP when it lands as an RFC (~Jan 2027); WAICT quarterly — if it ships, the threat-model note upgrades.
 
+*(revised 2026-08-08, maintainer's ruling: **the doors close for now — the private beta serves the house lane only** (R12). The own-key and OpenRouter doors, and with them the whole browser-vault custody build, go ON ICE — `research/icebox.md` holds the entry; revival conditions: a friend asking for their own key or model choice · house-lane spend straining the monthly cap · stage-2 auth/billing design re-running the door table. Everything above stays the prepared shape, not deleted law — the door table remains the record of what COULD be offered, and this entry's own Revisit-when clauses sleep with the build and wake at revival. The 2026-08-05 ⚠ DEVIATION ruling-request dissolves without needing its answer: no door is offered, so the constrained-subset question binds nothing. 02 §Auth, the stage-1 checklist (items 6–7) and 08 §login carry dated pointers.)*
+
 ---
 
 ## R12 — The house lane: operator-funded play from stage 1, one ledger from test grants to sold tokens
@@ -268,6 +272,8 @@ compaction path stands. Covenant context: R26.)*
 **Rejected:** *Funding from the personal subscription* (the instruction's literal reading — surfaced for the maintainer with the ruling request in the summary of 2026-08-05) — prohibited three ways by consumer terms (account sharing, resale, automated access) and one enforcement action from losing the maintainer's own account; the funding intent survives, the vehicle changes. *Unmetered friend play on the org key* (the old 02 "interim alternative") — R2's lesson gates every expensive path from day one; the real ledger replaces the interim hack entirely. *A throwaway test-phase mechanism* — it would be rebuilt for tokens within months; building the ledger once is cheaper than twice.
 
 **Revisit when:** stage 2's payment integration starts (processor, prices, top-up shapes — derived from real stage-1 telemetry per R6); if Anthropic's paused credit plan resumes in an operator-allocable shape (as proposed it was subscriber-self-claimed only — useless to us; a true allocation mechanism would add a fourth door); if test-phase spend breaches the monthly cap twice — the cap is the experiment's budget, not a suggestion.
+
+*(revised 2026-08-08, maintainer's ruling: **the house lane is THE lane** — R11's doors went on ice the same day, so "BYO players keep their own model choice" sleeps until a door revives; every friend plays metered on the org key from the first turn. The provider and billing model behind that key are this round's research question; the ruling lands as its own R entry. The 2026-08-05 funding-vehicle question settles in passing — the maintainer's provider ask presumes the org-key vehicle; the personal-subscription reading stays rejected.)*
 
 ---
 
