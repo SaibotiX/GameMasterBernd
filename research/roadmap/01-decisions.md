@@ -209,6 +209,19 @@ for the session itself (thresholds become honest then), or cut
 recommendations turn out too eager/too timid across a few rounds (tune
 the criteria against real use).
 
+*(revised 2026-08-08, governance round: a third cut trigger joins the
+two — COLLABORATION BREAKDOWN. Signals: the same point clarified
+repeatedly without landing, corrections of the session's understanding
+piling up, answers and questions visibly missing each other. On
+trigger the session says so plainly, recommends the break — a drink,
+some air — instead of the next task, and prepares the fresh-thread
+opener. The opener law stays for records (point, never restate) and
+grows one carve-out: it carries the OPEN QUESTIONS themselves,
+verbatim, because the confusion is precisely what no record holds; the
+fresh thread opens with the maintainer answering them, not the session
+guessing. Never force the cut mid-round otherwise — the wip: +
+compaction path stands. Covenant context: R26.)*
+
 ---
 
 ## R11 — Every door pi offers, wherever the provider still opens it — and the keys live with the player

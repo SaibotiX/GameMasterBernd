@@ -41,6 +41,7 @@ Before adopting ANY new research finding, plan, or design change:
 
 - **Recommending the end of a session is YOUR job, unprompted.** When a round closes per R9 (wrapped, green, pushed, zero deviations, no open tasks) and the next item is a substantial new round — or you notice real strain (re-reading known files, unsure of your own earlier decisions, heavy compaction behind you) — say so and recommend a fresh session. Never cut mid-round (that's `wip:` + compaction).
 - **Before recommending: the cold-start test.** Could a fresh session reconstruct everything from this file + the owning docs alone? A "no" is a records bug — fix the records, then cut. End with a paste-ready opener that POINTS at the owning documents (build log next-step, report, registry) — it never restates their content.
+- **The breakdown cut (R10, revised 2026-08-08):** when the conversation talks past itself — the same point clarified repeatedly, corrections piling up — say so plainly, recommend the break, and prep the opener: pointers to the records PLUS the open questions themselves, verbatim; the fresh thread opens with the maintainer answering, not the session guessing.
 
 ## Prompt triage (decision R22 — the packed prompt maps into threads first)
 
