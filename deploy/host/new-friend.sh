@@ -19,8 +19,11 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # One home for the caddy pin: read it out of compose.yaml.
 CADDY_IMG="$(grep -oE 'image: caddy:[0-9.]+' "$HERE/compose.yaml" | head -1 | cut -d' ' -f2)"
 
-TOKEN="$(tr -dc 'a-z0-9' </dev/urandom | head -c 30)"
-PASS="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)"
+# Bounded input, not an endless stream: `tr </dev/urandom | head` dies of
+# SIGPIPE under pipefail (exit 141) once head closes the pipe. 1 KiB of
+# entropy filters down to far more than the chars we keep.
+TOKEN="$(head -c 1024 /dev/urandom | tr -dc 'a-z0-9' | head -c 30)"
+PASS="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 20)"
 HASH="$(docker run --rm "$CADDY_IMG" caddy hash-password --plaintext "$PASS")"
 
 cat <<EOF
