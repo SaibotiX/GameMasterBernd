@@ -20,7 +20,7 @@ Both verify scripts fail loudly; green means what the headers say and nothing mo
 
 Prerequisites, all maintainer errands (rulings R17/R18 name them): **worldconsole.eu** registered at INWX with A/AAAA records for `worldconsole.eu`, `play.` and `vault.` pointing at the box, DNS plain and unproxied; the **netcup VPS 500 G12 Vienna** on hourly billing, **click-AVV signed day 1**; the Hetzner runner-up account created and verified before it is ever needed.
 
-*(State 2026-08-08: every errand done — domain, box, AVV, Hetzner account; receipts in [06](../research/roadmap/06-research-log.md) §hosting. A records live and verified: apex, `play.`, `vault.` → **152.53.51.13**. **AAAA still pending** — read the global IPv6 off the box first (`ip -6 addr`; the SCP shows the prefix `2a0a:4cc0:80:189b::/64` — never DNS the link-local `fe80::…`), then add the three records. Access: `ssh -i ~/.ssh/worldconsole root@152.53.51.13` — the key lives on the maintainer's machine, public half installed via ssh-copy-id.)*
+*(State 2026-08-08, evening: **steps 1–5 ran green on the box** — Debian 13, docker 26.1.5 + compose 2.26.1, `deploy` user (docker group, same key), sshd keys-only, core dumps to `/bin/false`, zero swap, DOCKER-USER standing and persisted (`worldconsole-firewall.service`, `PartOf=docker.service` so it re-fires with the daemon), image built on the box, caddy up with **Let's Encrypt certs on all three hosts** — verified from outside over IPv4; en route the firewall's drops learned container-origin scoping (`a0e6157`). Access: `ssh -i ~/.ssh/worldconsole root@152.53.51.13` (root or `deploy@`); clone at `/home/deploy/world-console`, `.env` written. **Open, maintainer's errands:** the three AAAA rows at INWX — box v6 **`2a0a:4cc0:80:189b:34cd:13ff:fee2:3bc5`**, v6 listeners + on-box door check green (external-vantage v6 check right after the rows land; browsers fall back to v4 regardless) · the box's read-only deploy key into GitHub → repo Settings → Deploy keys (public half: `/home/deploy/.ssh/id_ed25519.pub`; until pasted, box pulls ride an agent-forwarded ssh from this machine) · the eyeball sitting, step 6.)*
 
 On the box (Debian stable assumed):
 
@@ -28,7 +28,7 @@ On the box (Debian stable assumed):
 2. Clone the repo (read-only deploy key), `cd deploy/host`, write `.env` with `ACME_EMAIL=<a real mailbox>` (gitignored; the mail-on-domain ruling is still open — any working mailbox serves ACME).
 3. Host hardening that makes R11's wipe real (02 item 2): core dumps off (`kernel.core_pattern=|/bin/false` + `* hard core 0`), **no swap** (netcup images ship none — verify with `swapon --show`; if any exists, `swapoff -a` and remove from fstab, or encrypt it).
 4. `deploy/host/firewall.sh` — after docker is up; persist it (a oneshot systemd unit `After=docker.service`, or iptables-persistent). Verify from inside a container: `docker run --rm world-console:latest node -e "fetch('http://192.168.1.1',{signal:AbortSignal.timeout(5000)}).then(()=>process.exit(1)).catch(()=>process.exit(0))"` (drop = timeout = pass; a reply = the block is not standing).
-5. `deploy/image/build.sh` on the box, then `docker compose up -d caddy`.
+5. `deploy/image/build.sh` on the box, then `docker compose up -d caddy`. Prove the door from *outside*: `curl -sI https://worldconsole.eu` (and `play.`/`vault.`) — 200/404 under a Let's Encrypt issuer. The in-container egress probe cannot see an inbound break; the first deploy learned that the hard way.
 6. **The eyeball sitting** (closes 02 items 3–4's browser half): mint a door for yourself, open it in Firefox and one Chromium-family browser, play a short real sitting. Check: dice overlay dress and space-to-cast, the four-slot board's red urgency, the bell, media announcements, `/pick` and `/roll` as the guaranteed paths where Alt+number is browser-bound (Firefox on Linux switches tabs — expected, not a bug).
 
 ## Per-friend onboarding
@@ -75,7 +75,7 @@ The central session store (R13's shipper, its own round) backs up separately —
 | Image + in-container verify | built & green on this machine (2026-08-08) |
 | Host stack + local door check | built & green on this machine (2026-08-08) |
 | Purchases (domain, box, AVV) | done (2026-08-08) — worldconsole.eu at INWX, netcup Vienna box, click-AVV concluded |
-| First deploy + eyeball sitting | next — A records live (2026-08-08); AAAA + the deploy run once the SSH key lands (§first-deploy state note) |
+| First deploy + eyeball sitting | steps 1–5 green on the box (2026-08-08) — TLS live on all three hosts; AAAA rows, deploy-key paste and the eyeball with the maintainer (§first-deploy state note) |
 | App server & panes (02 item 5, R14) | next build round |
 | Vault, house lane, shipper, disclosure, intro (items 6–11) | own rounds; R11/R12 rulings pending |
 | Idle reaper, disk quotas (item 12) | with the app-server round (stop = wipe + seal) |

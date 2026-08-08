@@ -38,7 +38,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | DSA duties | ◐ | [03](03-public-launch.md) + compliance section | Art. 11/12/14/16 land at stage-2 build |
 | Steam | ● | R7/R8 · [07](07-steam-launch.md) | re-verify all policy facts at stage-4 planning |
 | Offline copies | ● | [05](05-offline-distribution.md) | on demand |
-| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals · built in `deploy/` | container/door/firewall/backup halves landed & locally verified (2026-08-08) · box-side execution + restore test at first deploy |
+| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals · built in `deploy/` | box-side execution done, first deploy 2026-08-08 (TLS live, hardening + firewall standing) · restore test with the backup round (Storage Box still unbought) |
 | Ops runbooks (support · breach · deletion) | ◐ | [03](03-public-launch.md) §support · compliance §breach · R13 deletion | write with the stage-1 build; exercise per the exit gates |
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
