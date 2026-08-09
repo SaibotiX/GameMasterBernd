@@ -536,3 +536,37 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   in roadmap 09's house-lane row, the maintainer rules. Verified: unit 75/75
   (laneModel pure cases) · integration 30/30 (one live-model flake on run 1,
   clean on re-run) · tty-probe not triggered (no widget/overlay change).
+- 2026-08-09 · The words round (roadmap 02 items 9+11 + the papers + the
+  side-call ruling): the sentences a friend meets before playing now exist
+  and are live. The landing ground at the root — loud disclosure with the
+  human reader first, Art. 50(1)'s AI sentence, both names for R16's dated
+  public use, the full Art. 13 note against R29's re-verified facts, R19's
+  Impressum rendering its address from the box .env through caddy templates
+  (the address never enters the repo; the env errand is the maintainer's).
+  The play page gained the first-run notice (once per browser, class-shown —
+  the [hidden]-vs-id lesson respected — Enter dismisses, law 5 keeps the
+  keyboard) and Art. 50(2)'s machine marking (page meta + x-ai-generated on
+  served chronicle prose only — Commons media and config stay unmarked).
+  The intro rides deploy/friend-intro.md ending in consent's two questions;
+  new-friend.sh refuses any mint without the friend's consents.md row
+  (R13 + R20 recorded at invite-acceptance, proven live by the refusal).
+  The 2026-08-09 rulings landed: side calls tagged via the gateway's /side
+  prefix and subtracted at reconcile (the false-page hole closed); the
+  backup restore test (item 13) gates the first invite; 50(2) marking now;
+  papers folded — roadmap 10 (VVZ, threshold verdict, DPA table, breach
+  four-liner, the Art.-50 pair's technique note). §deletion wrote the month
+  promise as eight steps and DRY-RAN GREEN on production with probe-del:
+  gate refusal, one real lane turn, seal/sweep/pull landed, then door 404,
+  volumes gone, store clean, key out, ledger anonymized to deleted-1, the
+  mirror propagating the erase on the next pull, the row marked withdrawn.
+  Judgment calls: the marker is a PATH (/side), not a header — the gateway
+  forwards headers by whitelist so a header would need two changes to stay
+  honest, while the path is one law provable pure in laneModel; the borg
+  retention ≤ 28 days constraint was derived from the note's month promise
+  and filed on item 13 rather than left to the backup round to rediscover.
+  Verified: unit 75/75 · verify green dev AND box · localcheck green with
+  five new legs (site words + rendered address + headers · tagged side row
+  vs untagged turn · reconcile subtracting a 999000-micro side row · marked
+  chronicle prose · notice + meta in the served page) · live receipts on
+  the public door. Eyeballs riding (R9): the site in a real browser, the
+  notice at the maintainer's next sitting.
