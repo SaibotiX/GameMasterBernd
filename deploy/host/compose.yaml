@@ -31,6 +31,11 @@ x-friend: &friend
   networks: [web]
 
 services:
+  # BOX-ONLY: needs ./.env (ACME_EMAIL) — an empty email is a Caddyfile
+  # parse error, and restart:unless-stopped turns it into a quiet crash
+  # loop (a dev machine learned this on eyeball night). The dev-machine
+  # door is localcheck.sh (profile: local); this service never runs off
+  # the box.
   caddy:
     image: caddy:2.10.2
     restart: unless-stopped
