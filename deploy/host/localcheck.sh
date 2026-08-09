@@ -102,6 +102,20 @@ echo "=== store side twice is a no-op ==="
 [ "$(find "$WC_TEST_STORE/sessions" -name '*.tar.zst' | wc -l)" = "1" ] \
 	|| { echo "FAIL: a second store-sweep changed the store"; exit 1; }
 
+echo "=== the reaper: an idle friend is stopped, and the stop seals ==="
+compose up -d wc-test
+for _ in $(seq 1 20); do
+	compose exec -T wc-test node -e \
+		'fetch("http://127.0.0.1:7681/healthz").then(()=>process.exit(0)).catch(()=>process.exit(1))' \
+		>/dev/null 2>&1 && break
+	sleep 0.5
+done
+REAP_OUT="$(COMPOSE_PROFILES=local IDLE_LIMIT=0 STORE="$WC_TEST_STORE" "$HERE/reaper.sh" wc-test)"
+grep -q "stop: wc-test" <<<"$REAP_OUT" \
+	|| { echo "FAIL: the reaper left the idle friend running"; echo "$REAP_OUT"; exit 1; }
+compose ps --services --status running | grep -qx wc-test \
+	&& { echo "FAIL: wc-test still running after the reaper"; exit 1; }
+
 echo "=== a tampered manifest is refused loudly ==="
 SID2=0198cccc-dddd-7eee-8fff-000011112222
 S2="$WC_TEST_STORE/staging/test/$SID2"

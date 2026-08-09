@@ -1,0 +1,10 @@
+# 02 item 12's host half — runbook §the reaper.
+# Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
+[Unit]
+Description=World Console reaper (stop-on-idle with seal, disk watch, stats line)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/deploy/world-console/deploy/host/reaper.sh

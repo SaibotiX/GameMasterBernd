@@ -19,18 +19,22 @@
 # skipped; re-running changes nothing. Exit 1 if anything erred — the
 # journal is the alarm.
 #
-#   store-sweep.sh [--store DIR] [--compact-only]
+#   store-sweep.sh [--store DIR] [--compact-only] [--friend NAME]
 #     --store DIR      the store root (default /srv/worldconsole/store)
 #     --compact-only   skip phase 1 (localcheck's mode: no box friends)
+#     --friend NAME    phase 1 for this one friend only — the reaper's
+#                      post-stop call, so a stop is a seal within the minute
 set -euo pipefail
 umask 077
 
 STORE=/srv/worldconsole/store
 COMPACT_ONLY=0
+FRIEND=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--store) STORE="$2"; shift 2 ;;
 	--compact-only) COMPACT_ONLY=1; shift ;;
+	--friend) FRIEND="$2"; shift 2 ;;
 	*) echo "unknown argument: $1" >&2; exit 2 ;;
 	esac
 done
@@ -41,7 +45,11 @@ ERRORS=0
 
 # --- 1: stopped friends get the one-shot sweep -----------------------------
 if [ "$COMPACT_ONLY" != 1 ]; then
-	ALL="$(docker compose --project-directory "$HERE" config --services 2>/dev/null | grep '^wc-' | grep -vE '^wc-(template|test)$' || true)"
+	if [ -n "$FRIEND" ]; then
+		ALL="wc-$FRIEND"
+	else
+		ALL="$(docker compose --project-directory "$HERE" config --services 2>/dev/null | grep '^wc-' | grep -vE '^wc-(template|test)$' || true)"
+	fi
 	RUNNING="$(docker compose --project-directory "$HERE" ps --services --status running 2>/dev/null || true)"
 	for SVC in $ALL; do
 		NAME="${SVC#wc-}"

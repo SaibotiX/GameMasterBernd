@@ -1,0 +1,11 @@
+# Every five minutes; no Persistent catch-up — a missed pass is just the
+# next one.
+[Unit]
+Description=World Console reaper, every 5 minutes (02 item 12)
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

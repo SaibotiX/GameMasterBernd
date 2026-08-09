@@ -83,6 +83,10 @@ Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit
 
 ⚠ DEVIATION (R13 / 02 §research data): 02 says the store is "encrypted at rest"; this store is a plain 0700 root-only directory. Proposed reading: at-rest encryption with an on-box key guards nothing the live plaintext volumes don't already surrender — the honestly-encrypted copy is the borg backup (item 13, key off-box), and the store's real walls are file mode + the box's SSH door. Awaiting the maintainer's ruling; a gocryptfs mount can slot under the same path if ruled the other way.
 
+## The reaper (02 item 12's host half — rode the shipper round per the 2026-08-09 ruling)
+
+`reaper.sh` every 5 minutes (`cp deploy/host/systemd/worldconsole-reaper.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-reaper.timer`): any friend 30 minutes without a WebSocket client is stopped — the stop grace lets the app server seal, then `store-sweep.sh --friend` makes the seal a certainty and the compact immediate. An idle container costs nothing extra: pi only spawns on attach, and worlds persist — the next connect resumes the world, not the conversation. The same pass watches per-volume disk (`du` warn at 2 GiB, alarm at 5 GiB — **alarm-only**: automatic pruning of `data/downloads/` over a cap is proposed but unruled, since it deletes player-visible files) and prints one `docker stats` line per running friend into the journal.
+
 ## Backups (02 item 13; shape ruled in R18)
 
 Nightly, to a *different provider* (Hetzner Storage Box as the borg target) plus the periodic pull to the maintainer's machine. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir, never inside any volume, so a volume backup cannot contain it.
