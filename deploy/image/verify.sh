@@ -5,7 +5,7 @@
 #
 #   deploy/image/verify.sh [image]      # default world-console:latest
 #
-# Four legs:
+# Five legs:
 #   1. the unit gate inside the container — engine logic plus all three
 #      scrying lenses against live Wikipedia/Commons (proves the image's
 #      network path and CA ground),
@@ -16,7 +16,10 @@
 #      same PTY stream a browser would receive over /ws/term
 #      (appserver-probe.mjs),
 #   4. the ttyd FALLBACK bridge — R14 keeps it aboard; a fallback that
-#      rotted silently is no fallback (ws-probe.mjs).
+#      rotted silently is no fallback (ws-probe.mjs),
+#   5. the R13 shipper inside the container — mirror/seal against a torn
+#      session, ship-twice no-op, growth reopening the seal, auth.json
+#      provably unshippable (shipper-probe.mjs).
 # What this cannot prove: how the dress LOOKS in a real browser — that
 # eyeball check happens at first deploy and with each friend's first sitting.
 set -euo pipefail
@@ -56,13 +59,13 @@ wait_http() { # $1 = url; poll until it answers
 	return 1
 }
 
-echo "=== 1/4 unit gate (engine + three lenses, live) ==="
+echo "=== 1/5 unit gate (engine + three lenses, live) ==="
 docker run --rm "${HARDEN[@]}" "$IMG" node extension/test/unit.ts
 
-echo "=== 2/4 tty-probe (TUI dress under a real PTY) ==="
+echo "=== 2/5 tty-probe (TUI dress under a real PTY) ==="
 docker run --rm "${HARDEN[@]}" "$IMG" bash extension/test/tty-probe.sh
 
-echo "=== 3/4 app server probe (page + health + pane APIs + /ws/term stream) ==="
+echo "=== 3/5 app server probe (page + health + pane APIs + /ws/term stream) ==="
 CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG")"
 ADDR="$(docker port "$CID" 7681/tcp | head -1)"
 wait_http "http://$ADDR/healthz"
@@ -78,7 +81,7 @@ wait "$PROBE"
 docker stop -t 2 "$CID" >/dev/null
 CID=""
 
-echo "=== 4/4 ttyd fallback probe (the bare-page rung still carries) ==="
+echo "=== 4/5 ttyd fallback probe (the bare-page rung still carries) ==="
 CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG" \
 	ttyd --writable --max-clients 1 --port 7681 \
 	-t titleFixed="World Console" -t disableLeaveAlert=true pi)"
@@ -87,5 +90,11 @@ wait_http "http://$ADDR/"
 "${NODEBIN[@]}" "$PROBE_DIR/ws-probe.mjs" "http://$ADDR"
 docker stop -t 2 "$CID" >/dev/null
 CID=""
+
+echo "=== 5/5 shipper probe (mirror/seal/sweep laws, in-container) ==="
+docker run --rm "${HARDEN[@]}" \
+	--tmpfs /ship:rw,uid=1001,gid=1001 \
+	-v "$HERE":/probe:ro \
+	"$IMG" node /probe/shipper-probe.mjs
 
 echo "=== verify green: $IMG ==="

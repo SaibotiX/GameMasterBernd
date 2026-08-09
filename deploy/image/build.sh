@@ -31,11 +31,11 @@ cp "$HERE/Dockerfile" "$HERE/entrypoint.sh" "$CTX/"
 # builder stage compiles its own from the lockfile.
 mkdir "$CTX/appserver"
 cp "$HERE/appserver/package.json" "$HERE/appserver/package-lock.json" \
-	"$HERE/appserver/server.js" "$CTX/appserver/"
+	"$HERE/appserver/server.js" "$HERE/appserver/shipper.js" "$CTX/appserver/"
 cp -r "$HERE/appserver/client" "$CTX/appserver/client"
 
 REV="$(git -C "$REPO" rev-parse --short "$REF")"
-BUILD_ARGS=()
+BUILD_ARGS=(--build-arg "GIT_REV=${REV}")
 if [ -n "${PI_VERSION:-}" ]; then
 	BUILD_ARGS+=(--build-arg "PI_VERSION=${PI_VERSION}")
 fi

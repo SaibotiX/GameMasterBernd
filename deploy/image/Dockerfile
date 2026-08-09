@@ -62,8 +62,14 @@ COPY --chown=player:player game/ /home/player/game/
 # The app server: root-owned and world-readable — the player user runs it
 # but must never be able to rewrite it.
 COPY --from=appserver-deps /opt/appserver/node_modules /opt/appserver/node_modules
-COPY appserver/package.json appserver/server.js /opt/appserver/
+COPY appserver/package.json appserver/server.js appserver/shipper.js /opt/appserver/
 COPY appserver/client/ /opt/appserver/client/
+
+# The game-tree rev build.sh archived, as env: R13's manifests stamp the
+# code version that played each session (the OCI label can't be read from
+# inside the container).
+ARG GIT_REV=unknown
+ENV GIT_REV=${GIT_REV}
 
 # data/ (worlds, downloads) and ~/.pi/agent/sessions are the two persistent
 # volumes; ~/.pi/agent itself is a runtime tmpfs so auth.json lives and dies

@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import chokidar from "chokidar";
 import pty from "node-pty";
 import { WebSocketServer } from "ws";
+import { createShipper } from "./shipper.js";
 
 const PORT = 7681;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,11 @@ let term = null; // { pty, cols, rows }
 let client = null; // the one active /ws/term socket
 let lastDetachAt = Date.now(); // the reaper's idle mark (02 item 12 seam)
 
+// R13's shipper rides the server's seams: sweep at boot, checkpoint every
+// ten minutes, seal at pi's exit and at the stop signal. The newest session
+// is live while pi runs; everything else seals as it goes.
+const shipper = createShipper({ log, piRunning: () => !!term });
+
 function spawnPi(cols, rows) {
 	const p = pty.spawn("pi", [], {
 		name: "xterm-256color",
@@ -67,6 +73,7 @@ function spawnPi(cols, rows) {
 		term = null;
 		if (client?.readyState === 1)
 			client.send(JSON.stringify({ t: "exit", code: exitCode }));
+		shipper.tick("pi-exit"); // the session just ended — seal it now
 	});
 }
 
@@ -431,6 +438,7 @@ const server = http.createServer(async (req, res) => {
 					idleSeconds: client
 						? 0
 						: Math.round((Date.now() - lastDetachAt) / 1000),
+					shipper: shipper.status(),
 				}),
 			);
 			return;
@@ -531,9 +539,20 @@ async function shutdown(sig) {
 		t.pty.kill();
 		await Promise.race([exited, new Promise((r) => setTimeout(r, 3000))]);
 	}
+	// A stop is a seal (02 item 12): pi has hung up and flushed; ship what
+	// remains, bounded well inside the compose stop grace. The host's sweep
+	// re-treats anything this race cuts short — sealing is idempotent.
+	await Promise.race([
+		shipper.tick("stop"),
+		new Promise((r) => setTimeout(r, 15_000)),
+	]);
 	process.exit(0);
 }
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
-server.listen(PORT, () => log("listening", { port: PORT, gameDir: GAME_DIR }));
+server.listen(PORT, () => {
+	log("listening", { port: PORT, gameDir: GAME_DIR });
+	shipper.tick("boot"); // the sweep-on-connect trigger: seal what a crash left
+});
+setInterval(() => shipper.tick("checkpoint"), 10 * 60_000).unref();
