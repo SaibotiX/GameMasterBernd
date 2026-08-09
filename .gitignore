@@ -36,6 +36,8 @@ deploy/host/.localcheck-store.*
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.
-# (human batches under research/analysis/, AI batches under aitester/)
+# (human batches under research/analysis/, AI batches under aitester/;
+# store-mirror is the analysis machine's pull of the hosted store — R13)
 research/analysis/sessions-in/
+research/analysis/store-mirror/
 aitester/sessions-in/

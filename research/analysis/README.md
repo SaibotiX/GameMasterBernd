@@ -34,6 +34,9 @@ testers play  ──►  sessions-in/<batch>/<tester>/     (jsonl + story folder
 ## Quick start (maintainer)
 
 ```
+# hosted sittings first ride in from the store (R13's shipper):
+research/analysis/tools/pull-sessions.sh 2026-08-xx-first-batch
+
 # one command, whole batch — from the repo root in Claude Code:
 /analyze-sessions research/analysis/sessions-in/2026-08-xx-first-batch/
 
@@ -48,9 +51,11 @@ Reports land in `reports/` (tracked — they are the project's quality
 history); reports for AI batches land in `aitester/reports/`, beside the
 batches they judge. Both `sessions-in/` folders are **gitignored**:
 sessions are private play. Hosted testers (the friends web service,
-roadmap stage 1) hand in only their notes: the maintainer copies session
-+ chronicle from the server volumes into `sessions-in/<batch>/<tester>/`
-— the same contract from there on.
+roadmap stage 1) hand in only their notes: their sessions arrive via the
+shipper (R13) — `tools/pull-sessions.sh <batch>` pulls the store's
+mirror and lands each session as `sessions-in/<batch>/<player>/<sid>/`
+(`session.jsonl` + `story/` + a manifest-written `meta.md`, hashes
+verified on landing) — the same contract from there on.
 
 ## The three rules that make it work
 
