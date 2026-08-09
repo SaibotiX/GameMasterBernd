@@ -33,9 +33,21 @@ CID=""
 cleanup() { [ -n "$CID" ] && docker stop -t 2 "$CID" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
+# The host-side probe legs need a node. The dev machine has one; the box
+# deliberately has only docker/compose/git — there, the image under test
+# lends its own (host network so 127.0.0.1:<published port> resolves; the
+# DOCKER-USER egress block guards the bridge, loopback is untouched).
+if command -v node >/dev/null 2>&1; then
+	NODEBIN=(node)
+	PROBE_DIR="$HERE"
+else
+	NODEBIN=(docker run --rm --network host -v "$HERE":/probe:ro "$IMG" node)
+	PROBE_DIR="/probe"
+fi
+
 wait_http() { # $1 = url; poll until it answers
 	for _ in $(seq 1 40); do
-		if node -e "fetch('$1').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" 2>/dev/null; then
+		if "${NODEBIN[@]}" -e "fetch('$1').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" 2>/dev/null; then
 			return 0
 		fi
 		sleep 0.5
@@ -54,10 +66,10 @@ echo "=== 3/4 app server probe (page + health + pane APIs + /ws/term stream) ===
 CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG")"
 ADDR="$(docker port "$CID" 7681/tcp | head -1)"
 wait_http "http://$ADDR/healthz"
-node "$HERE/appserver-probe.mjs" "http://$ADDR"
+"${NODEBIN[@]}" "$PROBE_DIR/appserver-probe.mjs" "http://$ADDR"
 
 echo "--- watcher: a write in data/ reaches the events channel ---"
-node "$HERE/appserver-probe.mjs" "http://$ADDR" --fs-event &
+"${NODEBIN[@]}" "$PROBE_DIR/appserver-probe.mjs" "http://$ADDR" --fs-event &
 PROBE=$!
 sleep 1
 docker exec "$CID" sh -c 'echo probe >> /home/player/game/data/probe-touch.md'
@@ -72,7 +84,7 @@ CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG" \
 	-t titleFixed="World Console" -t disableLeaveAlert=true pi)"
 ADDR="$(docker port "$CID" 7681/tcp | head -1)"
 wait_http "http://$ADDR/"
-node "$HERE/ws-probe.mjs" "http://$ADDR"
+"${NODEBIN[@]}" "$PROBE_DIR/ws-probe.mjs" "http://$ADDR"
 docker stop -t 2 "$CID" >/dev/null
 CID=""
 
