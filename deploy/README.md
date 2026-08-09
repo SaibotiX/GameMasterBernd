@@ -79,7 +79,7 @@ store/sessions/<player>/<sid>.tar.zst
                                   stay (they answer "shipped already")
 ```
 
-Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit, the stop signal — `appserver/shipper.js`); the store side is the host's (`store-sweep.sh`, daily timer). The analysis machine pulls `sessions/` — never `staging/` — with the kit's puller (`research/analysis/tools/pull-sessions.sh`), landing straight in the `sessions-in` layout.
+Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit, the stop signal — `appserver/shipper.js`); the store side is the host's (`store-sweep.sh`, daily timer: `cp deploy/host/systemd/worldconsole-store-sweep.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-store-sweep.timer`). The analysis machine pulls `sessions/` — never `staging/` — with the kit's puller (`research/analysis/tools/pull-sessions.sh`), landing straight in the `sessions-in` layout.
 
 ⚠ DEVIATION (R13 / 02 §research data): 02 says the store is "encrypted at rest"; this store is a plain 0700 root-only directory. Proposed reading: at-rest encryption with an on-box key guards nothing the live plaintext volumes don't already surrender — the honestly-encrypted copy is the borg backup (item 13, key off-box), and the store's real walls are file mode + the box's SSH door. Awaiting the maintainer's ruling; a gocryptfs mount can slot under the same path if ruled the other way.
 

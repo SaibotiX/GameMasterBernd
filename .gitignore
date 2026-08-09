@@ -32,7 +32,7 @@ deploy/host/caddy/friends/*.caddy
 !deploy/host/caddy/friends/.keep.caddy
 # localcheck.sh's throwaway store (recorded play, even test play, never lands
 # in the tree)
-deploy/host/.localcheck-ship.*
+deploy/host/.localcheck-store.*
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.

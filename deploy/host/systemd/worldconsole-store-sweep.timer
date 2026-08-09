@@ -1,0 +1,11 @@
+# Daily, small-hours; Persistent so a rebooted box catches up its sweep.
+[Unit]
+Description=Daily World Console store sweep (R13)
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

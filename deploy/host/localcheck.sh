@@ -10,16 +10,20 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DOOR="https://localhost:8443/f/localtest00000000000000000000"
 
-# wc-test's staging slice of a throwaway store (R13): under the repo, not
-# /tmp — the repo tree is what Docker Desktop provably shares. 777 so the
-# container's player uid can write through the bind whatever the mapping.
-export WC_TEST_SHIP="$(mktemp -d "$HERE/.localcheck-ship.XXXXXX")"
-chmod 777 "$WC_TEST_SHIP"
+# A throwaway store in the production layout (R13): under the repo, not
+# /tmp — the repo tree is what Docker Desktop provably shares. wc-test
+# mounts only its staging slice, exactly like a friend on the box; 777 so
+# the container's player uid can write through the bind whatever the
+# mapping.
+WC_TEST_STORE="$(mktemp -d "$HERE/.localcheck-store.XXXXXX")"
+mkdir -p "$WC_TEST_STORE/staging/test" "$WC_TEST_STORE/sessions"
+chmod 777 "$WC_TEST_STORE" "$WC_TEST_STORE/staging" "$WC_TEST_STORE/staging/test" "$WC_TEST_STORE/sessions"
+export WC_TEST_SHIP="$WC_TEST_STORE/staging/test"
 
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
-	rm -rf "$WC_TEST_SHIP"
+	rm -rf "$WC_TEST_STORE"
 }
 trap cleanup EXIT
 
@@ -81,5 +85,37 @@ echo "=== the one-shot sweep (the host's seam) finds nothing left to do ==="
 SWEEP_OUT="$(compose run --rm --no-deps -T --entrypoint "node /opt/appserver/shipper.js sweep" wc-test)"
 echo "$SWEEP_OUT" | grep -q '"copied":0' && echo "$SWEEP_OUT" | grep -q '"sealed":0' \
 	|| { echo "FAIL: re-sweep of a sealed store was not a no-op"; echo "$SWEEP_OUT"; exit 1; }
+
+echo "=== store side: verify hashes, compact to tar.zst, prune to markers ==="
+"$HERE/store-sweep.sh" --store "$WC_TEST_STORE" --compact-only
+TAR="$(find "$WC_TEST_STORE/sessions" -name '*.tar.zst' | head -1)"
+[ -n "$TAR" ] || { echo "FAIL: no compacted tarball"; ls -laR "$WC_TEST_STORE"; exit 1; }
+tar --zstd -tf "$TAR" | grep -q '^session.jsonl$' \
+	|| { echo "FAIL: tarball misses session.jsonl"; exit 1; }
+find "$WC_TEST_STORE/staging" -name session.jsonl | grep -q . \
+	&& { echo "FAIL: staged data files were not pruned"; exit 1; }
+find "$WC_TEST_STORE/staging" -name sealed | grep -q . \
+	|| { echo "FAIL: the sealed marker did not survive compaction"; exit 1; }
+
+echo "=== store side twice is a no-op ==="
+"$HERE/store-sweep.sh" --store "$WC_TEST_STORE" --compact-only
+[ "$(find "$WC_TEST_STORE/sessions" -name '*.tar.zst' | wc -l)" = "1" ] \
+	|| { echo "FAIL: a second store-sweep changed the store"; exit 1; }
+
+echo "=== a tampered manifest is refused loudly ==="
+SID2=0198cccc-dddd-7eee-8fff-000011112222
+S2="$WC_TEST_STORE/staging/test/$SID2"
+mkdir -p "$S2"
+echo '{"type":"session","timestamp":"2026-08-09T13:00:00.000Z"}' >"$S2/session.jsonl"
+printf '{"manifestVersion":1,"sessionId":"%s","player":"test","sourceSize":61,"files":{"session.jsonl":{"size":61,"sha256":"%s"}}}\n' \
+	"$SID2" "0000000000000000000000000000000000000000000000000000000000000000" >"$S2/manifest.json"
+echo '{}' >"$S2/sealed"
+if "$HERE/store-sweep.sh" --store "$WC_TEST_STORE" --compact-only 2>/dev/null; then
+	echo "FAIL: a tampered manifest was accepted"; exit 1
+fi
+[ ! -e "$WC_TEST_STORE/sessions/test/$SID2.tar.zst" ] \
+	|| { echo "FAIL: the tampered session was compacted anyway"; exit 1; }
+[ -f "$S2/session.jsonl" ] \
+	|| { echo "FAIL: the tampered staging dir was pruned"; exit 1; }
 
 echo "=== localcheck green ==="
