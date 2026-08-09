@@ -20,16 +20,33 @@ mkdir -p "$WC_TEST_STORE/staging/test" "$WC_TEST_STORE/sessions"
 chmod 777 "$WC_TEST_STORE" "$WC_TEST_STORE/staging" "$WC_TEST_STORE/staging/test" "$WC_TEST_STORE/sessions"
 export WC_TEST_SHIP="$WC_TEST_STORE/staging/test"
 
+# The house lane, keyless (R12): a throwaway gateway state with two virtual
+# keys — one funded, one holding a single micro-dollar so its first turn is
+# its last — and the gateway pointed at the pretend-Anthropic stub. The org
+# key here is a stand-in; the stub only checks that ONE arrived (custody
+# proof: the friend's key never travels upstream).
+GATEWAY_STATE="$(mktemp -d "$HERE/.localcheck-gateway.XXXXXX")"
+chmod 777 "$GATEWAY_STATE"
+cat >"$GATEWAY_STATE/keys.json" <<'KEYS'
+{
+	"wc-local-good": { "player": "test", "budgetMicro": 1000000, "rpm": 60 },
+	"wc-local-broke": { "player": "broke", "budgetMicro": 1, "rpm": 60 }
+}
+KEYS
+export GATEWAY_STATE
+export GATEWAY_UPSTREAM="http://stub:9990"
+export ANTHROPIC_ORG_KEY="sk-local-stand-in"
+
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
-	rm -rf "$WC_TEST_STORE"
+	rm -rf "$WC_TEST_STORE" "$GATEWAY_STATE"
 }
 trap cleanup EXIT
 
-echo "=== up (caddy-local + wc-test + waker) ==="
+echo "=== up (caddy-local + wc-test + waker + gateway + stub) ==="
 compose config -q
-compose up -d caddy-local wc-test waker
+compose up -d caddy-local wc-test waker gateway stub
 
 echo "=== door: wrong password is refused ==="
 for _ in $(seq 1 20); do
@@ -55,6 +72,80 @@ echo "=== the whole page carries through the door (prefix strip, auth, TLS) ==="
 # /f/<token>/ with basic auth over self-signed TLS, exactly like a friend.
 NODE_TLS_REJECT_UNAUTHORIZED=0 WS_PROBE_AUTH="test:local-test-password" \
 	node "$HERE/../image/appserver-probe.mjs" "$DOOR"
+
+echo "=== the house lane: a turn flows through the gateway (R12) ==="
+# From INSIDE a friend container — the only vantage that proves the web
+# network route, the virtual-key auth, and the upstream swap in one move.
+compose exec -T wc-test node -e '
+const req = (extra={}) => fetch(process.env.WC_GATEWAY_URL + "/v1/messages", {
+	method: "POST",
+	headers: { "content-type": "application/json", "anthropic-version": "2023-06-01",
+		"x-api-key": process.env.ANTHROPIC_API_KEY },
+	body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 32,
+		messages: [{ role: "user", content: "knock" }], ...extra }),
+});
+(async () => {
+	const r = await req();
+	const j = await r.json();
+	if (r.status !== 200 || !(j.usage?.output_tokens > 0)) { console.error("turn refused:", r.status, JSON.stringify(j)); process.exit(1); }
+	console.log("turn ok, usage:", JSON.stringify(j.usage));
+})();' || { echo "FAIL: no turn flowed through the gateway"; exit 1; }
+
+echo "=== the house lane: cache_control passes through with a hit ==="
+compose exec -T wc-test node -e '
+const sys = [{ type: "text", text: "stable prefix ".repeat(400), cache_control: { type: "ephemeral" } }];
+const turn = () => fetch(process.env.WC_GATEWAY_URL + "/v1/messages", {
+	method: "POST",
+	headers: { "content-type": "application/json", "anthropic-version": "2023-06-01",
+		"x-api-key": process.env.ANTHROPIC_API_KEY },
+	body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 32, system: sys,
+		messages: [{ role: "user", content: "again" }] }),
+}).then((r) => r.json());
+(async () => {
+	const first = await turn();
+	const second = await turn();
+	const read = second.usage?.cache_read_input_tokens ?? 0;
+	if (!(read > 0)) { console.error("no cache hit:", JSON.stringify({ first: first.usage, second: second.usage })); process.exit(1); }
+	console.log("cache hit on the second call:", read, "tokens read");
+})();' || { echo "FAIL: cache_control did not survive the gateway"; exit 1; }
+
+echo "=== the house lane: a dry grant refuses the second knock ==="
+compose exec -T wc-test node -e '
+const turn = () => fetch(process.env.WC_GATEWAY_URL + "/v1/messages", {
+	method: "POST",
+	headers: { "content-type": "application/json", "anthropic-version": "2023-06-01",
+		"x-api-key": "wc-local-broke" },
+	body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 32,
+		messages: [{ role: "user", content: "last coin" }] }),
+});
+(async () => {
+	const drain = await turn();
+	if (drain.status !== 200) { console.error("the single micro-dollar did not buy the first turn:", drain.status); process.exit(1); }
+	const after = await turn();
+	const j = await after.json();
+	if (!(after.status === 400 && j.type === "error" && /grant is spent/.test(j.error?.message ?? ""))) {
+		console.error("the dry grant was not refused kindly:", after.status, JSON.stringify(j)); process.exit(1);
+	}
+	console.log("refused with:", JSON.stringify(j.error.message));
+})();' || { echo "FAIL: the dry grant did not refuse"; exit 1; }
+
+echo "=== the house lane: pi itself completes a turn through the gateway ==="
+# The whole item-2 wiring in one breath: the shipped .pi/extensions override
+# reroutes pi, the container env carries the virtual key and the model, and
+# the stub answers — keyless end to end. (--model because this bare exec has
+# no app server to pass the flag; the PTY spawn adds it from WC_MODEL.)
+PI_OUT="$(compose exec -T wc-test sh -c 'cd /home/player/game && pi --model "$WC_MODEL" --no-session -p "say the word"')" \
+	|| { echo "FAIL: pi errored through the lane"; echo "$PI_OUT"; exit 1; }
+grep -q "the stub answers" <<<"$PI_OUT" \
+	|| { echo "FAIL: pi did not answer through the gateway"; echo "$PI_OUT"; exit 1; }
+
+echo "=== the house lane: the meter recorded every turn ==="
+compose exec -T gateway node -e '
+fetch("http://127.0.0.1:4100/healthz").then((r) => r.json()).then((h) => {
+	const good = h.keys["wc-local-good"], broke = h.keys["wc-local-broke"];
+	if (!(good?.spentMicro > 0 && broke?.spentMicro > 0)) { console.error("meter empty:", JSON.stringify(h)); process.exit(1); }
+	console.log("meter:", JSON.stringify(h.keys));
+});' || { echo "FAIL: the gateway meter recorded nothing"; exit 1; }
 
 echo "=== a stop is a seal: a session in the live volumes reaches the store (R13) ==="
 # localcheck runs KEYLESS by design — pi cannot finish a turn, so it never

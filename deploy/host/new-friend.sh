@@ -86,19 +86,23 @@ docker run --rm --user 0 -v "$STORE_STAGING:/s" world-console:latest \
 # gateway's box-local keys.json, budget in micro-USD. 10,000,000 micro = $10
 # is R12's placeholder test-phase grant until the ledger round replaces the
 # static budget with monthly grants. The box has no host node by design —
-# the image's node runs this errand too, and the gateway re-reads keys.json
-# per request, so the key binds with no reload.
+# the image's node runs this errand too (init + merge + custody in one
+# breath: the state ends up 700, owned by the gateway's uid 1001, so the
+# capability-stripped gateway can append its ledger and nobody else on the
+# box reads keys casually). The gateway re-reads keys.json per request, so
+# the key binds with no reload.
 GATEWAY_STATE="$HERE/gateway-state"
 mkdir -p "$GATEWAY_STATE"
-[ -f "$GATEWAY_STATE/keys.json" ] || echo '{}' >"$GATEWAY_STATE/keys.json"
 docker run --rm --user 0 -v "$GATEWAY_STATE:/d" -e VKEY="$VKEY" -e PLAYER="$NAME" world-console:latest \
 	node -e '
 		const fs = require("fs");
-		const keys = JSON.parse(fs.readFileSync("/d/keys.json", "utf8"));
+		const keys = fs.existsSync("/d/keys.json") ? JSON.parse(fs.readFileSync("/d/keys.json", "utf8")) : {};
 		if (Object.values(keys).some(k => k.player === process.env.PLAYER))
 			{ console.error(`a key for ${process.env.PLAYER} already exists`); process.exit(1); }
 		keys[process.env.VKEY] = { player: process.env.PLAYER, budgetMicro: 10000000, rpm: 30 };
-		fs.writeFileSync("/d/keys.json", JSON.stringify(keys, null, "\t") + "\n");'
+		fs.writeFileSync("/d/keys.json", JSON.stringify(keys, null, "\t") + "\n");
+		fs.chownSync("/d", 1001, 1001); fs.chmodSync("/d", 0o700);
+		fs.chownSync("/d/keys.json", 1001, 1001); fs.chmodSync("/d/keys.json", 0o600);'
 
 SVC="$(mktemp)"; VOL="$(mktemp)"
 trap 'rm -f "$SVC" "$VOL"' EXIT

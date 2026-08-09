@@ -87,6 +87,10 @@ services:
     init: true
     restart: unless-stopped
     read_only: true
+    # The player uid, same as in the friends' image: the state bind is
+    # chowned to it (new-friend.sh's errand / localcheck's 777 throwaway),
+    # so with every capability dropped the ledger append still lands.
+    user: "1001:1001"
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
