@@ -29,7 +29,8 @@ lands in the game's own `.pi/extensions/`).
 
 ## Where results land
 
-The printed receipt blocks go to the research log with the shape decision
-(one commit per the round map); the probe grows into localcheck's gateway leg
-in item 2. `usage.jsonl` and `.env` are gitignored; the org key never enters
-git, an image layer, or a transcript.
+The shape decision annotates map item 1 (`deploy/README.md` §next round) and
+the round's state note carries the receipt summary at wrap — build receipts
+live in the runbook, as every round before. The probe grows into localcheck's
+gateway leg in item 2. `usage.jsonl` and `.env` are gitignored; the org key
+never enters git, an image layer, or a transcript.

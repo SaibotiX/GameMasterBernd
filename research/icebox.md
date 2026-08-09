@@ -31,6 +31,12 @@ Prompted by: the shipper round built the watch `du`-based and alarm-only; the en
 Why not now: it deletes player-visible files on a machine's judgment; one friend on a 4 GB box leaves no pressure, downloads are re-fetchable but their loss would still surprise, and the alarm already names the moment a human should look.
 **Revive when:** any disk alarm actually fires (the 5 GiB line) · two friends sit over the 2 GiB warn line at once (manual pruning becoming a chore) · or stage-2 sizing re-opens per-volume budgets.
 
+### LiteLLM as the house gateway · infrastructure · iced 2026-08-09 · recurrence 0
+Running LiteLLM (plus the Postgres its virtual keys require) as the lane's gateway instead of the adopted own proxy — R12's "LiteLLM-style" made literal.
+Prompted by: the house-lane round's item-1 spike weighed both candidates against the real API (`deploy/gateway-spike/`, receipts on the map item).
+Why not now: its virtual keys mandate a Postgres service; its cost tables and admin API would sit between the org key and the ledger's own metering; two more services on a 4 GB box buy nothing the ~200-line own proxy didn't just prove — passthrough, caching, streaming, budgets, all green. The spike's LiteLLM harness (compose + config) stays aboard, so a revival is a run, not a build.
+**Revive when:** a second PROVIDER (not model) enters the house lane (multi-provider routing is LiteLLM's real value — the aggregator question, 06 §2026-08-08) · virtual-key administration outgrows the own proxy (key rotation/team features becoming real work) · the own proxy fails a receipt the spike can't explain.
+
 ## Closed
 
 *(nothing yet — won't-dos land here with their one-line reasons)*
