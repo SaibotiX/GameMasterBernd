@@ -155,8 +155,13 @@ const stripAnsi = (s) =>
 	const ws = new WebSocket(url, auth ? { headers } : undefined);
 	ws.binaryType = "arraybuffer";
 	const decoder = new TextDecoder("utf-8", { fatal: false });
+	const encoder = new TextEncoder();
 	let seen = "";
+	let typed = false;
 
+	// Two truths on one socket: the footer proves output flows OUT, the
+	// typed echo proves keystrokes flow IN (the direction the first eyeball
+	// caught untested — a stream that only talks is not a terminal).
 	const result = await new Promise((resolve) => {
 		const timer = setTimeout(() => resolve("timeout"), deadlineMs);
 		ws.onopen = () =>
@@ -164,7 +169,11 @@ const stripAnsi = (s) =>
 		ws.onmessage = (ev) => {
 			if (typeof ev.data === "string") return; // control frames
 			seen += decoder.decode(new Uint8Array(ev.data), { stream: true });
-			if (/mood:/.test(stripAnsi(seen))) {
+			if (!typed && /mood:/.test(stripAnsi(seen))) {
+				typed = true;
+				seen = "";
+				setTimeout(() => ws.send(encoder.encode("zzqq")), 300);
+			} else if (typed && /zzqq/.test(stripAnsi(seen))) {
 				clearTimeout(timer);
 				resolve("ok");
 			}
@@ -175,18 +184,19 @@ const stripAnsi = (s) =>
 		};
 		ws.onclose = () => {
 			clearTimeout(timer);
-			resolve(/mood:/.test(stripAnsi(seen)) ? "ok" : "closed");
+			resolve("closed");
 		};
 	});
 	try {
 		ws.close();
 	} catch {}
 	if (result !== "ok") {
-		console.error(`FAIL appserver-probe: term ${result} — footer never appeared. Last output:`);
+		const stage = typed ? "typed input never echoed" : "footer never appeared";
+		console.error(`FAIL appserver-probe: term ${result} — ${stage}. Last output:`);
 		console.error(stripAnsi(seen).split("\n").slice(-15).join("\n"));
 		process.exit(1);
 	}
-	ok("game footer reached the web client through /ws/term");
+	ok("footer reached the client AND typed input echoed back through /ws/term");
 }
 
 console.log("appserver-probe green");

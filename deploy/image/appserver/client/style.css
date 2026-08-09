@@ -261,6 +261,12 @@ pre.raw {
 	z-index: 10;
 }
 
+/* The id rule above outweighs the UA's [hidden]{display:none} — without
+   this line the veil sits over the terminal INVISIBLY, darkening the TUI
+   and eating every click (the 2026-08-09 eyeball: unreadable boot text,
+   unclickable terminal). Never remove it. */
+#overlay[hidden] { display: none; }
+
 #overlay-text {
 	padding: 10px 18px;
 	background: var(--pane);
