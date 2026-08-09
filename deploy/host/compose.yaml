@@ -30,6 +30,9 @@ x-friend: &friend
   pids_limit: 256
   expose: ["7681"]
   networks: [web]
+  # A stop is a seal (02 item 12): the app server hangs up pi, then ships
+  # what remains — give it room. The host sweep re-treats anything cut short.
+  stop_grace_period: 30s
 
 services:
   # BOX-ONLY: needs ./.env (ACME_EMAIL) — an empty email is a Caddyfile
@@ -62,14 +65,19 @@ services:
   # `extends` this — the anchor above stays the single home. (A YAML
   # anchor cannot cross files, and extends inherits `profiles`, so scale
   # is the parking that works.) new-friend.sh writes the override; its
-  # shape, for the record:
+  # shape, for the record (the /ship bind is the friend's OWN staging
+  # prefix of the store — each container can write its slice and nothing
+  # else; runbook §the store):
   #
   #   wc-alice:
   #     extends: {file: compose.yaml, service: wc-template}
   #     scale: 1
+  #     environment:
+  #       WC_PLAYER: alice
   #     volumes:
   #       - data-alice:/home/player/game/data
   #       - sessions-alice:/home/player/.pi/agent/sessions
+  #       - /srv/worldconsole/store/staging/alice:/ship
   wc-template:
     <<: *friend
     scale: 0
@@ -88,9 +96,14 @@ services:
     profiles: [local]
     <<: *friend
     restart: "no"
+    environment:
+      WC_PLAYER: test
     volumes:
       - data-test:/home/player/game/data
       - sessions-test:/home/player/.pi/agent/sessions
+      # localcheck.sh exports the real path; the default is never created
+      # (config parses it, only `up wc-test` would mount it — local profile).
+      - ${WC_TEST_SHIP:-/tmp/wc-test-ship}:/ship
 
 networks:
   web:

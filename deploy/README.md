@@ -61,6 +61,28 @@ R14 keeps the fallback aboard, and verify leg 4 keeps it honest).
 
 Named volumes (`data-*`, `sessions-*`) are untouched by recreation; chronicles survive by construction. A **pi version change is never an update** — it is an upgrade and takes the full rite ([pi-upgrades.md](../research/design/pi-upgrades.md)) before the new pin builds anyone's container.
 
+## The store (02 item 10, R13 — where sessions become research data)
+
+One private place on the box, root-only: `/srv/worldconsole/store/` (created at the shipper deploy: `install -d -m 700 -o root -g root /srv/worldconsole/store /srv/worldconsole/store/staging /srv/worldconsole/store/sessions`; the box needs `zstd` for compaction — `apt install zstd`).
+
+```
+store/staging/<player>/<sid>/     the friend's OWN slice, bind-mounted at
+  session.jsonl · story/**        /ship in their container (minted by
+  manifest.json · sealed          new-friend.sh, owned by the player uid) —
+                                  the in-container shipper writes here and
+                                  can reach nothing else of the store
+store/sessions/<player>/<sid>.tar.zst
+                                  the compacted record, root-only — written
+                                  by store-sweep.sh after verifying every
+                                  manifest hash; staging's data files are
+                                  then pruned, its manifest + sealed markers
+                                  stay (they answer "shipped already")
+```
+
+Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit, the stop signal — `appserver/shipper.js`); the store side is the host's (`store-sweep.sh`, daily timer). The analysis machine pulls `sessions/` — never `staging/` — with the kit's puller (`research/analysis/tools/pull-sessions.sh`), landing straight in the `sessions-in` layout.
+
+⚠ DEVIATION (R13 / 02 §research data): 02 says the store is "encrypted at rest"; this store is a plain 0700 root-only directory. Proposed reading: at-rest encryption with an on-box key guards nothing the live plaintext volumes don't already surrender — the honestly-encrypted copy is the borg backup (item 13, key off-box), and the store's real walls are file mode + the box's SSH door. Awaiting the maintainer's ruling; a gocryptfs mount can slot under the same path if ruled the other way.
+
 ## Backups (02 item 13; shape ruled in R18)
 
 Nightly, to a *different provider* (Hetzner Storage Box as the borg target) plus the periodic pull to the maintainer's machine. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir, never inside any volume, so a volume backup cannot contain it.

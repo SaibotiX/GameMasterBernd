@@ -30,6 +30,9 @@ dist/
 deploy/host/compose.override.yaml
 deploy/host/caddy/friends/*.caddy
 !deploy/host/caddy/friends/.keep.caddy
+# localcheck.sh's throwaway store (recorded play, even test play, never lands
+# in the tree)
+deploy/host/.localcheck-ship.*
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.

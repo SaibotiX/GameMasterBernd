@@ -58,6 +58,14 @@ volumes:
   # -- per-friend volumes: ----------------------------------------------------
 EOF
 
+# The friend's staging prefix in the store (R13): created owned by the
+# player uid BEFORE the bind mounts it — docker would otherwise auto-create
+# it root-owned and the shipper inside could never write. The image's own
+# node runs the errand; --user 0 because chown is root's.
+STORE_STAGING="/srv/worldconsole/store/staging"
+docker run --rm --user 0 -v "$STORE_STAGING:/s" world-console:latest \
+	sh -c "mkdir -p /s/$NAME && chown 1001:1001 /s/$NAME && chmod 700 /s/$NAME"
+
 SVC="$(mktemp)"; VOL="$(mktemp)"
 trap 'rm -f "$SVC" "$VOL"' EXIT
 cat > "$SVC" <<EOF
@@ -66,11 +74,13 @@ cat > "$SVC" <<EOF
       file: compose.yaml
       service: wc-template
     scale: 1
+    environment:
+      WC_PLAYER: $NAME
+      # WORLD_CONSOLE_WORLD: star-frontier
     volumes:
       - data-$NAME:/home/player/game/data
       - sessions-$NAME:/home/player/.pi/agent/sessions
-    # environment:
-    #   WORLD_CONSOLE_WORLD: star-frontier
+      - $STORE_STAGING/$NAME:/ship
 
 EOF
 cat > "$VOL" <<EOF
