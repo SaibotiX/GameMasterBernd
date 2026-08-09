@@ -33,6 +33,7 @@ CADDY_IMG="$(grep -oE 'image: caddy:[0-9.]+' "$HERE/compose.yaml" | head -1 | cu
 TOKEN="$(head -c 1024 /dev/urandom | tr -dc 'a-z0-9' | head -c 30)"
 PASS="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 20)"
 HASH="$(docker run --rm "$CADDY_IMG" caddy hash-password --plaintext "$PASS")"
+VKEY="wc-$(head -c 1024 /dev/urandom | tr -dc 'a-z0-9' | head -c 40)"
 
 # The door: its own snippet, picked up by the play site block's import.
 # Two upstreams under lb_policy first: the friend's container, then the
@@ -81,6 +82,24 @@ STORE_STAGING="/srv/worldconsole/store/staging"
 docker run --rm --user 0 -v "$STORE_STAGING:/s" world-console:latest \
 	sh -c "mkdir -p /s/$NAME && chown 1001:1001 /s/$NAME && chmod 700 /s/$NAME"
 
+# The friend's grant on the house lane (R12/R29): a virtual key in the
+# gateway's box-local keys.json, budget in micro-USD. 10,000,000 micro = $10
+# is R12's placeholder test-phase grant until the ledger round replaces the
+# static budget with monthly grants. The box has no host node by design —
+# the image's node runs this errand too, and the gateway re-reads keys.json
+# per request, so the key binds with no reload.
+GATEWAY_STATE="$HERE/gateway-state"
+mkdir -p "$GATEWAY_STATE"
+[ -f "$GATEWAY_STATE/keys.json" ] || echo '{}' >"$GATEWAY_STATE/keys.json"
+docker run --rm --user 0 -v "$GATEWAY_STATE:/d" -e VKEY="$VKEY" -e PLAYER="$NAME" world-console:latest \
+	node -e '
+		const fs = require("fs");
+		const keys = JSON.parse(fs.readFileSync("/d/keys.json", "utf8"));
+		if (Object.values(keys).some(k => k.player === process.env.PLAYER))
+			{ console.error(`a key for ${process.env.PLAYER} already exists`); process.exit(1); }
+		keys[process.env.VKEY] = { player: process.env.PLAYER, budgetMicro: 10000000, rpm: 30 };
+		fs.writeFileSync("/d/keys.json", JSON.stringify(keys, null, "\t") + "\n");'
+
 SVC="$(mktemp)"; VOL="$(mktemp)"
 trap 'rm -f "$SVC" "$VOL"' EXIT
 cat > "$SVC" <<EOF
@@ -91,6 +110,9 @@ cat > "$SVC" <<EOF
     scale: 1
     environment:
       WC_PLAYER: $NAME
+      WC_GATEWAY_URL: http://gateway:4100
+      WC_MODEL: anthropic/claude-haiku-4-5
+      ANTHROPIC_API_KEY: $VKEY
       # WORLD_CONSOLE_WORLD: star-frontier
     volumes:
       - data-$NAME:/home/player/game/data
@@ -109,8 +131,9 @@ docker compose -f "$HERE/compose.yaml" -f "$OVERRIDE" config -q
 
 cat <<EOF
 minted: caddy/friends/$NAME.caddy + wc-$NAME in compose.override.yaml
+        + a house-lane grant in gateway-state/keys.json (\$10, R12 placeholder)
 ── then ────────────────────────────────────────────────────────────────────
-  docker compose up -d wc-$NAME
+  docker compose up -d gateway wc-$NAME
   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 ── send to $NAME out of band, once (never in the repo, never in a log): ────

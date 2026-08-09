@@ -73,6 +73,10 @@ function hasPriorSession() {
 
 function spawnPi(cols, rows) {
 	const args = hasPriorSession() ? ["--continue"] : [];
+	// The house lane pins the keeper's model (02 §house lane: routing is
+	// ours): WC_MODEL rides the friend's env as "provider/id". Unset — the
+	// maintainer's local play, older doors — pi chooses as it always did.
+	if (process.env.WC_MODEL) args.push("--model", process.env.WC_MODEL);
 	const p = pty.spawn("pi", args, {
 		name: "xterm-256color",
 		cwd: GAME_DIR,

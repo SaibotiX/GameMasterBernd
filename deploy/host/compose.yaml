@@ -73,6 +73,36 @@ services:
     command: ["node", "/waker.js"]
     networks: [wake]
 
+  # The house lane's gateway (02 §house lane, R12/R29; shape from the item-1
+  # spike): ONE process holding the org key, friends speak to it with
+  # per-friend virtual keys minted by new-friend.sh. It lives on `web` so
+  # friends can reach it by name — the org key itself never enters any
+  # friend container, and the box publishes no port for it. State (keys.json
+  # + usage.jsonl) is box-local and gitignored, same custody as
+  # caddy/friends/. ANTHROPIC_ORG_KEY comes from ./.env on the box — never
+  # this file, never an image layer. GATEWAY_UPSTREAM exists for localcheck
+  # to point the lane at the stub; on the box it stays unset (real API).
+  gateway:
+    image: node:24-trixie-slim
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    pids_limit: 64
+    expose: ["4100"]
+    volumes:
+      - ./gateway/gateway.js:/gateway.js:ro
+      - ${GATEWAY_STATE:-./gateway-state}:/data
+    environment:
+      ANTHROPIC_ORG_KEY: ${ANTHROPIC_ORG_KEY:-}
+      GATEWAY_BIND: 0.0.0.0
+      GATEWAY_UPSTREAM: ${GATEWAY_UPSTREAM:-https://api.anthropic.com}
+    command: ["node", "/gateway.js"]
+    networks: [web]
+
   # The hardened friend shape as a real but inert service (scale 0 = `up`
   # creates no container). Friends live in compose.override.yaml and
   # `extends` this — the anchor above stays the single home. (A YAML
@@ -80,13 +110,18 @@ services:
   # is the parking that works.) new-friend.sh writes the override; its
   # shape, for the record (the /ship bind is the friend's OWN staging
   # prefix of the store — each container can write its slice and nothing
-  # else; runbook §the store):
+  # else; runbook §the store — and the lane trio WC_GATEWAY_URL +
+  # ANTHROPIC_API_KEY (the VIRTUAL key) + WC_MODEL puts the friend's pi on
+  # the house lane, R12):
   #
   #   wc-alice:
   #     extends: {file: compose.yaml, service: wc-template}
   #     scale: 1
   #     environment:
   #       WC_PLAYER: alice
+  #       WC_GATEWAY_URL: http://gateway:4100
+  #       WC_MODEL: anthropic/claude-haiku-4-5
+  #       ANTHROPIC_API_KEY: <virtual key from gateway-state/keys.json>
   #     volumes:
   #       - data-alice:/home/player/game/data
   #       - sessions-alice:/home/player/.pi/agent/sessions
@@ -105,12 +140,29 @@ services:
       - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
     networks: [web, wake]
 
+  # localcheck's pretend Anthropic: the gateway's upstream when the check
+  # runs keyless (localcheck exports GATEWAY_UPSTREAM=http://stub:9990).
+  stub:
+    profiles: [local]
+    image: node:24-trixie-slim
+    init: true
+    restart: "no"
+    volumes:
+      - ./gateway/stub-upstream.mjs:/stub.js:ro
+    command: ["node", "/stub.js"]
+    networks: [web]
+
   wc-test:
     profiles: [local]
     <<: *friend
     restart: "no"
     environment:
       WC_PLAYER: test
+      # The lane trio, exactly as new-friend.sh writes it for a real friend —
+      # the virtual key matches localcheck's throwaway keys.json.
+      WC_GATEWAY_URL: http://gateway:4100
+      WC_MODEL: anthropic/claude-haiku-4-5
+      ANTHROPIC_API_KEY: wc-local-good
     volumes:
       - data-test:/home/player/game/data
       - sessions-test:/home/player/.pi/agent/sessions

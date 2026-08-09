@@ -8,7 +8,7 @@ through one probe and lets receipts decide:
 
 | | Candidate A: LiteLLM | Candidate B: own proxy |
 |---|---|---|
-| pieces on the box | LiteLLM (Python) **+ Postgres** (virtual keys require it) | one node process (`own-proxy.mjs`, ~200 lines), spend as JSONL |
+| pieces on the box | LiteLLM (Python) **+ Postgres** (virtual keys require it) | one node process (~200 lines — adopted, now living at `deploy/host/gateway/gateway.js`), spend as JSONL |
 | metering | its cost tables, its DB | our price table (R29's re-verified numbers), our file — the same rows the ledger (item 3) needs anyway |
 | org-key custody | inside its container/env + admin API surface | env of one process, no admin surface |
 

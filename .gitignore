@@ -3,6 +3,7 @@
 auth.json
 .env
 .env.*
+.env~
 *.pem
 *.key
 credentials.json
@@ -33,6 +34,10 @@ deploy/host/caddy/friends/*.caddy
 # localcheck.sh's throwaway store (recorded play, even test play, never lands
 # in the tree)
 deploy/host/.localcheck-store.*
+# The house lane's box-local state: virtual keys + the usage ledger (R12/R29).
+# Same custody as the friend files — the tracked tree never carries a key.
+deploy/host/gateway-state/
+deploy/host/.localcheck-gateway.*
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.

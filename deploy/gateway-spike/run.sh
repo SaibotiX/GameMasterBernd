@@ -23,7 +23,10 @@ case "$CAND" in
 		GATEWAY=http://127.0.0.1:4100
 		GOOD=wc-spike-good BROKE=wc-spike-broke
 		rm -f usage.jsonl
-		node own-proxy.mjs &
+		# The adopted gateway grew from this spike into its production home —
+		# the spike keeps probing THE live implementation, not a frozen copy.
+		GATEWAY_KEYS="$PWD/keys.json" GATEWAY_LEDGER="$PWD/usage.jsonl" \
+			node ../host/gateway/gateway.js &
 		PROXY=$!
 		trap 'kill "$PROXY" 2>/dev/null || true' EXIT
 		for _ in $(seq 40); do curl -fsS "$GATEWAY/healthz" >/dev/null 2>&1 && break; sleep 0.25; done
