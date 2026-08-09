@@ -77,7 +77,7 @@ research day.)
 | netcup GmbH | hosting (box, Vienna) | click-AVV in the CCP | concluded 2026-08-08 (R18) |
 | Anthropic | model API (house lane, R29) | DPA auto-incorporated in the Commercial Terms; SCCs for the US transfer | standing since the org account (2026-08-09) |
 | Google (Gmail) | mail channel (stage-1 nod) | consumer terms — the known wart; DPF-certified | accepted 2026-08-08 until Migadu (stage 2) |
-| Hetzner (Storage Box) | backup target (item 13) | AVV at purchase | pending — rides the backup round |
+| Hetzner (Storage Box) | backup target (item 13) | AVV concluded electronically in the account | concluded at order 2026-08-09 (BX11 Falkenstein; the borg lane built on it 2026-08-10) |
 
 Re-verify the provider table at every stage gate (06 §compliance, the
 ⚠ fast-moving flags; DPF watch C-703/25 P stands).
