@@ -104,6 +104,14 @@ services:
       ANTHROPIC_ORG_KEY: ${ANTHROPIC_ORG_KEY:-}
       GATEWAY_BIND: 0.0.0.0
       GATEWAY_UPSTREAM: ${GATEWAY_UPSTREAM:-https://api.anthropic.com}
+      # The ledger's ruled bounds ride the box .env only when overriding the
+      # in-code defaults ($55/mo kill ≈ €50, $5.50/day alarm ≈ €5 — the
+      # 2026-08-09 ruling); localcheck shrinks them to prove the tripwires.
+      # NTFY_TOPIC is the maintainer's push channel — the topic name is the
+      # secret, box .env only.
+      GATEWAY_KILL_MICRO: ${GATEWAY_KILL_MICRO:-}
+      GATEWAY_ALARM_DAY_MICRO: ${GATEWAY_ALARM_DAY_MICRO:-}
+      NTFY_TOPIC: ${NTFY_TOPIC:-}
     command: ["node", "/gateway.js"]
     networks: [web]
 

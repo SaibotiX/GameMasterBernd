@@ -144,8 +144,54 @@ compose exec -T gateway node -e '
 fetch("http://127.0.0.1:4100/healthz").then((r) => r.json()).then((h) => {
 	const good = h.keys["wc-local-good"], broke = h.keys["wc-local-broke"];
 	if (!(good?.spentMicro > 0 && broke?.spentMicro > 0)) { console.error("meter empty:", JSON.stringify(h)); process.exit(1); }
+	if (!(good.spentMonthMicro > 0 && h.globalMonthMicro > 0 && h.globalDayMicro > 0)) { console.error("month/day buckets empty:", JSON.stringify(h)); process.exit(1); }
 	console.log("meter:", JSON.stringify(h.keys));
 });' || { echo "FAIL: the gateway meter recorded nothing"; exit 1; }
+
+echo "=== the house lane: /grant shows a friend their own window only ==="
+compose exec -T wc-test node -e '
+(async () => {
+	const mine = await fetch(process.env.WC_GATEWAY_URL + "/grant", { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY } }).then((r) => r.json());
+	if (!(mine.player === "test" && mine.remainingMicro > 0 && mine.laneOpen === true)) { console.error("grant window wrong:", JSON.stringify(mine)); process.exit(1); }
+	if (JSON.stringify(mine).includes("broke")) { console.error("a friend can see another grant"); process.exit(1); }
+	const nobody = await fetch(process.env.WC_GATEWAY_URL + "/grant", { headers: { "x-api-key": "not-a-key" } });
+	if (nobody.status !== 401) { console.error("a stranger read a grant:", nobody.status); process.exit(1); }
+	console.log("grant window:", JSON.stringify(mine));
+})();' || { echo "FAIL: the grant window misbehaves"; exit 1; }
+
+echo "=== the ledger's tripwires: the daily alarm pings, the kill-switch stops the lane ==="
+# Shrink the ruled values and recreate the gateway: the persisted ledger
+# already crosses both shrunken lines, so the gateway PINGS both on waking
+# (boot-time tripwire check) and rests the lane — the next knock, any key,
+# is refused with the resting message.
+export GATEWAY_ALARM_DAY_MICRO=10 GATEWAY_KILL_MICRO=10
+compose up -d gateway >/dev/null 2>&1
+sleep 1
+compose exec -T wc-test node -e '
+(async () => {
+	const r = await fetch(process.env.WC_GATEWAY_URL + "/v1/messages", {
+		method: "POST",
+		headers: { "content-type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": process.env.ANTHROPIC_API_KEY },
+		body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 32, messages: [{ role: "user", content: "one past the line" }] }),
+	});
+	const j = await r.json();
+	if (!(r.status === 400 && /rests this month/.test(j.error?.message ?? ""))) {
+		console.error("the tripped kill-switch did not stop the lane:", r.status, JSON.stringify(j)); process.exit(1);
+	}
+	console.log("the lane rests:", JSON.stringify(j.error.message));
+})();' || { echo "FAIL: the kill-switch did not hold"; exit 1; }
+docker logs "$(compose ps -q gateway)" 2>&1 | grep -q "ping: THE KILL-SWITCH TRIPPED" \
+	|| { echo "FAIL: the kill-switch never pinged"; docker logs "$(compose ps -q gateway)" | tail -5; exit 1; }
+docker logs "$(compose ps -q gateway)" 2>&1 | grep -q "ping: Daily spend crossed the alarm line" \
+	|| { echo "FAIL: the daily alarm never pinged"; docker logs "$(compose ps -q gateway)" | tail -5; exit 1; }
+unset GATEWAY_ALARM_DAY_MICRO GATEWAY_KILL_MICRO
+compose up -d gateway >/dev/null 2>&1
+sleep 1
+compose exec -T gateway node -e '
+fetch("http://127.0.0.1:4100/healthz").then((r) => r.json()).then((h) => {
+	if (!(h.globalMonthMicro < h.killMicro)) { console.error("lane still resting at ruled values:", JSON.stringify(h)); process.exit(1); }
+	console.log("lane open again at the ruled caps (spent", h.globalMonthMicro, "of", h.killMicro, "micro)");
+});' || { echo "FAIL: the lane did not reopen at ruled values"; exit 1; }
 
 echo "=== a stop is a seal: a session in the live volumes reaches the store (R13) ==="
 # localcheck runs KEYLESS by design — pi cannot finish a turn, so it never

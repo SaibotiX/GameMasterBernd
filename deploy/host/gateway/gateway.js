@@ -7,17 +7,26 @@
 //   friend container ──x-api-key: <virtual>──▶ gateway ──x-api-key: <org>──▶ Anthropic
 //
 // Its meter is the billing source of truth (02), reconciled nightly against
-// pi's own per-turn cost lines once the ledger round lands (R6, map item 3).
-// Storage is deliberately plain until then: keys.json re-read per request
-// (box-local edits by new-friend.sh apply live, no reload dance) and an
-// append-only usage.jsonl summed at boot. The ledger replaces the storage,
-// not the seam.
+// pi's own per-turn cost lines (R6, reconcile.sh). THE LEDGER LIVES HERE
+// (R12, map item 3): keys.json re-read per request (box-local edits by
+// new-friend.sh apply live, no reload dance), an append-only usage.jsonl
+// folded at boot into per-key-per-month, global-month and global-day
+// buckets — grants are CALENDAR-MONTH scoped, and two ruled bounds stand
+// over everything (the maintainer, 2026-08-09): the global monthly
+// KILL-SWITCH that stops the whole lane (€50 ≈ $55 at the ruling-day rate —
+// the meter stays micro-USD because the provider bills USD) and the global
+// DAILY alarm that only pings (€5 ≈ $5.50). Pings travel by ntfy.sh push
+// when NTFY_TOPIC is set (the topic name is the secret, box .env only,
+// carrying spend numbers and player names — never play content); unset,
+// they land in the container log alone.
 //
 // Env: ANTHROPIC_ORG_KEY (required, from the host's gitignored .env) ·
 // GATEWAY_BIND (default 127.0.0.1; compose sets 0.0.0.0 so friends on the
 // web network can reach it) · GATEWAY_PORT (4100) · GATEWAY_UPSTREAM
 // (default the real API; localcheck points it at the stub) · GATEWAY_KEYS /
-// GATEWAY_LEDGER (default /data/…, the box-local state bind).
+// GATEWAY_LEDGER (default /data/…, the box-local state bind) ·
+// GATEWAY_KILL_MICRO / GATEWAY_ALARM_DAY_MICRO (localcheck shrinks them to
+// prove the tripwires) · NTFY_TOPIC.
 
 import fs from "node:fs";
 import http from "node:http";
@@ -71,23 +80,73 @@ function readKeys() {
 	}
 }
 
-const spentMicro = {};
+// `||`, not `??`: compose forwards these as EMPTY strings when unset on the
+// host, and Number("") is 0 — which would rest the lane forever.
+const KILL_MICRO = Number(process.env.GATEWAY_KILL_MICRO || 55_000_000);
+const ALARM_DAY_MICRO = Number(process.env.GATEWAY_ALARM_DAY_MICRO || 5_500_000);
+const NTFY_TOPIC = process.env.NTFY_TOPIC;
+
+// One ping per latch key (kill:<month>, alarm:<day>, grant:<key>:<month>) —
+// in-memory, so a restart may repeat a still-true warning; that is a
+// feature. Pings never block or fail the lane.
+const pinged = new Set();
+function ping(latch, text) {
+	if (pinged.has(latch)) return;
+	pinged.add(latch);
+	console.log(`ping: ${text}`);
+	if (NTFY_TOPIC)
+		fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+			method: "POST",
+			headers: { title: "world console — the house lane" },
+			body: text,
+		}).catch((e) => console.error(`ping failed to send: ${e.message}`));
+}
+
+// The ledger's living buckets, folded from the append-only file at boot.
+const spentMicro = {}; // lifetime per key
+const keyMonth = {}; // key → { "2026-08": micro }
+const globalMonth = {}; // "2026-08" → micro
+const globalDay = {}; // "2026-08-09" → micro
+function bucket(key, ts, cost) {
+	const month = ts.slice(0, 7);
+	const day = ts.slice(0, 10);
+	spentMicro[key] = (spentMicro[key] ?? 0) + cost;
+	(keyMonth[key] ??= {})[month] = (keyMonth[key][month] ?? 0) + cost;
+	globalMonth[month] = (globalMonth[month] ?? 0) + cost;
+	globalDay[day] = (globalDay[day] ?? 0) + cost;
+}
 if (fs.existsSync(LEDGER_FILE))
 	for (const line of fs.readFileSync(LEDGER_FILE, "utf8").split("\n")) {
 		if (!line) continue;
 		try {
 			const row = JSON.parse(line);
-			spentMicro[row.key] = (spentMicro[row.key] ?? 0) + row.costMicro;
+			bucket(row.key, row.ts, row.costMicro);
 		} catch {}
 	}
 
+const nowMonth = () => new Date().toISOString().slice(0, 7);
+const nowDay = () => new Date().toISOString().slice(0, 10);
+const spentThisMonth = (key) => keyMonth[key]?.[nowMonth()] ?? 0;
+
+// The tripwires watch at record time AND at boot — a gateway waking into an
+// already-breached line says so instead of resting silently.
+function checkTripwires(day, month) {
+	if ((globalDay[day] ?? 0) >= ALARM_DAY_MICRO)
+		ping(`alarm:${day}`, `Daily spend crossed the alarm line: ${((globalDay[day] ?? 0) / 1e6).toFixed(2)} USD on ${day} (line: ${(ALARM_DAY_MICRO / 1e6).toFixed(2)}). The lane keeps running.`);
+	if ((globalMonth[month] ?? 0) >= KILL_MICRO)
+		ping(`kill:${month}`, `THE KILL-SWITCH TRIPPED: ${((globalMonth[month] ?? 0) / 1e6).toFixed(2)} USD in ${month} (cap: ${(KILL_MICRO / 1e6).toFixed(2)}). The lane is stopped until next month or a raised cap.`);
+}
+checkTripwires(nowDay(), nowMonth());
+
 function record(key, player, model, usage) {
 	const cost = costMicro(model, usage);
-	spentMicro[key] = (spentMicro[key] ?? 0) + cost;
+	const ts = new Date().toISOString();
+	bucket(key, ts, cost);
 	fs.appendFileSync(
 		LEDGER_FILE,
-		JSON.stringify({ ts: new Date().toISOString(), key, player, model, usage, costMicro: cost }) + "\n",
+		JSON.stringify({ ts, key, player, model, usage, costMicro: cost }) + "\n",
 	);
+	checkTripwires(ts.slice(0, 10), ts.slice(0, 7));
 }
 
 // Per-key rate limit: a one-minute sliding window, in memory. Turn-based
@@ -111,16 +170,52 @@ const refuse = (res, status, message) => {
 const server = http.createServer(async (req, res) => {
 	if (req.method === "GET" && req.url === "/healthz") {
 		const keys = readKeys();
+		const month = nowMonth();
+		const day = nowDay();
 		res.writeHead(200, { "content-type": "application/json" });
 		res.end(
 			JSON.stringify({
 				ok: true,
+				month,
+				globalMonthMicro: globalMonth[month] ?? 0,
+				killMicro: KILL_MICRO,
+				globalDayMicro: globalDay[day] ?? 0,
+				alarmDayMicro: ALARM_DAY_MICRO,
 				keys: Object.fromEntries(
 					Object.entries(keys).map(([k, v]) => [
 						k,
-						{ player: v.player, budgetMicro: v.budgetMicro, spentMicro: spentMicro[k] ?? 0 },
+						{
+							player: v.player,
+							budgetMicro: v.budgetMicro,
+							spentMicro: spentMicro[k] ?? 0,
+							spentMonthMicro: keyMonth[k]?.[month] ?? 0,
+						},
 					]),
 				),
+			}),
+		);
+		return;
+	}
+
+	// The strip's window (08's status-strip law, map item 4): a friend asks
+	// with their OWN key and learns only their OWN grant — never the table.
+	if (req.method === "GET" && req.url === "/grant") {
+		const virtual = req.headers["x-api-key"];
+		const grant = typeof virtual === "string" ? readKeys()[virtual] : undefined;
+		if (!grant) {
+			refuse(res, 401, "unknown key — this door is not yours");
+			return;
+		}
+		const spent = spentThisMonth(virtual);
+		res.writeHead(200, { "content-type": "application/json" });
+		res.end(
+			JSON.stringify({
+				player: grant.player,
+				month: nowMonth(),
+				budgetMicro: grant.budgetMicro,
+				spentMicro: spent,
+				remainingMicro: Math.max(0, grant.budgetMicro - spent),
+				laneOpen: (globalMonth[nowMonth()] ?? 0) < KILL_MICRO,
 			}),
 		);
 		return;
@@ -136,7 +231,15 @@ const server = http.createServer(async (req, res) => {
 		refuse(res, 401, "unknown key — this door is not yours");
 		return;
 	}
-	if ((spentMicro[virtual] ?? 0) >= grant.budgetMicro) {
+	if ((globalMonth[nowMonth()] ?? 0) >= KILL_MICRO) {
+		refuse(res, 400, "The house rests this month — the lane reopens with the new month.");
+		return;
+	}
+	if (spentThisMonth(virtual) >= grant.budgetMicro) {
+		ping(
+			`grant:${virtual}:${nowMonth()}`,
+			`${grant.player}'s grant is spent for ${nowMonth()} (${(grant.budgetMicro / 1e6).toFixed(2)} USD). Their keeper rests until a top-up.`,
+		);
 		refuse(res, 400, "The house grant is spent — the keeper rests until the maintainer tops it up.");
 		return;
 	}

@@ -83,9 +83,10 @@ docker run --rm --user 0 -v "$STORE_STAGING:/s" world-console:latest \
 	sh -c "mkdir -p /s/$NAME && chown 1001:1001 /s/$NAME && chmod 700 /s/$NAME"
 
 # The friend's grant on the house lane (R12/R29): a virtual key in the
-# gateway's box-local keys.json, budget in micro-USD. 10,000,000 micro = $10
-# is R12's placeholder test-phase grant until the ledger round replaces the
-# static budget with monthly grants. The box has no host node by design —
+# gateway's box-local keys.json, budget in micro-USD PER CALENDAR MONTH
+# (the ledger scopes grants monthly). 10,000,000 micro = $10/month is R12's
+# placeholder test-phase grant until telemetry tunes it. The box has no
+# host node by design —
 # the image's node runs this errand too (init + merge + custody in one
 # breath: the state ends up 700, owned by the gateway's uid 1001, so the
 # capability-stripped gateway can append its ledger and nobody else on the
