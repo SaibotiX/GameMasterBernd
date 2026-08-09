@@ -23,6 +23,8 @@ Prerequisites, all maintainer errands (rulings R17/R18 name them): **worldconsol
 
 *(State 2026-08-08, night: **the deploy stands** — steps 1–5 green on Debian 13 (docker 26.1.5, compose 2.26.1; `deploy` user, sshd keys-only, no core dumps, no swap, DOCKER-USER persisted via `worldconsole-firewall.service`); three hosts live under Let's Encrypt, AAAA rows live at INWX and propagated, deploy key pasted — **the box pulls on its own key**. Three landmines found and fixed en route, each its own commit: firewall drops learned container-origin scoping (`a0e6157`), the mint's urandom pipes got bounded input (`a398e69`), caddy mounts the `caddy/` directory instead of a pinned single-file inode (`e99885b`). The maintainer's own door is minted and green from outside (401 bare / 200 authed, ttyd page; `wc-tobias` healthy; pair handed out of band). Since 2026-08-09 friend state is box-local and gitignored — `caddy/friends/tobias.caddy` + `compose.override.yaml` — and the box's tracked tree is CLEAN: pulls need no stash dance. Access: `ssh -i ~/.ssh/worldconsole root@152.53.51.13` (root or `deploy@`); clone at `/home/deploy/world-console`. **Closed 2026-08-09:** the eyeball sitting ran green — Firefox and a Chromium-family browser, dress, space-to-cast, board urgency, bell, media announcements and the `/pick`/`/roll` paths all as expected. The external-vantage IPv6 check is **on ice** (maintainer's call, 2026-08-09): parked here, its owning note — revisit at the next natural v6 vantage (a new PC, a phone-on-mobile-data moment) or on the first report of an unreachable door; proven on-box, and browsers' happy-eyeballs fall back to v4 regardless. The first-deploy round is complete.)*
 
+*(State 2026-08-09, app-server round: **the page is live** — `wc-tobias` recreated onto the app-server image; verify's four legs green on the dev machine AND the box (the box has no host node by design — verify lends the image's own, learned on the first on-box run); localcheck walks the full page through a production-shaped door. Live smoke: page 4 ms, tree 50 ms, `constitution.md` 4 ms in-container; door shape from outside 200/404/401 as designed; the watcher hop measures ~26 ms isolated on the dev machine. pi now spawns on first attach — an idle container carries no game process. **Open:** the maintainer's eyeball through the new page — 08's laws in real browsers (space-to-cast through the page, tabs, the glass auto-opening its catch, the ledger's tail) — the round's acceptance look (R9); and the item-12 ruling (§Status).)*
+
 On the box (Debian stable assumed):
 
 1. Base: `apt install docker.io docker-compose-v2 git` (or Docker's own repo), a non-root deploy user in the `docker` group, SSH keys only.
@@ -53,6 +55,10 @@ deploy/image/build.sh
 docker compose up -d               # recreates changed friend containers
 ```
 
+If the app server ever misbehaves, the bare-ttyd rung is one compose
+`command:` override away (the Dockerfile's CMD note carries the exact line —
+R14 keeps the fallback aboard, and verify leg 4 keeps it honest).
+
 Named volumes (`data-*`, `sessions-*`) are untouched by recreation; chronicles survive by construction. A **pi version change is never an update** — it is an upgrade and takes the full rite ([pi-upgrades.md](../research/design/pi-upgrades.md)) before the new pin builds anyone's container.
 
 ## Backups (02 item 13; shape ruled in R18)
@@ -78,6 +84,6 @@ The central session store (R13's shipper, its own round) backs up separately —
 | Host stack + local door check | built & green on this machine (2026-08-08) |
 | Purchases (domain, box, AVV) | done (2026-08-08) — worldconsole.eu at INWX, netcup Vienna box, click-AVV concluded |
 | First deploy + eyeball sitting | done (2026-08-09) — deploy 2026-08-08, eyeball green in both browser families; v6 vantage check on ice (§first-deploy state note) |
-| App server & panes (02 item 5, R14) | next build round |
+| App server & panes (02 item 5, R14) | built & deployed (2026-08-09) — probes green dev + box, tobias's container recreated onto it; closes at the maintainer's pane-page eyeball (R9's acceptance look) |
 | Vault, house lane, shipper, disclosure, intro (items 6–11) | own rounds; R11/R12 rulings pending |
-| Idle reaper, disk quotas (item 12) | with the app-server round (stop = wipe + seal) |
+| Idle reaper, disk quotas (item 12) | app-server seam landed 2026-08-09 (healthz `idleSeconds`, lifecycle logs, clean stop); host-side stop/start + quotas PROPOSED to ride the shipper round (a stop only means something once it seals) — maintainer's ruling pending |
