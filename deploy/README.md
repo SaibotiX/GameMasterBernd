@@ -110,7 +110,7 @@ Custody: the box's dedicated backup key `/root/.ssh/storagebox_ed25519` opens th
 
 **The month promise (§deletion's binding constraint):** `borg prune --keep-within 28d` + `borg compact` every night — an erased player ages out of every archive inside the month the privacy note promises, never by hand-editing archives; Storage-Box automated snapshots stay **OFF** (06 §2026-08-09) so no layer outlives the prune. Install on the box: `apt install borgbackup`, then `cp deploy/host/systemd/worldconsole-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-backup.timer`.
 
-The restore test — extract the latest archive, tar a data volume back into a scratch volume, boot a scratch container against it, prove a chronicle actually reads — is the exit gate: proven once before the first friend, again per the stage-2 gates.
+The restore test — extract the latest archive, tar a data volume back into a scratch volume, boot a scratch container against it, prove a chronicle actually reads — is the exit gate: proven once before the first friend, again per the stage-2 gates. Localcheck proves the whole cycle keyless against a throwaway file repo — stage, create, the 28-day prune eating a planted stale archive, and the restored chronicle reading — wherever borg is installed (the dev machine lacks it today: the leg skips LOUDLY there, and the box's nightly run carries the standing proof).
 
 ## Deletion (02 item 9's tail, R13 — "we delete your sessions within a month")
 

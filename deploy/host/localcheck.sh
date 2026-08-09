@@ -44,7 +44,9 @@ export WC_IMPRESSUM_ADDRESS="Teststraße 1, 0000 Localdorf"
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
+	docker volume rm world-console_restore-check >/dev/null 2>&1 || true
 	rm -rf "$WC_TEST_STORE" "$GATEWAY_STATE"
+	[ -z "${BK_TMP:-}" ] || rm -rf "$BK_TMP"
 }
 trap cleanup EXIT
 
@@ -400,5 +402,54 @@ fi
 	|| { echo "FAIL: the tampered session was compacted anyway"; exit 1; }
 [ -f "$S2/session.jsonl" ] \
 	|| { echo "FAIL: the tampered staging dir was pruned"; exit 1; }
+
+echo "=== the backup lane: stage → borg → prune → a restored chronicle reads (02 item 13) ==="
+if command -v borg >/dev/null 2>&1; then
+	BK_TMP="$(mktemp -d "$HERE/.localcheck-backup.XXXXXX")"
+	# A pretend box: all six state paths backup.sh requires, throwaway content.
+	mkdir -p "$BK_TMP/hostdir/gateway-state" "$BK_TMP/hostdir/caddy/friends" "$BK_TMP/hostdir/first-use"
+	echo '| test | 2026-08-09 | probe | yes | yes | note 2026-08-09 |' >"$BK_TMP/hostdir/consents.md"
+	echo 'ACME_EMAIL=localcheck@example.invalid' >"$BK_TMP/hostdir/.env"
+	cp "$GATEWAY_STATE/keys.json" "$BK_TMP/hostdir/gateway-state/keys.json"
+	echo '# a door' >"$BK_TMP/hostdir/caddy/friends/test.caddy"
+	echo 'services: {}' >"$BK_TMP/hostdir/compose.override.yaml"
+	echo 'as served' >"$BK_TMP/hostdir/first-use/index.html"
+	export BORG_PASSCOMMAND="echo localcheck-pass"
+	borg init --encryption=repokey "$BK_TMP/repo"
+	# Plant an archive far past the month — the nightly prune must eat it.
+	borg create --timestamp 2026-06-01T00:00:00 "$BK_TMP/repo::nightly-stale" "$BK_TMP/hostdir/consents.md"
+	"$HERE/backup.sh" --repo "$BK_TMP/repo" --staging "$BK_TMP/staging" \
+		--hostdir "$BK_TMP/hostdir" --store "$WC_TEST_STORE" \
+		--volumes "world-console_data-test world-console_sessions-test"
+	if borg list --short "$BK_TMP/repo" | grep -q '^nightly-stale$'; then
+		echo "FAIL: the stale archive outlived the 28-day prune (§deletion's promise)"; exit 1
+	fi
+	ARCHIVE="$(borg list --short "$BK_TMP/repo" | tail -1)"
+	[ -n "$ARCHIVE" ] || { echo "FAIL: no archive landed"; exit 1; }
+	borg list "$BK_TMP/repo::$ARCHIVE" | grep -q "sessions/test" \
+		|| { echo "FAIL: the session store did not ride the archive"; exit 1; }
+	borg list "$BK_TMP/repo::$ARCHIVE" | grep -q "consents.md" \
+		|| { echo "FAIL: the box-local state did not ride the archive"; exit 1; }
+	# The restore half, §Backups' exit gate in miniature: the data tar back
+	# out of the archive, into a scratch volume, and the chronicle reads
+	# through a scratch container.
+	mkdir "$BK_TMP/x"
+	(cd "$BK_TMP/x" && borg extract "$BK_TMP/repo::$ARCHIVE" "${BK_TMP#/}/staging/world-console_data-test.tar")
+	docker volume create world-console_restore-check >/dev/null
+	docker run --rm --network none -v world-console_restore-check:/v \
+		-v "$BK_TMP/x/${BK_TMP#/}/staging:/in:ro" \
+		--entrypoint tar world-console:latest xf /in/world-console_data-test.tar -C /v
+	RESTORED="$(docker run --rm --network none -v world-console_restore-check:/v:ro \
+		--entrypoint cat world-console:latest \
+		/v/world/localcheck-world/0198bbbb-cccc-7ddd-8eee-ffff00001111/quests.md)"
+	[ "$RESTORED" = "# quests" ] \
+		|| { echo "FAIL: the restored chronicle does not read"; echo "$RESTORED"; exit 1; }
+	docker volume rm world-console_restore-check >/dev/null
+	unset BORG_PASSCOMMAND
+else
+	echo "SKIPPED, LOUDLY: no borg on this machine — the cycle stands unproven here;"
+	echo "the box's nightly run and the restore gate carry the proof"
+	echo "(sudo apt install borgbackup wakes this leg)"
+fi
 
 echo "=== localcheck green ==="
