@@ -24,6 +24,13 @@ dist/
 *.swp
 .DS_Store
 
+# --- Box-local friend machinery (new-friend.sh) -----------------------------
+# One door + one service per friend — secret paths and auth hashes live on
+# the box only; the tracked tree never carries a friend.
+deploy/host/compose.override.yaml
+deploy/host/caddy/friends/*.caddy
+!deploy/host/caddy/friends/.keep.caddy
+
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.
 # (human batches under research/analysis/, AI batches under aitester/)

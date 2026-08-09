@@ -1,9 +1,10 @@
 # Stage-1 host stack (02 item 1 + the hardening bullets): Caddy in front,
 # one hardened container per friend behind it. Friend services and their
-# volumes are minted by new-friend.sh and pasted under the markers below;
-# the commented exemplar shows the shape. Local end-to-end check: the
-# `local` profile (localcheck.sh drives it) — same friend shape, self-signed
-# TLS, throwaway volumes.
+# volumes are minted by new-friend.sh into the box-local, gitignored
+# compose.override.yaml (compose auto-merges it; each friend `extends`
+# wc-template below) — the tracked tree never carries a friend. Local
+# end-to-end check: the `local` profile (localcheck.sh drives it) — same
+# friend shape, self-signed TLS, throwaway volumes.
 name: world-console
 
 # The security boundary is the container (02): pi has no permission system,
@@ -56,14 +57,22 @@ services:
       - caddy-config:/config
     networks: [web]
 
-  # -- friends (minted by new-friend.sh): ------------------------------------
-  # wc-alice:
-  #   <<: *friend
-  #   volumes:
-  #     - data-alice:/home/player/game/data
-  #     - sessions-alice:/home/player/.pi/agent/sessions
-  #   # environment:
-  #   #   WORLD_CONSOLE_WORLD: star-frontier
+  # The hardened friend shape as a real but inert service (scale 0 = `up`
+  # creates no container). Friends live in compose.override.yaml and
+  # `extends` this — the anchor above stays the single home. (A YAML
+  # anchor cannot cross files, and extends inherits `profiles`, so scale
+  # is the parking that works.) new-friend.sh writes the override; its
+  # shape, for the record:
+  #
+  #   wc-alice:
+  #     extends: {file: compose.yaml, service: wc-template}
+  #     scale: 1
+  #     volumes:
+  #       - data-alice:/home/player/game/data
+  #       - sessions-alice:/home/player/.pi/agent/sessions
+  wc-template:
+    <<: *friend
+    scale: 0
 
   # -- local end-to-end check only (never on the VPS): -----------------------
   caddy-local:
@@ -91,6 +100,5 @@ volumes:
   caddy-config:
   data-test:
   sessions-test:
-  # -- per-friend volumes (minted with the service): -------------------------
-  # data-alice:
-  # sessions-alice:
+  # per-friend volumes (data-<name>, sessions-<name>) live with their
+  # services in the box-local compose.override.yaml

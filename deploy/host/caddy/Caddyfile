@@ -12,14 +12,10 @@
 play.worldconsole.eu {
 	encode zstd gzip
 
-	# -- friends (minted by new-friend.sh; exemplar): -----------------------
-	# redir /f/<token> /f/<token>/ 308
-	# handle_path /f/<token>/* {
-	# 	basic_auth {
-	# 		alice <bcrypt-hash>
-	# 	}
-	# 	reverse_proxy wc-alice:7681
-	# }
+	# Friends' doors: one box-local snippet each in friends/<name>.caddy,
+	# written by new-friend.sh, gitignored — the tracked tree never carries
+	# a friend. The tracked .keep.caddy keeps the glob non-empty.
+	import friends/*.caddy
 
 	# Unmatched paths, including / — there is no directory of doors.
 	handle {

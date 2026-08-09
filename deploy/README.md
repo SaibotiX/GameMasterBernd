@@ -36,12 +36,13 @@ On the box (Debian stable assumed):
 **Gate first (02 items 9–11):** before the *first* friend plays, the disclosure + consent + 18+ assertion (R13/R20), the shipper (R13), and the friend intro with the LICENSE line (R3) must be live — those are their own build rounds, and this runbook refuses to pretend otherwise.
 
 ```bash
-deploy/host/new-friend.sh alice        # mints token + basic-auth pair
-# paste the three printed blocks into caddy/Caddyfile / compose.yaml, then:
+deploy/host/new-friend.sh alice        # mints the pair AND writes the files
 docker compose up -d wc-alice
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 # send the printed door + pair to alice out of band, once
 ```
+
+Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend: `docker compose down wc-<name>`, delete the snippet and the override lines; the volumes stay until R11's wipe rules say otherwise.
 
 ## Updates (the path that cannot destroy a chronicle)
 
