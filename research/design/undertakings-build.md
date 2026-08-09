@@ -510,3 +510,29 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   Commons clip with credit · pure derivative/credit picks) · integration
   30/30 incl. the WC_VIDEO C3 end-to-end (GM → Commons → webm on disk) ·
   tty-probe not triggered (no widget/overlay change).
+- 2026-08-09 · The side voices learn the lane (the house-lane round's caught
+  bug): the maintainer's played turn on the live lane found every gmchat side
+  call — GM table, chronicler, fate planner, both truth judges, the crafting
+  call — still knocking on api.anthropic.com with the per-friend VIRTUAL key:
+  /gm and /history long answered 401 out loud, and the fail-open planner would
+  have skipped every twist silently (a designed degrade wrongly ON — the lane
+  would have played twistless and judgeless). The cause: one law lived on one
+  surface only — .pi/extensions/gateway.ts routes pi's own turns through
+  WC_GATEWAY_URL, but gmchat builds its OWN pi-ai catalog, which never saw the
+  override. Fix: exported pure `laneModel` in gmchat.ts — WC_GATEWAY_URL set +
+  provider anthropic → the model's baseUrl swaps to the gateway; unset, empty
+  (the compose lesson) or foreign provider → untouched. It rides pi-ai's
+  applyAuth honoring the passed model's baseUrl (register row added — only a
+  per-credential auth.baseUrl, Copilot-style, outranks it; the maintainer's
+  401 itself proved env-key resolution works, the URL alone was wrong). The
+  judgment calls: mirror the lane extension's exact condition rather than
+  grow a shared module (two 3-line laws, each at its own boundary, beat a
+  cross-world import); no localcheck leg grown — the honest receipt is the
+  maintainer's own /gm + /history long ON the lane (seen-before-done, rides
+  the words round's first sitting). The consequence surfaced, not silently
+  absorbed: side-call spend now meters through the gateway (caps correct by
+  design) but never lands in pi's cost stamps — reconcile's 5% tolerance can
+  page falsely on chat-heavy sittings; question + tag-header proposal filed
+  in roadmap 09's house-lane row, the maintainer rules. Verified: unit 75/75
+  (laneModel pure cases) · integration 30/30 (one live-model flake on run 1,
+  clean on re-run) · tty-probe not triggered (no widget/overlay change).
