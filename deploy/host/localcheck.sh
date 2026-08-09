@@ -355,9 +355,15 @@ grep -qi "^x-ai-generated: true" <<<"$HDRS" \
 echo "=== reconciliation: the two meters agree, and a lie is caught (R12/R6) ==="
 # The first receipt for reconcile.sh, fully fabricated: a gateway ledger row
 # and a pi cost stamp that MATCH (4520 micro vs usage.cost.total 0.004520),
-# then a ledger row for a ghost with no sessions volume — the honest day
-# passes, the lie exits red. NTFY_TOPIC is forced empty: tests never page.
-RECON_DAY="$(date -u +%F)"
+# then the ghost-row rules — a keyless ghost (removed player, §deletion's
+# residue) reports benignly, a keyed ghost (a live player with no volume)
+# exits red — and last the epoch floor: pre-lane days answer green. The
+# honest day passes, the lie pages. NTFY_TOPIC is forced empty: tests
+# never page.
+# A fixed post-epoch day: reconcile only string-matches timestamps against
+# --day, so the fixture needs no relation to the wall clock — and the real
+# today can still be pre-epoch while this check runs.
+RECON_DAY="2026-08-15"
 # The side row (999000 micro, tagged) would blow the 5% tolerance ~20× over
 # if it were counted — "test: match" below is the subtraction's receipt.
 cat >"$GATEWAY_STATE/recon-ledger.jsonl" <<RECON
@@ -380,12 +386,37 @@ grep -q "test: match" <<<"$RECON_OUT" \
 grep -q "side, subtracted" <<<"$RECON_OUT" \
 	|| { echo "FAIL: the side sum was not named and subtracted"; echo "$RECON_OUT"; exit 1; }
 echo "$RECON_OUT" | tail -1
-echo '{"ts":"'"$RECON_DAY"'T11:00:00.000Z","key":"wc-ghost","player":"ghost","model":"claude-haiku-4-5","usage":{},"costMicro":999000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
+
+# A REMOVED player's row — no volume AND no key — is §deletion's designed
+# residue (sums kept, handle gone): reported, never paged.
+echo '{"ts":"'"$RECON_DAY"'T10:30:00.000Z","key":"wc-was-here","player":"gone","model":"claude-haiku-4-5","usage":{},"costMicro":4000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
+RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl")" \
+	|| { echo "FAIL: a removed player's residue paged"; echo "$RECON_OUT"; exit 1; }
+grep -q "gone: removed" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the removed player was not named benignly"; echo "$RECON_OUT"; exit 1; }
+
+# The SAME missing volume under a LIVE key is a leak and must still page:
+# mint the ghost a key, then expect red.
+docker run --rm --user 0 -v "$GATEWAY_STATE:/d" world-console:latest node -e '
+	const fs = require("fs");
+	const keys = JSON.parse(fs.readFileSync("/d/keys.json", "utf8"));
+	keys["wc-local-ghost"] = { player: "ghost", budgetMicro: 1000, rpm: 60 };
+	fs.writeFileSync("/d/keys.json", JSON.stringify(keys, null, "\t") + "\n");'
+echo '{"ts":"'"$RECON_DAY"'T11:00:00.000Z","key":"wc-local-ghost","player":"ghost","model":"claude-haiku-4-5","usage":{},"costMicro":999000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
 if RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl" 2>&1)"; then
 	echo "FAIL: a ledger row with no session counterpart passed"; echo "$RECON_OUT"; exit 1
 fi
 grep -q "ghost: MISMATCH" <<<"$RECON_OUT" \
 	|| { echo "FAIL: the ghost was not called out"; echo "$RECON_OUT"; exit 1; }
+grep -q "gone: removed" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the removed player's benign line vanished from the red run"; echo "$RECON_OUT"; exit 1; }
+
+# Days before the lane's first full day answer green with or without rows —
+# the epoch never moves, so 2026-08-09 tests it forever.
+RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day 2026-08-09 --ledger "$GATEWAY_STATE/recon-ledger.jsonl")" \
+	|| { echo "FAIL: a pre-epoch day reconciled red"; echo "$RECON_OUT"; exit 1; }
+grep -q "predates the lane" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the pre-epoch day was not named"; echo "$RECON_OUT"; exit 1; }
 
 echo "=== a tampered manifest is refused loudly ==="
 SID2=0198cccc-dddd-7eee-8fff-000011112222

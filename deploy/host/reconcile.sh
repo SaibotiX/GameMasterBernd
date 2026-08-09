@@ -15,7 +15,21 @@
 # structural drift is a bug. Any mismatch: exit 1 (a red systemd unit) and
 # a ntfy ping when NTFY_TOPIC is set (box .env). The box has no host node
 # by design — the image's node does all the JSON work.
+#
+# Two days the meters cannot argue about (learned dry-running the first
+# timered night, 2026-08-10):
+#   · Days before LANE_EPOCH — the lane's first full day — are structurally
+#     un-reconcilable: the migration day carries real play (the maintainer's
+#     own pre-lane Opus sittings) that the ledger never metered, and no
+#     formula makes the two witnesses agree about play only one of them saw.
+#     Those days report and exit green; the epoch never moves.
+#   · A ledger row whose player has NO volume and NO key in keys.json (the
+#     file beside the ledger) is §deletion's designed residue — the volume
+#     erased, the anonymized sums kept as billing truth — reported benignly.
+#     The same row with a LIVE key is still a leak and still pages.
 set -euo pipefail
+
+LANE_EPOCH="2026-08-10"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # .env supplies defaults (NTFY_TOPIC on the box) but an EXPLICIT environment
@@ -34,6 +48,14 @@ while [ $# -gt 0 ]; do
 		*) echo "usage: reconcile.sh [--day YYYY-MM-DD] [--ledger PATH]" >&2; exit 2 ;;
 	esac
 done
+
+# Before the lane's first full day there is nothing honest to compare —
+# checked before the ledger so a pre-epoch day answers the same with or
+# without rows on it.
+if [[ "$DAY" < "$LANE_EPOCH" ]]; then
+	echo "reconcile: $DAY predates the lane (epoch $LANE_EPOCH) — the ledger stands alone; nothing to reconcile"
+	exit 0
+fi
 
 [ -f "$LEDGER" ] || { echo "reconcile: no ledger at $LEDGER — nothing to check"; exit 0; }
 
@@ -59,13 +81,28 @@ GW_SUMS="$(docker run --rm -v "$LEDGER:/ledger:ro" -e DAY="$DAY" world-console:l
 
 [ -n "$GW_SUMS" ] || { echo "reconcile: $DAY — the ledger holds no spend; nothing to check"; exit 0; }
 
+# The live-player roll: who holds a key TODAY (keys.json lives beside the
+# ledger, in production gateway-state/). A historical row whose player left
+# the roll is judged by the removed-player rule below; a missing keys.json
+# leaves the roll empty, so every ghost stays a paging ghost — broken state
+# should be loud, not lenient.
+KEYS_FILE="$(dirname "$LEDGER")/keys.json"
+LIVE_PLAYERS=""
+[ -f "$KEYS_FILE" ] && LIVE_PLAYERS="$(docker run --rm -v "$KEYS_FILE:/keys.json:ro" world-console:latest node -e '
+	const keys = JSON.parse(require("fs").readFileSync("/keys.json", "utf8"));
+	for (const v of Object.values(keys)) console.log(v.player);')"
+
 MISMATCH=0
 REPORT=""
 while read -r PLAYER GW_MICRO SIDE_MICRO; do
 	VOL="world-console_sessions-$PLAYER"
 	if ! docker volume inspect "$VOL" >/dev/null 2>&1; then
-		REPORT+="$DAY $PLAYER: MISMATCH — ledger says $((GW_MICRO + SIDE_MICRO)) micro but no sessions volume $VOL exists"$'\n'
-		MISMATCH=1
+		if grep -qx "$PLAYER" <<<"$LIVE_PLAYERS"; then
+			REPORT+="$DAY $PLAYER: MISMATCH — ledger says $((GW_MICRO + SIDE_MICRO)) micro but no sessions volume $VOL exists"$'\n'
+			MISMATCH=1
+		else
+			REPORT+="$DAY $PLAYER: removed — no key, no volume; the ledger rows stand as the billing record (§deletion keeps the sums)"$'\n'
+		fi
 		continue
 	fi
 	# Phase 2: pi's side — sum usage.cost.total over the day's assistant
