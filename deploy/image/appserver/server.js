@@ -477,6 +477,38 @@ const server = http.createServer(async (req, res) => {
 			res.end(body);
 			return;
 		}
+		if (pathname === "/api/grant") {
+			// The strip's rounds note (08's status-strip law, R12): the app
+			// server asks the gateway with the container's OWN virtual key and
+			// translates money into rounds at the cache-adjusted estimate
+			// (06 §the house key, ~0.9¢ ≈ 9000 micro-USD per round) — the
+			// browser never sees a key or a dollar figure. Off the lane
+			// (maintainer's local play), the note simply isn't.
+			if (!process.env.WC_GATEWAY_URL || !process.env.ANTHROPIC_API_KEY) {
+				res.writeHead(200, { "content-type": "application/json", "cache-control": "no-cache" });
+				res.end(JSON.stringify({ lane: false }));
+				return;
+			}
+			try {
+				const g = await fetch(`${process.env.WC_GATEWAY_URL}/grant`, {
+					headers: { "x-api-key": process.env.ANTHROPIC_API_KEY },
+					signal: AbortSignal.timeout(3000),
+				}).then((r) => (r.ok ? r.json() : null));
+				const est = Number(process.env.WC_ROUND_EST_MICRO || 9000);
+				res.writeHead(200, { "content-type": "application/json", "cache-control": "no-cache" });
+				res.end(
+					JSON.stringify(
+						g
+							? { lane: true, laneOpen: g.laneOpen, rounds: Math.floor(g.remainingMicro / est) }
+							: { lane: true, laneOpen: false, rounds: 0 },
+					),
+				);
+			} catch {
+				res.writeHead(200, { "content-type": "application/json", "cache-control": "no-cache" });
+				res.end(JSON.stringify({ lane: true, laneOpen: false, rounds: 0 }));
+			}
+			return;
+		}
 		if (pathname.startsWith("/files/")) {
 			const rest = pathname.slice("/files/".length);
 			const slash = rest.indexOf("/");

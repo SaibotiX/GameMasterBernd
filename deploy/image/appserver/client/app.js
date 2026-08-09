@@ -427,6 +427,30 @@ function applyTree(data) {
 	renderTree();
 }
 
+// The rounds note (08's strip law, R12): an invisible meter is the genre's
+// #1 complaint, so the strip says plainly how many rounds the house grant
+// still buys this month. Off the lane the server answers {lane:false} and
+// the note never appears. Refreshed on a slow clock — the count only needs
+// to be roughly true between turns.
+async function refreshGrant() {
+	try {
+		const g = await (await fetch("./api/grant")).json();
+		const el = $("#strip-rounds");
+		if (!g.lane) {
+			el.hidden = true;
+			return;
+		}
+		el.textContent = !g.laneOpen
+			? "the keeper rests"
+			: g.rounds > 0
+				? `~${g.rounds} rounds`
+				: "grant spent";
+		el.hidden = false;
+	} catch {}
+}
+refreshGrant();
+setInterval(refreshGrant, 90_000);
+
 let treeTimer = null;
 function scheduleTreeRefresh() {
 	clearTimeout(treeTimer);

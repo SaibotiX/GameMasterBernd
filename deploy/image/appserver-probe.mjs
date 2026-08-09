@@ -88,6 +88,20 @@ if (mode === "--fs-event") {
 	ok("healthz answers");
 }
 
+// --- 2b. the strip's grant window (08's rounds note, R12) -------------------
+// Off the lane (bare image, verify) the answer is {lane:false}; behind
+// localcheck's gateway it carries laneOpen + rounds. Both are correct —
+// what may never happen is an error or a keyless container leaking a key.
+{
+	const res = await fetch(`${base}/api/grant`, { headers });
+	if (!res.ok) fail(`GET /api/grant → ${res.status}`);
+	const g = await res.json();
+	if (typeof g.lane !== "boolean") fail(`grant window malformed: ${JSON.stringify(g)}`);
+	if (g.lane && !(typeof g.rounds === "number" && typeof g.laneOpen === "boolean"))
+		fail(`on-lane grant window malformed: ${JSON.stringify(g)}`);
+	ok(`grant window answers (${g.lane ? `on the lane, ~${g.rounds} rounds` : "off the lane"})`);
+}
+
 // --- 3. the pane APIs ------------------------------------------------------
 {
 	const res = await fetch(`${base}/api/tree`, { headers });

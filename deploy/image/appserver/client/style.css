@@ -42,6 +42,8 @@ body { display: flex; flex-direction: column; }
 #strip-name { color: var(--ink); letter-spacing: 0.4px; }
 #strip-world { color: var(--dim); }
 #strip-world::before { content: "· "; }
+#strip-rounds { color: var(--dim); }
+#strip-rounds::before { content: "· "; }
 .strip-spacer { flex: 1; }
 
 #conn-dot { color: var(--bad); font-size: 11px; transition: color 0.3s; }
