@@ -56,7 +56,7 @@ docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 *(One gate still standing before the FIRST friend: §Backups' restore test, item 13 — ruled 2026-08-09: the backup round rides between the words and the first invite.)*
 
-Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend: `docker compose down wc-<name>`, delete the snippet and the override lines; the volumes stay until R11's wipe rules say otherwise.
+Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend without erasing them (a pause, a broken door): `docker compose down wc-<name>`, delete the snippet and the override lines; volumes and store stay. Erasing them is §deletion below.
 
 ## Updates (the path that cannot destroy a chronicle)
 
@@ -113,7 +113,39 @@ docker run --rm -v data-alice:/v:ro -v /backup/staging:/out world-console:latest
 # once before the first friend, again per the stage-2 gates)
 ```
 
-The central session store (R13's shipper, its own round) backs up separately — it is the research record, not a play volume.
+The central session store (R13's shipper, its own round) backs up separately — it is the research record, not a play volume. **Constraint from §deletion, binding on this item's build:** borg retention stays ≤ 28 days, so an erased player ages out of every backup inside the month the privacy note promises — deletion-from-backup by construction, never by hand-editing archives.
+
+## Deletion (02 item 9's tail, R13 — "we delete your sessions within a month")
+
+The request arrives by any channel (at invite scale the requester IS the friend); withdrawal of consent is the same path. Everything below is on the box unless said otherwise, `<n>` the friend's name. Dry-run once before the first friend — the receipt lives in the state note.
+
+1. **Close the door:** `docker compose down wc-<n>` · delete `caddy/friends/<n>.caddy` · remove the `wc-<n>:` service block AND the `data-<n>:`/`sessions-<n>:` volume lines from `compose.override.yaml` · `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`. Their knock now gets the by-invitation 404.
+2. **The play volumes:** `docker volume rm world-console_data-<n> world-console_sessions-<n>`.
+3. **The store:** `rm -rf /srv/worldconsole/store/staging/<n> /srv/worldconsole/store/sessions/<n>` (root).
+4. **The lane:** remove their key from `gateway-state/keys.json`, then anonymize their ledger rows — the spend sums are the billing truth (R12) and stay, the handle goes:
+
+```bash
+docker run --rm --user 0 -v "$PWD/gateway-state:/d" -e P=<n> world-console:latest node -e '
+  const fs=require("fs");
+  const keys=JSON.parse(fs.readFileSync("/d/keys.json","utf8"));
+  for (const [k,v] of Object.entries(keys)) if (v.player===process.env.P) delete keys[k];
+  fs.writeFileSync("/d/keys.json", JSON.stringify(keys,null,"\t")+"\n");
+  if (fs.existsSync("/d/usage.jsonl")) {
+    const done=new Set(fs.readFileSync("/d/usage.jsonl","utf8").split("\n").filter(Boolean)
+      .map(l=>JSON.parse(l).player).filter(p=>/^deleted-/.test(p)));
+    const alias=`deleted-${done.size+1}`;
+    const out=fs.readFileSync("/d/usage.jsonl","utf8").split("\n").filter(Boolean).map(l=>{
+      const r=JSON.parse(l); if (r.player===process.env.P) r.player=alias; return JSON.stringify(r);
+    }).join("\n")+"\n";
+    fs.writeFileSync("/d/usage.jsonl", out);
+  }' 
+docker compose up -d --force-recreate gateway   # drop the folded in-memory buckets
+```
+
+5. **The analysis mirror** (dev machine): `research/analysis/tools/pull-sessions.sh` — the store mirror (`research/analysis/store-mirror/`) propagates deletions on the next pull (rsync --delete, proven in the shipper round). Landed `sessions-in/<batch>/<n>` copies are the tool's never-touched working dirs — remove them by hand; their batch's immutable report falls under step 8's rule.
+6. **The consent row** (`deploy/host/consents.md`): append `withdrawn <date>` to their row — it stays as Art. 7(1) proof that processing until then was lawful, and dies with the register at the beta's end (the papers' VVZ B).
+7. **Backups:** nothing to do by construction once item 13 honors the ≤ 28-day retention above — the erased player ages out of every archive within the promised month. Until item 13 exists there are no backups to purge.
+8. **The reports** (`research/analysis/reports/`, immutable, R4-tier internal): raw sessions are the promise's scope and are now gone everywhere. If a request explicitly extends to quoted lines inside a report, that is immutability vs. erasure — surface to the maintainer for a ruling, never resolve silently.
 
 ## Status (kept honest, updated per round)
 
