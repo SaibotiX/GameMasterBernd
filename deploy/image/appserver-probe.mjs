@@ -76,7 +76,11 @@ if (mode === "--fs-event") {
 	if (!res.ok) fail(`GET / → ${res.status}`);
 	const html = await res.text();
 	if (!html.includes('id="terminal"')) fail("page carries no terminal pane");
-	ok("page serves");
+	if (!html.includes('id="firstrun"') || !html.includes("AI game master"))
+		fail("page carries no first-run notice (02 item 9)");
+	if (!html.includes('name="ai-generated"'))
+		fail("page carries no Art. 50(2) marking meta");
+	ok("page serves (with first-run notice + AI marking)");
 }
 
 // --- 2. health -------------------------------------------------------------
@@ -119,6 +123,8 @@ if (mode === "--fs-event") {
 		fail(`constitution served as ${res.headers.get("content-type")}`);
 	const text = await res.text();
 	if (text.length < 100) fail("constitution came back suspiciously empty");
+	if (res.headers.get("x-ai-generated"))
+		fail("config is human-written law and must NOT carry the AI marking");
 	ok("a real file serves with its type");
 }
 {

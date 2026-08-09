@@ -537,3 +537,29 @@ scheduleTreeRefresh();
 connect();
 connectEvents();
 term.focus();
+
+// --- the first-run notice (02 item 9, R13 + Art. 50(1)) ---------------------
+// Once per BROWSER, not per door: the notice speaks to the human, so its
+// flag deliberately skips the per-door NS. While open the button holds
+// focus (Enter dismisses); dismissal hands the keyboard back to the
+// terminal (law 5). Runs after boot's term.focus() so the button wins.
+{
+	const firstrun = $("#firstrun");
+	const okButton = $("#firstrun-ok");
+	const ACK = "wc:notice-ack";
+	let acked = false;
+	try {
+		acked = localStorage.getItem(ACK) === "1";
+	} catch {}
+	if (!acked) {
+		firstrun.classList.add("open");
+		okButton.focus();
+		okButton.addEventListener("click", () => {
+			try {
+				localStorage.setItem(ACK, "1");
+			} catch {}
+			firstrun.classList.remove("open");
+			refocus();
+		});
+	}
+}

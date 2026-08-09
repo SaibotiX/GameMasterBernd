@@ -9,6 +9,10 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<!-- The door's path is the secret: never let a link carry it out. -->
 	<meta name="referrer" content="no-referrer" />
+	<!-- Art. 50(2) AI Act, machine-readable marking: the story text this
+	     page streams and the chronicle files it serves are AI-generated
+	     (technique note: research/roadmap/10-privacy-papers.md). -->
+	<meta name="ai-generated" content="true" />
 	<title>World Console</title>
 	<link rel="stylesheet" href="./assets/vendor/xterm.css" />
 	<link rel="stylesheet" href="./assets/style.css" />
@@ -45,6 +49,23 @@
 			</section>
 		</aside>
 	</main>
+	<!-- The first-run notice (02 item 9, R13 + Art. 50(1)): one screen, once
+	     per browser, before the first play. Shown by CLASS, not [hidden] —
+	     the eyeball round's lesson about id rules outweighing attributes. -->
+	<div id="firstrun">
+		<div id="firstrun-card">
+			<h1>before you play</h1>
+			<p>This beta <strong>records your play</strong>: everything in this
+			session is saved and read by the developer to improve the game.</p>
+			<p>You are playing with an <strong>AI game master</strong> — an AI
+			system generates the story text.</p>
+			<p>Please don't enter real personal info.</p>
+			<p>Details &amp; rights:
+			<a href="https://worldconsole.eu/datenschutz.html" target="_blank"
+				rel="noopener">worldconsole.eu/datenschutz</a></p>
+			<button id="firstrun-ok" type="button">I understand — begin</button>
+		</div>
+	</div>
 	<script src="./assets/vendor/xterm.js"></script>
 	<script src="./assets/vendor/addon-fit.js"></script>
 	<script src="./assets/vendor/addon-webgl.js"></script>

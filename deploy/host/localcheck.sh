@@ -320,6 +320,14 @@ ws.on("error",()=>process.exit(1));')" \
 grep -q RESUMED <<<"$RESUME_OUT" \
 	|| { echo "FAIL: the woken console did not resume the sitting"; echo "$RESUME_OUT"; exit 1; }
 
+echo "=== the chronicle serves marked: x-ai-generated on world prose (Art. 50(2)) ==="
+# The fixture's quests.md is chronicle prose — its served copy must say
+# AI-generated; the constitution is human law and must not (probe holds
+# that half). Through the real door, auth and prefix strip and all.
+HDRS="$(curl -ksI -u test:local-test-password "$DOOR/files/data/world/localcheck-world/0198bbbb-cccc-7ddd-8eee-ffff00001111/quests.md")"
+grep -qi "^x-ai-generated: true" <<<"$HDRS" \
+	|| { echo "FAIL: chronicle prose served without the AI marking"; echo "$HDRS"; exit 1; }
+
 echo "=== reconciliation: the two meters agree, and a lie is caught (R12/R6) ==="
 # The first receipt for reconcile.sh, fully fabricated: a gateway ledger row
 # and a pi cost stamp that MATCH (4520 micro vs usage.cost.total 0.004520),

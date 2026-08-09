@@ -321,6 +321,11 @@ async function serveFile(req, res, rootKey, relRaw) {
 		"x-content-type-options": "nosniff",
 		"content-security-policy": "sandbox",
 	};
+	// Art. 50(2) marking: the chronicle is AI-written prose, so its served
+	// copies say so machine-readably. Only data/world — downloads are
+	// Commons media and config is human-written law; neither is marked.
+	if (rootKey === "data" && file.startsWith(path.join(ROOTS.data, "world") + path.sep))
+		headers["x-ai-generated"] = "true";
 	if (req.headers["if-none-match"] === etag) {
 		res.writeHead(304, headers);
 		res.end();
