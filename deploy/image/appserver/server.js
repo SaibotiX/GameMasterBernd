@@ -23,6 +23,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import chokidar from "chokidar";
 import pty from "node-pty";
 import { WebSocketServer } from "ws";
 
@@ -140,6 +141,226 @@ wssTerm.on("connection", (ws) => {
 });
 
 // ---------------------------------------------------------------------------
+// The pane roots (08 §what the panes serve): config/ + data/, read-only,
+// and NOTHING else — ~/.pi/agent (sessions, auth.json) is simply never a
+// root here, so the secrecy boundary is scope, not filtering.
+// ---------------------------------------------------------------------------
+
+const ROOTS = {
+	config: path.join(GAME_DIR, "config"),
+	data: path.join(GAME_DIR, "data"),
+};
+
+const MAX_TREE_ENTRIES = 4000;
+
+async function buildTree() {
+	let count = 0;
+	let truncated = false;
+	async function walk(dir, depth) {
+		if (depth > 10) return [];
+		let entries;
+		try {
+			entries = await fsp.readdir(dir, { withFileTypes: true });
+		} catch {
+			return [];
+		}
+		entries = entries.filter((e) => !e.name.startsWith("."));
+		entries.sort(
+			(a, b) =>
+				Number(b.isDirectory()) - Number(a.isDirectory()) ||
+				a.name.localeCompare(b.name),
+		);
+		const out = [];
+		for (const e of entries) {
+			if (count >= MAX_TREE_ENTRIES) {
+				truncated = true;
+				break;
+			}
+			count++;
+			// symlinks are neither: skipped, so the tree cannot point outside
+			if (e.isDirectory())
+				out.push({
+					name: e.name,
+					dir: true,
+					children: await walk(path.join(dir, e.name), depth + 1),
+				});
+			else if (e.isFile()) out.push({ name: e.name });
+		}
+		return out;
+	}
+	const roots = [];
+	for (const [name, dir] of Object.entries(ROOTS))
+		roots.push({ name, dir: true, children: await walk(dir, 0) });
+	return { roots, truncated };
+}
+
+// The status strip's world title: the world whose chronicle moved last,
+// prettied by its config page's heading when one exists.
+async function worldTitle() {
+	try {
+		const worldsDir = path.join(ROOTS.data, "world");
+		let best = null;
+		for (const w of await fsp.readdir(worldsDir, { withFileTypes: true })) {
+			if (!w.isDirectory()) continue;
+			const wDir = path.join(worldsDir, w.name);
+			for (const c of await fsp.readdir(wDir, { withFileTypes: true })) {
+				if (!c.isDirectory()) continue;
+				const st = await fsp.stat(path.join(wDir, c.name));
+				if (!best || st.mtimeMs > best.mtimeMs)
+					best = { slug: w.name, mtimeMs: st.mtimeMs };
+			}
+		}
+		if (!best) return null;
+		try {
+			const md = await fsp.readFile(
+				path.join(ROOTS.config, "worlds", `${best.slug}.md`),
+				"utf8",
+			);
+			const h = md.match(/^#\s+(.+)$/m);
+			if (h) return h[1].trim();
+		} catch {}
+		return best.slug;
+	} catch {
+		return null;
+	}
+}
+
+// Resolve a request path STRICTLY under its root: decode once, normalize,
+// then realpath — a symlink pointing out, a dot-dot in any encoding, or a
+// missing file all come back null and answer 404.
+async function resolveUnder(rootKey, relRaw) {
+	const root = ROOTS[rootKey];
+	if (!root) return null;
+	let rel;
+	try {
+		rel = decodeURIComponent(relRaw);
+	} catch {
+		return null;
+	}
+	if (rel.includes("\0")) return null;
+	const abs = path.resolve(root, rel);
+	if (abs !== root && !abs.startsWith(root + path.sep)) return null;
+	let real;
+	let realRoot;
+	try {
+		real = await fsp.realpath(abs);
+		realRoot = await fsp.realpath(root);
+	} catch {
+		return null;
+	}
+	if (real !== realRoot && !real.startsWith(realRoot + path.sep)) return null;
+	return real;
+}
+
+const FILE_TYPES = {
+	".md": "text/markdown; charset=utf-8",
+	".json": "application/json; charset=utf-8",
+	".txt": "text/plain; charset=utf-8",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".gif": "image/gif",
+	".webp": "image/webp",
+	".svg": "image/svg+xml",
+	".webm": "video/webm",
+	".ogv": "video/ogg",
+	".ogg": "video/ogg",
+	".mp4": "video/mp4",
+	".mp3": "audio/mpeg",
+	".wav": "audio/wav",
+};
+
+// Range support because <video> seeks; CSP sandbox + nosniff because a
+// served file must stay a document, never become a running page.
+async function serveFile(req, res, rootKey, relRaw) {
+	const file = await resolveUnder(rootKey, relRaw);
+	const st = file ? await fsp.stat(file) : null;
+	if (!st?.isFile()) {
+		res.writeHead(404, { "content-type": "text/plain" });
+		res.end("not found");
+		return;
+	}
+	const type =
+		FILE_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+	const etag = `W/"${st.size}-${Math.round(st.mtimeMs)}"`;
+	const headers = {
+		"content-type": type,
+		etag,
+		"cache-control": "no-cache",
+		"accept-ranges": "bytes",
+		"content-disposition": "inline",
+		"x-content-type-options": "nosniff",
+		"content-security-policy": "sandbox",
+	};
+	if (req.headers["if-none-match"] === etag) {
+		res.writeHead(304, headers);
+		res.end();
+		return;
+	}
+	const range = req.headers.range
+		? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range)
+		: null;
+	if (range && (range[1] !== "" || range[2] !== "")) {
+		let start = range[1] === "" ? st.size - Number(range[2]) : Number(range[1]);
+		let end =
+			range[1] !== "" && range[2] !== ""
+				? Math.min(Number(range[2]), st.size - 1)
+				: st.size - 1;
+		if (range[1] === "") start = Math.max(0, start);
+		if (start >= st.size || start > end) {
+			res.writeHead(416, { "content-range": `bytes */${st.size}` });
+			res.end();
+			return;
+		}
+		headers["content-range"] = `bytes ${start}-${end}/${st.size}`;
+		headers["content-length"] = end - start + 1;
+		res.writeHead(206, headers);
+		if (req.method === "HEAD") res.end();
+		else fs.createReadStream(file, { start, end }).pipe(res);
+		return;
+	}
+	headers["content-length"] = st.size;
+	res.writeHead(200, headers);
+	if (req.method === "HEAD") res.end();
+	else fs.createReadStream(file).pipe(res);
+}
+
+// ---------------------------------------------------------------------------
+// The watcher channel (08 law 3: everything hot-reloads): chokidar over the
+// two roots, every event pushed to /ws/events — its own socket, so pane
+// traffic never contends with the PTY stream (08's acceptance note).
+// ---------------------------------------------------------------------------
+
+const wssEvents = new WebSocketServer({ noServer: true });
+
+const watcher = chokidar.watch(Object.values(ROOTS), {
+	ignoreInitial: true,
+	ignored: (p) => path.basename(p).startsWith("."),
+	depth: 12,
+});
+const relOf = (abs) => {
+	for (const [root, dir] of Object.entries(ROOTS))
+		if (abs === dir || abs.startsWith(dir + path.sep))
+			return { root, rel: path.relative(dir, abs).split(path.sep).join("/") };
+	return null;
+};
+watcher.on("all", (kind, abs) => {
+	const loc = relOf(abs);
+	if (!loc || path.basename(abs).startsWith(".")) return;
+	const msg = JSON.stringify({ t: "fs", kind, ...loc });
+	for (const ws of wssEvents.clients) if (ws.readyState === 1) ws.send(msg);
+});
+watcher.on("error", (err) => log("watcher-error", { err: String(err) }));
+
+wssEvents.on("connection", async (ws) => {
+	ws.isAlive = true;
+	ws.on("pong", () => (ws.isAlive = true));
+	ws.send(
+		JSON.stringify({ t: "hello", title: await worldTitle(), ...(await buildTree()) }),
+	);
+});
+
+// ---------------------------------------------------------------------------
 // Static: the one page and its pinned vendor files — an explicit map, never
 // a directory walk over node_modules.
 // ---------------------------------------------------------------------------
@@ -214,6 +435,29 @@ const server = http.createServer(async (req, res) => {
 			);
 			return;
 		}
+		if (pathname === "/api/tree") {
+			const body = JSON.stringify({
+				title: await worldTitle(),
+				...(await buildTree()),
+			});
+			res.writeHead(200, {
+				"content-type": "application/json",
+				"cache-control": "no-cache",
+			});
+			res.end(body);
+			return;
+		}
+		if (pathname.startsWith("/files/")) {
+			const rest = pathname.slice("/files/".length);
+			const slash = rest.indexOf("/");
+			if (slash > 0) {
+				await serveFile(req, res, rest.slice(0, slash), rest.slice(slash + 1));
+				return;
+			}
+			res.writeHead(404, { "content-type": "text/plain" });
+			res.end("not found");
+			return;
+		}
 		if (await serveAsset(req, res, pathname)) return;
 		res.writeHead(404, { "content-type": "text/plain" });
 		res.end("not found");
@@ -248,6 +492,10 @@ server.on("upgrade", (req, socket, head) => {
 		wssTerm.handleUpgrade(req, socket, head, (ws) =>
 			wssTerm.emit("connection", ws, req),
 		);
+	} else if (pathname === "/ws/events") {
+		wssEvents.handleUpgrade(req, socket, head, (ws) =>
+			wssEvents.emit("connection", ws, req),
+		);
 	} else {
 		socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
 		socket.destroy();
@@ -257,7 +505,7 @@ server.on("upgrade", (req, socket, head) => {
 // Heartbeat: sweep dead sockets so a vanished client frees the seat (and
 // the proxy chain never sees an idle stream).
 setInterval(() => {
-	for (const ws of wssTerm.clients) {
+	for (const ws of [...wssTerm.clients, ...wssEvents.clients]) {
 		if (ws.isAlive === false) {
 			ws.terminate();
 			continue;

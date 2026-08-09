@@ -11,8 +11,10 @@
 #      network path and CA ground),
 #   2. the pseudo-TTY probe inside the container — the TUI's dress renders
 #      under a real PTY exactly as the local recipe checks it,
-#   3. the app server from the host — page, health, and the same PTY
-#      stream a browser would receive over /ws/term (appserver-probe.mjs),
+#   3. the app server from the host — page, health, the pane APIs (tree,
+#      file, refused traversal, events hello, a timed watcher push) and the
+#      same PTY stream a browser would receive over /ws/term
+#      (appserver-probe.mjs),
 #   4. the ttyd FALLBACK bridge — R14 keeps it aboard; a fallback that
 #      rotted silently is no fallback (ws-probe.mjs).
 # What this cannot prove: how the dress LOOKS in a real browser — that
@@ -48,11 +50,19 @@ docker run --rm "${HARDEN[@]}" "$IMG" node extension/test/unit.ts
 echo "=== 2/4 tty-probe (TUI dress under a real PTY) ==="
 docker run --rm "${HARDEN[@]}" "$IMG" bash extension/test/tty-probe.sh
 
-echo "=== 3/4 app server probe (page + health + /ws/term stream) ==="
+echo "=== 3/4 app server probe (page + health + pane APIs + /ws/term stream) ==="
 CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG")"
 ADDR="$(docker port "$CID" 7681/tcp | head -1)"
 wait_http "http://$ADDR/healthz"
 node "$HERE/appserver-probe.mjs" "http://$ADDR"
+
+echo "--- watcher: a write in data/ reaches the events channel ---"
+node "$HERE/appserver-probe.mjs" "http://$ADDR" --fs-event &
+PROBE=$!
+sleep 1
+docker exec "$CID" sh -c 'echo probe >> /home/player/game/data/probe-touch.md'
+wait "$PROBE"
+
 docker stop -t 2 "$CID" >/dev/null
 CID=""
 
