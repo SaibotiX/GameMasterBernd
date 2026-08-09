@@ -36,8 +36,11 @@ echo "=== no directory of doors: unmatched paths say nothing ==="
 CODE="$(curl -ks -o /dev/null -w '%{http_code}' "https://localhost:8443/")"
 [ "$CODE" = "404" ] || { echo "FAIL: expected 404 at /, got $CODE"; exit 1; }
 
-echo "=== the game streams through the proxied WebSocket ==="
+echo "=== the whole page carries through the door (prefix strip, auth, TLS) ==="
+# appserver-probe walks page + health + pane APIs + the PTY stream — every
+# client URL is relative, and THIS is where that promise is proven: behind
+# /f/<token>/ with basic auth over self-signed TLS, exactly like a friend.
 NODE_TLS_REJECT_UNAUTHORIZED=0 WS_PROBE_AUTH="test:local-test-password" \
-	node "$HERE/../image/ws-probe.mjs" "$DOOR"
+	node "$HERE/../image/appserver-probe.mjs" "$DOOR"
 
 echo "=== localcheck green ==="
