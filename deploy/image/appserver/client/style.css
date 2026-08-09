@@ -1,13 +1,17 @@
-/* The frame around the stream (08): dark, quiet, the terminal is the
-   main window and everything else defers to it. */
+/* The frame around the stream (08): dark, quiet, the terminal is the main
+   window and everything else defers to it. Three regions and a strip —
+   no menus, no toolbars. */
 
 :root {
 	--bg: #10131a;
 	--pane: #171b24;
+	--pane-2: #1c2130;
 	--edge: #262c3a;
 	--ink: #c9d1e0;
 	--dim: #7c8598;
 	--accent: #d8b26a;
+	--good: #7dbb7d;
+	--bad: #c96f6f;
 }
 
 * { box-sizing: border-box; }
@@ -20,15 +24,54 @@ html, body {
 	font: 14px/1.45 system-ui, sans-serif;
 }
 
-#page {
-	height: 100%;
-	padding: 10px;
+body { display: flex; flex-direction: column; }
+
+/* --- the status strip: world title, connection dot, nothing else -------- */
+
+#strip {
 	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 34px;
+	padding: 0 12px;
+	border-bottom: 1px solid var(--edge);
+	flex: none;
+	font-size: 13px;
+}
+
+#strip-name { color: var(--ink); letter-spacing: 0.4px; }
+#strip-world { color: var(--dim); }
+#strip-world::before { content: "· "; }
+.strip-spacer { flex: 1; }
+
+#conn-dot { color: var(--bad); font-size: 11px; transition: color 0.3s; }
+body.connected #conn-dot { color: var(--good); }
+
+#panes-toggle {
+	display: none;
+	background: var(--pane);
+	color: var(--ink);
+	border: 1px solid var(--edge);
+	border-radius: 4px;
+	padding: 2px 10px;
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+/* --- the three panes ------------------------------------------------------ */
+
+#page {
+	flex: 1;
+	display: flex;
+	gap: 10px;
+	padding: 10px;
+	min-height: 0;
 }
 
 #terminal-pane {
 	position: relative;
-	flex: 1;
+	flex: 2.05;
 	min-width: 0;
 	background: #000;
 	border: 1px solid var(--edge);
@@ -38,11 +81,174 @@ html, body {
 
 #terminal { position: absolute; inset: 6px; }
 
-/* xterm fills its box */
 #terminal .xterm, #terminal .xterm-viewport, #terminal .xterm-screen {
 	width: 100%;
 	height: 100%;
 }
+
+#side {
+	flex: 1;
+	min-width: 320px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-height: 0;
+}
+
+#viewer, #files {
+	background: var(--pane);
+	border: 1px solid var(--edge);
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+#viewer { flex: 2; }
+#files { flex: 1; }
+
+/* --- tabs (law 2: tabs remember) ----------------------------------------- */
+
+#tabs {
+	display: flex;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: thin;
+	border-bottom: 1px solid var(--edge);
+	flex: none;
+	min-height: 30px;
+}
+
+.tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 8px 5px 12px;
+	border-right: 1px solid var(--edge);
+	color: var(--dim);
+	cursor: pointer;
+	white-space: nowrap;
+	font-size: 12.5px;
+	user-select: none;
+}
+
+.tab.active { color: var(--ink); background: var(--pane-2); }
+.tab:hover { color: var(--ink); }
+
+.tab .close {
+	color: var(--dim);
+	border: none;
+	background: none;
+	font: inherit;
+	cursor: pointer;
+	padding: 0 2px;
+	border-radius: 3px;
+}
+.tab .close:hover { color: var(--ink); background: var(--edge); }
+
+/* --- the viewer ----------------------------------------------------------- */
+
+#viewer-body {
+	flex: 1;
+	overflow: auto;
+	padding: 4px 0;
+	min-height: 0;
+}
+
+#viewer-empty {
+	color: var(--dim);
+	padding: 22px 18px;
+	font-style: italic;
+}
+
+.doc { padding: 10px 18px 18px; max-width: 72ch; }
+.doc > :first-child { margin-top: 0; }
+.doc h1, .doc h2, .doc h3 { line-height: 1.25; margin: 1.1em 0 0.45em; }
+.doc h1 { font-size: 1.45em; }
+.doc h2 { font-size: 1.22em; }
+.doc h3 { font-size: 1.05em; }
+.doc p, .doc li { line-height: 1.55; }
+.doc blockquote {
+	margin: 0.8em 0;
+	padding: 2px 12px;
+	border-left: 3px solid var(--accent);
+	color: var(--dim);
+}
+.doc code {
+	background: var(--pane-2);
+	padding: 1px 5px;
+	border-radius: 3px;
+	font-size: 0.92em;
+}
+.doc pre { background: var(--pane-2); padding: 10px 12px; border-radius: 5px; overflow-x: auto; }
+.doc pre code { background: none; padding: 0; }
+.doc img { max-width: 100%; border-radius: 4px; }
+.doc table { border-collapse: collapse; }
+.doc th, .doc td { border: 1px solid var(--edge); padding: 4px 9px; }
+.doc a { color: var(--accent); }
+.doc hr { border: none; border-top: 1px solid var(--edge); }
+
+.media-wrap { padding: 12px 16px; }
+.media-wrap img, .media-wrap video { max-width: 100%; max-height: 100%; border-radius: 5px; display: block; }
+.media-credit { color: var(--dim); font-size: 12px; margin-top: 8px; }
+
+pre.raw {
+	margin: 0;
+	padding: 12px 16px;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-size: 12.5px;
+}
+
+.gone { color: var(--dim); font-style: italic; padding: 22px 18px; }
+
+/* --- the file manager (a launcher, not a workspace) ----------------------- */
+
+#files-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 12px;
+	border-bottom: 1px solid var(--edge);
+	color: var(--dim);
+	font-size: 12px;
+	flex: none;
+}
+
+#media-auto-wrap { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+#media-auto { accent-color: var(--accent); margin: 0; }
+
+#tree { flex: 1; overflow: auto; padding: 6px 4px; font-size: 13px; }
+
+#tree ul { list-style: none; margin: 0; padding-left: 16px; }
+#tree > ul { padding-left: 6px; }
+
+.node-row {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 1.5px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+	color: var(--ink);
+	user-select: none;
+	white-space: nowrap;
+}
+.node-row:hover { background: var(--pane-2); }
+.node-row.dir { color: var(--dim); }
+.node-row .arrow { width: 12px; flex: none; font-size: 10px; color: var(--dim); }
+
+/* law 3's quiet badge: the world grew — noticed, never insisted on */
+.node-row .badge {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--accent);
+	flex: none;
+	margin-left: 2px;
+}
+
+/* --- overlay + bell -------------------------------------------------------- */
 
 #overlay {
 	position: absolute;
@@ -65,3 +271,20 @@ html, body {
 
 /* The bell made visible: one short flash of the terminal's edge. */
 body.bell #terminal-pane { border-color: var(--accent); }
+
+/* --- narrow screens (08: the terminal always wins the space) -------------- */
+
+@media (max-width: 1000px) {
+	#side { display: none; }
+	#panes-toggle { display: inline-block; }
+	body.side-open #side {
+		display: flex;
+		position: fixed;
+		top: 42px;
+		right: 8px;
+		bottom: 8px;
+		width: min(430px, 92vw);
+		z-index: 20;
+		box-shadow: -6px 0 24px rgba(0, 0, 0, 0.45);
+	}
+}

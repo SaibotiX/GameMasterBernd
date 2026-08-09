@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- The friend's page (08). Every URL is RELATIVE on purpose: the page
+<!-- The friend's page (08): three panes around the terminal, one thin
+     status strip, nothing else. Every URL is RELATIVE on purpose: the page
      lives behind Caddy's /f/<token>/ prefix strip, so ./assets/… and
      ./ws/… resolve under the door while the server sees clean paths. -->
 <html lang="en">
@@ -13,11 +14,35 @@
 	<link rel="stylesheet" href="./assets/style.css" />
 </head>
 <body>
+	<header id="strip">
+		<span id="strip-name">World Console</span>
+		<span id="strip-world" hidden></span>
+		<span class="strip-spacer"></span>
+		<button id="panes-toggle" type="button">pages</button>
+		<span id="conn-dot" title="connection">●</span>
+	</header>
 	<main id="page">
 		<section id="terminal-pane">
 			<div id="terminal"></div>
 			<div id="overlay" hidden><span id="overlay-text"></span></div>
 		</section>
+		<aside id="side">
+			<section id="viewer">
+				<nav id="tabs"></nav>
+				<div id="viewer-body">
+					<div id="viewer-empty">the chronicle opens here — pick a page below</div>
+				</div>
+			</section>
+			<section id="files">
+				<div id="files-head">
+					<span id="files-label">pages</span>
+					<label id="media-auto-wrap" title="the scrying glass opens its catch here by itself">
+						<input type="checkbox" id="media-auto" checked /> glass shows
+					</label>
+				</div>
+				<div id="tree"></div>
+			</section>
+		</aside>
 	</main>
 	<script src="./assets/vendor/xterm.js"></script>
 	<script src="./assets/vendor/addon-fit.js"></script>
