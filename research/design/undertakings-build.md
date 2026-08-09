@@ -528,8 +528,8 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   judgment calls: mirror the lane extension's exact condition rather than
   grow a shared module (two 3-line laws, each at its own boundary, beat a
   cross-world import); no localcheck leg grown — the honest receipt is the
-  maintainer's own /gm + /history long ON the lane (seen-before-done, rides
-  the words round's first sitting). The consequence surfaced, not silently
+  maintainer's own /gm + /history long ON the lane (seen-before-done, rode
+  the words round's first sitting; seen 2026-08-09: green, both behaved). The consequence surfaced, not silently
   absorbed: side-call spend now meters through the gateway (caps correct by
   design) but never lands in pi's cost stamps — reconcile's 5% tolerance can
   page falsely on chat-heavy sittings; question + tag-header proposal filed
