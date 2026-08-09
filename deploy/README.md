@@ -114,6 +114,8 @@ Custody: the box's dedicated backup key `/root/.ssh/storagebox_ed25519` opens th
 
 The restore test — extract the latest archive, tar a data volume back into a scratch volume, boot a scratch container against it, prove a chronicle actually reads — is the exit gate: proven once before the first friend, again per the stage-2 gates. Localcheck proves the whole cycle keyless against a throwaway file repo — stage, create, the 28-day prune eating a planted stale archive, and the restored chronicle reading — wherever borg is installed (the dev machine lacks it today: the leg skips LOUDLY there, and the box's nightly run carries the standing proof).
 
+**R18's second leg — the pull to the maintainer's machine:** `pull-backup.sh` (run on the maintainer's machine, monthly-ish and before anything sweeping, by day) mirrors the encrypted repo to `~/worldconsole-backups/borg/` — rsync over ProxyJump through the box (the dev machine's DNS quirk; the maintainer's `worldconsole` key is the Storage Box's second authorized key, appended 2026-08-10; the Storage Box host keys are pinned in the dev machine's known_hosts off the same docs-verified scan). `--delete` is load-bearing: the 28-day prune reaches the mirror on each pull, so a pull inside the month after any erasure is part of §deletion's promise.
+
 ## Deletion (02 item 9's tail, R13 — "we delete your sessions within a month")
 
 The request arrives by any channel (at invite scale the requester IS the friend); withdrawal of consent is the same path. Everything below is on the box unless said otherwise, `<n>` the friend's name. Dry-run once before the first friend — the receipt lives in the state note.
@@ -143,7 +145,7 @@ docker compose up -d --force-recreate gateway   # drop the folded in-memory buck
 
 5. **The analysis mirror** (dev machine): `research/analysis/tools/pull-sessions.sh` — the store mirror (`research/analysis/store-mirror/`) propagates deletions on the next pull (rsync --delete, proven in the shipper round). Landed `sessions-in/<batch>/<n>` copies are the tool's never-touched working dirs — remove them by hand; their batch's immutable report falls under step 8's rule.
 6. **The consent row** (`deploy/host/consents.md`): append `withdrawn <date>` to their row — it stays as Art. 7(1) proof that processing until then was lawful, and dies with the register at the beta's end (the papers' VVZ B).
-7. **Backups:** nothing to do by construction once item 13 honors the ≤ 28-day retention above — the erased player ages out of every archive within the promised month. Until item 13 exists there are no backups to purge.
+7. **Backups:** nothing to do on the box by construction — item 13's nightly `--keep-within 28d` (live since 2026-08-10) ages the erased player out of every archive within the promised month, and Storage-Box snapshots stay OFF so no layer outlives the prune. The one hand-step: run `pull-backup.sh` on the maintainer's machine inside that same month, so the prune reaches the backup mirror too (its `--delete` propagates; same pattern as step 5's analysis-mirror pull).
 8. **The reports** (`research/analysis/reports/`, immutable, R4-tier internal): raw sessions are the promise's scope and are now gone everywhere. If a request explicitly extends to quoted lines inside a report, that is immutability vs. erasure — surface to the maintainer for a ruling, never resolve silently.
 
 ## Status (kept honest, updated per round)
