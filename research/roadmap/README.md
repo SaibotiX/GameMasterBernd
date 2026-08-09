@@ -48,6 +48,7 @@ Next, in order:
 | [07-steam-launch.md](07-steam-launch.md) | Stage 4 spec: the Steam build, AI-content compliance, Steam money rules, store logistics, scale expectations |
 | [08-stage1-web-ui.md](08-stage1-web-ui.md) | Stage 1 page spec: three panes around the terminal, interaction laws, hot-reload, the login screen's face |
 | [09-coverage.md](09-coverage.md) | The coverage register (R15): every product-side domain with status, owning doc, and next trigger — pointer-only; the zero-silent-unknowns duty |
+| [10-privacy-papers.md](10-privacy-papers.md) | The standing GDPR & AI-Act records: VVZ, DPIA threshold assessment, DPA/AVV collection, breach runbook, the Art.-50 pair with its technique note, hardening state |
 
 ## Guiding principles
 

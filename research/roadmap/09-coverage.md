@@ -18,21 +18,21 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | House lane & ledger | ● | R12 · R29 · [02](02-friends-web-service.md) item 8 · `deploy/host/gateway/` | LIVE, round closed 2026-08-09 (drain test + the played turn green); open: telemetry tunes the grant/estimate numbers · the side-call spend question RULED 2026-08-09: tag-and-subtract adopted and built the same day — side calls ride the gateway's /side prefix (laneModel), their ledger rows carry `side:true` under the same caps, reconcile names and subtracts them (localcheck holds all three receipts) · the fix's lane eyeball ran green 2026-08-09 (/gm + /history long behaved on the lane) · Gemini EEA/under-18 facts re-verified 2026-08-08 |
 | Session recording & consent | ● | R13 · [06](06-research-log.md) 2026-08-05 | deletion dry-run before the first friend (02 checklist 9) |
 | Stage-1 page | ● | R14 · [08](08-stage1-web-ui.md) | build |
-| Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
+| Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | done 2026-08-09 — the friend intro carries the LICENSE line (words round) |
 | In-game media sourcing (the glass's legality) | ● | R24 · [06](06-research-log.md) §2026-08-07 real video | catalogue complaints → the revival shapes (06 §) · ⚠ Commons rate limits changeable — re-verify at stage-1 build |
 | In-game voice (TTS) | ◐ | [06](06-research-log.md) §2026-08-08 the voice | evidence landed, park proposed (trigger: 08 page build, or a friend asks) — adopt/spike ruling with the maintainer; licenses re-verified at adoption |
 | Hosting provider | ● | R18 · [06](06-research-log.md) §2026-08-06 hosting | purchase + AVV done 2026-08-08 · re-compare the field at renewal |
 | Domain, TLD, registrar | ● | R17 · [06](06-research-log.md) §2026-08-06 name's ground | worldconsole.eu bought 2026-08-08 · .com expiry watch late Oct 2026 |
-| Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use + first-use archive start with the page (R16) |
+| Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | the page carries both names (words round) — dated public use + first-use archive fire at the box deploy |
 | Trademark & registrations | ◐ | [06](06-research-log.md) §2026-08-06 trademark | €0 now · professional search + EUTM 41+9 with SME voucher at stage 2→3 · Italian-mark check before filing |
 | Company form & Gewerbe (AT) | ● | R21 · [06](06-research-log.md) §2026-08-06 founding & tax | registration only pre-stage-2 (03 gate) · re-confirm the branch at registration |
 | Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · Familienbeihilfe limit (R21) · any ALG episode · January re-verify of indexed values · VAT path finalizes with the stage-2 payments ruling |
 | Payment processor & rails | ◐ | [06](06-research-log.md) §2026-08-06 payments · Stripe standing per [03](03-public-launch.md) | ruling deliberately deferred to the stage-2 build (maintainer, 2026-08-07): Stripe direct vs Stripe-MoR · €10 pack floor · Widerrufsbutton (in force 2026-10-01) in the checkout |
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
-| Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page live before the first friend (maintainer fills in the address) · ⚠ address re-ruled before stage-3 public |
-| Privacy papers beyond R13 | ◐ | same section | VVZ · threshold assessment · DPA collection · breach runbook — stage-1 build items |
-| AI Act (Art. 50, live 2026-08-02) | ◐ | same section | disclosure sentence + text marking with the R14 build · ⚠ AT authority designation watch |
-| Age policy | ● | R20 | 18+ assertion into invite-acceptance (stage-1 build) + the purchase flow (stage 2) · revisit at stage-3 planning |
+| Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page built (words round) — live at the box deploy once WC_IMPRESSUM_ADDRESS is set in the box .env (maintainer errand) · ⚠ address re-ruled before stage-3 public |
+| Privacy papers beyond R13 | ● | [10-privacy-papers.md](10-privacy-papers.md) (built 2026-08-09) | payments rows at the stage-2 build · threshold re-run at stage 3 |
+| AI Act (Art. 50, live 2026-08-02) | ● | [10-privacy-papers.md](10-privacy-papers.md) §5 · 06 §compliance | 50(1) sentence live ×3, 50(2) marking landed (words round) · ⚠ AT authority designation watch · the "placing on the market" question decides 50(2)'s formal start (06) |
+| Age policy | ● | R20 | 18+ assertion rides invite-acceptance since 2026-08-09 (consents gate, words round) · the purchase flow adds its own (stage 2) · revisit at stage-3 planning |
 | Accessibility (EAA/BaFG) | ⊘ | compliance section | trigger: ≥10 persons or >€2 M — or stage 4 |
 | Product liability (PLD 2024/2853) | ⊘ | compliance section | trigger: public availability past 2026-12-09 |
 | DSA duties | ◐ | [03](03-public-launch.md) + compliance section | Art. 11/12/14/16 land at stage-2 build |
