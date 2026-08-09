@@ -81,7 +81,7 @@ rm -rf "$STAGING"
 mkdir -p "$STAGING"
 for VOL in $VOLUMES; do
 	echo "stage: $VOL"
-	docker run --rm --network none -v "$VOL:/v:ro" -v "$STAGING:/out" \
+	docker run --rm --user 0 --network none -v "$VOL:/v:ro" -v "$STAGING:/out" \
 		--entrypoint tar "$IMAGE" cf "/out/$VOL.tar" -C /v .
 done
 

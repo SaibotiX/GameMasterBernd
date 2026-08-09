@@ -436,10 +436,10 @@ if command -v borg >/dev/null 2>&1; then
 	mkdir "$BK_TMP/x"
 	(cd "$BK_TMP/x" && borg extract "$BK_TMP/repo::$ARCHIVE" "${BK_TMP#/}/staging/world-console_data-test.tar")
 	docker volume create world-console_restore-check >/dev/null
-	docker run --rm --network none -v world-console_restore-check:/v \
+	docker run --rm --user 0 --network none -v world-console_restore-check:/v \
 		-v "$BK_TMP/x/${BK_TMP#/}/staging:/in:ro" \
 		--entrypoint tar world-console:latest xf /in/world-console_data-test.tar -C /v
-	RESTORED="$(docker run --rm --network none -v world-console_restore-check:/v:ro \
+	RESTORED="$(docker run --rm --user 0 --network none -v world-console_restore-check:/v:ro \
 		--entrypoint cat world-console:latest \
 		/v/world/localcheck-world/0198bbbb-cccc-7ddd-8eee-ffff00001111/quests.md)"
 	[ "$RESTORED" = "# quests" ] \
