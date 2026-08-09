@@ -40,3 +40,21 @@ localhost, 127.0.0.1 {
 		respond "World Console — by invitation." 404
 	}
 }
+
+# The landing ground's local mirror (02 items 9+11): the exact production
+# block from caddy/Caddyfile on its own local hostname — localcheck curls
+# it via --resolve and proves the words, the templates-rendered address
+# (a test fixture here) and the headers before any of it faces the box.
+site.localhost {
+	encode zstd gzip
+	root * /srv/site
+	templates
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'"
+	}
+	file_server
+}

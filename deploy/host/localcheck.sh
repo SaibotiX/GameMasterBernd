@@ -37,6 +37,10 @@ export GATEWAY_STATE
 export GATEWAY_UPSTREAM="http://stub:9990"
 export ANTHROPIC_ORG_KEY="sk-local-stand-in"
 
+# The landing ground's address fixture (R19): the real value lives only in
+# the box .env — here a deliberately fake street proves templates render it.
+export WC_IMPRESSUM_ADDRESS="Teststraße 1, 0000 Localdorf"
+
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
@@ -65,6 +69,30 @@ CODE="$(curl -ks -o /dev/null -w '%{http_code}' -u test:local-test-password "$DO
 echo "=== no directory of doors: unmatched paths say nothing ==="
 CODE="$(curl -ks -o /dev/null -w '%{http_code}' "https://localhost:8443/")"
 [ "$CODE" = "404" ] || { echo "FAIL: expected 404 at /, got $CODE"; exit 1; }
+
+echo "=== the landing ground: the words are served (02 items 9+11, R13/R19/R16) ==="
+# The production root block on its local hostname: the loud disclosure, the
+# AI sentence (Art. 50(1)), both names (R16), R29's retention sentence, the
+# SCC transfer ground, and the Impressum's templates-rendered address.
+SITE_RESOLVE="--resolve site.localhost:8443:127.0.0.1"
+BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/")"
+grep -q "AI game master" <<<"$BODY" \
+	|| { echo "FAIL: the landing is missing the AI sentence"; exit 1; }
+grep -q "personally reads" <<<"$BODY" \
+	|| { echo "FAIL: the landing softened the human-reads fact"; exit 1; }
+grep -q "Hausregel" <<<"$BODY" && grep -q "WORLD CONSOLE" <<<"$BODY" \
+	|| { echo "FAIL: the landing is missing a name (R16)"; exit 1; }
+BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/datenschutz.html")"
+grep -q "deleted within 30 days at most" <<<"$BODY" \
+	|| { echo "FAIL: the note is missing R29's retention sentence"; exit 1; }
+grep -q "standard contractual clauses" <<<"$BODY" \
+	|| { echo "FAIL: the note is missing the transfer ground"; exit 1; }
+BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/impressum.html")"
+grep -q "Teststraße 1, 0000 Localdorf" <<<"$BODY" \
+	|| { echo "FAIL: the Impressum address did not render from the env"; exit 1; }
+HDRS="$(curl -ksI $SITE_RESOLVE "https://site.localhost:8443/")"
+grep -qi "strict-transport-security" <<<"$HDRS" \
+	|| { echo "FAIL: the hardening headers are missing"; exit 1; }
 
 echo "=== the whole page carries through the door (prefix strip, auth, TLS) ==="
 # appserver-probe walks page + health + pane APIs + the PTY stream — every
