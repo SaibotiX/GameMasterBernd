@@ -18,6 +18,21 @@ NAME="${1:?usage: new-friend.sh <name> (lowercase letters, digits, dashes)}"
 }
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+
+# The consent gate (02 item 9, R13/R20): no door before the recorded yes.
+# consents.md is box-local and gitignored — one row per friend, written by
+# hand when the invite's two questions come back answered (the format and
+# the order live in the runbook §per-friend onboarding; probe friends get
+# a row with channel "probe"). The reply itself stays in the maintainer's
+# own channel; the row records the fact.
+CONSENTS="$HERE/consents.md"
+grep -Eq "^\|[[:space:]]*$NAME[[:space:]]*\|" "$CONSENTS" 2>/dev/null || {
+	echo "no consent row for '$NAME' in deploy/host/consents.md — the invite's" >&2
+	echo "two questions come FIRST (deploy/friend-intro.md part one); record" >&2
+	echo "the yes as '| $NAME | <date> | <channel> | yes | yes | <note date> |'," >&2
+	echo "then mint." >&2
+	exit 1
+}
 SNIPPET="$HERE/caddy/friends/$NAME.caddy"
 OVERRIDE="$HERE/compose.override.yaml"
 

@@ -38,6 +38,9 @@ deploy/host/.localcheck-store.*
 # Same custody as the friend files — the tracked tree never carries a key.
 deploy/host/gateway-state/
 deploy/host/.localcheck-gateway.*
+# The consent register (02 item 9, R13/R20): who agreed, when, over which
+# channel — personal data, box-local like every friend fact.
+deploy/host/consents.md
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.

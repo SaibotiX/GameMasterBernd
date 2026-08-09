@@ -40,14 +40,21 @@ On the box (Debian stable assumed):
 
 ## Per-friend onboarding
 
-**Gate first (02 items 9–11):** before the *first* friend plays, the disclosure + consent + 18+ assertion (R13/R20), the shipper (R13), and the friend intro with the LICENSE line (R3) must be live — those are their own build rounds, and this runbook refuses to pretend otherwise.
+The words came first (02 items 9+11, the words round) — what remains is the ORDER, and new-friend.sh enforces its gate:
+
+1. **Invite:** send [friend-intro.md](friend-intro.md) part one, by any channel that keeps the reply.
+2. **Record the yes** (02 item 9, R13/R20): both questions answered plainly → one row in the box-local, gitignored `deploy/host/consents.md` — `| alice | 2026-08-12 | signal | yes | yes | note 2026-08-09 |` (name · date · channel · recorded-consent · 18+ · privacy-note version). The friend's actual words stay in the channel they came by; the row records the fact. Probe friends get a row with channel `probe`.
+3. **Mint and open:**
 
 ```bash
-deploy/host/new-friend.sh alice        # mints the pair AND writes the files
-docker compose up -d wc-alice
+deploy/host/new-friend.sh alice        # refuses without alice's consent row
+docker compose up -d gateway wc-alice
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-# send the printed door + pair to alice out of band, once
 ```
+
+4. **Send part two** — the printed door + pair, out of band, once.
+
+*(One gate still standing before the FIRST friend: §Backups' restore test, item 13 — ruled 2026-08-09: the backup round rides between the words and the first invite.)*
 
 Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend: `docker compose down wc-<name>`, delete the snippet and the override lines; the volumes stay until R11's wipe rules say otherwise.
 
