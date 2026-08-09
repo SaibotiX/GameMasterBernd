@@ -54,8 +54,26 @@ let lastDetachAt = Date.now(); // the reaper's idle mark (02 item 12 seam)
 // is live while pi runs; everything else seals as it goes.
 const shipper = createShipper({ log, piRunning: () => !!term });
 
+// A returning player finds their sitting, not a blank console (02 §sizing:
+// "worlds persist; pi resumes the sitting") — the reaper's stop and the
+// waker's start must be invisible to the story. Only a truly first boot
+// spawns fresh; R13's shipper already expects resumed sessions to grow
+// (a grown source re-earns its seal).
+function hasPriorSession() {
+	try {
+		const root = path.join(process.env.HOME ?? "/home/player", ".pi", "agent", "sessions");
+		for (const d of fs.readdirSync(root, { withFileTypes: true })) {
+			if (!d.isDirectory()) continue;
+			if (fs.readdirSync(path.join(root, d.name)).some((f) => f.endsWith(".jsonl")))
+				return true;
+		}
+	} catch {}
+	return false;
+}
+
 function spawnPi(cols, rows) {
-	const p = pty.spawn("pi", [], {
+	const args = hasPriorSession() ? ["--continue"] : [];
+	const p = pty.spawn("pi", args, {
 		name: "xterm-256color",
 		cwd: GAME_DIR,
 		env: process.env,
@@ -64,7 +82,7 @@ function spawnPi(cols, rows) {
 		rows,
 	});
 	term = { pty: p, cols, rows };
-	log("pi-spawn", { pid: p.pid, cols, rows });
+	log("pi-spawn", { pid: p.pid, cols, rows, resume: args.length > 0 });
 	p.onData((chunk) => {
 		if (client?.readyState === 1) client.send(chunk, { binary: true });
 	});

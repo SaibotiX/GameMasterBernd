@@ -62,6 +62,9 @@ echo "=== a stop is a seal: a session in the live volumes reaches the store (R13
 # half). Fabricate one in the live volumes instead — same fixture shape as
 # verify leg 5 — and let the real seam do the rest: compose stop → SIGTERM
 # → pi's hangup → the seal lands in wc-test's staging slice.
+# The fixture wears pi's REAL entry shape (id/parentId chain, content as
+# text blocks) — pi --continue silently starts fresh on a malformed chain,
+# which the resume leg below would misread as a broken feature.
 compose exec -T wc-test sh <<'FIXTURE'
 set -e
 SID=0198bbbb-cccc-7ddd-8eee-ffff00001111
@@ -69,8 +72,8 @@ SDIR=/home/player/.pi/agent/sessions/--home-player-game--
 STORY=/home/player/game/data/world/localcheck-world/$SID
 mkdir -p "$SDIR" "$STORY"
 {
-	echo '{"type":"session","version":3,"timestamp":"2026-08-09T12:00:00.000Z","cwd":"/home/player/game"}'
-	echo '{"type":"message","timestamp":"2026-08-09T12:00:10.000Z","message":{"role":"user","content":"through the door"}}'
+	echo '{"type":"session","version":3,"id":"'$SID'","timestamp":"2026-08-09T12:00:00.000Z","cwd":"/home/player/game"}'
+	echo '{"type":"message","id":"aaaa0001","parentId":null,"timestamp":"2026-08-09T12:00:10.000Z","message":{"role":"user","content":[{"type":"text","text":"through the door"}],"timestamp":"2026-08-09T12:00:10.000Z"}}'
 } > "$SDIR/2026-08-09T12-00-00_$SID.jsonl"
 echo '# quests' > "$STORY/quests.md"
 FIXTURE
@@ -130,6 +133,27 @@ for _ in $(seq 1 40); do
 	sleep 0.5
 done
 [ "$WOKE" = 1 ] || { echo "FAIL: the friend never woke behind the door"; exit 1; }
+
+echo "=== resume: the woken console carries the sitting (02 §sizing) ==="
+# The fixture session is in the woken container's volume; attaching must
+# spawn pi with --continue, whose transcript replay shows the fixture's own
+# words. A fresh spawn would never print them.
+# Strip terminal escapes before matching — the phrase can arrive chopped
+# across styled repaint runs — and give a cold container time to boot pi
+# and replay. Exits as soon as the phrase lands.
+RESUME_OUT="$(compose exec -T wc-test node -e '
+const {WebSocket}=require("/opt/appserver/node_modules/ws");
+const ws=new WebSocket("ws://127.0.0.1:7681/ws/term");
+let buf="";
+const clean=()=>buf.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g,"").replace(/\x1b\][^\x07]*\x07/g,"");
+const probe=setInterval(()=>{if(clean().includes("through the door")){console.log("RESUMED");process.exit(0)}},500);
+ws.on("message",(d,b)=>{if(b)buf+=d.toString("utf8")});
+ws.on("open",()=>{ws.send(JSON.stringify({t:"resize",cols:120,rows:30,attach:true}));
+setTimeout(()=>{console.log("TIMEOUT after 20s; screen tail:");console.log(clean().split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean).slice(-12).join("\n"));process.exit(1)},20000)});
+ws.on("error",()=>process.exit(1));')" \
+	|| { echo "FAIL: the woken console did not resume the sitting"; echo "$RESUME_OUT"; exit 1; }
+grep -q RESUMED <<<"$RESUME_OUT" \
+	|| { echo "FAIL: the woken console did not resume the sitting"; echo "$RESUME_OUT"; exit 1; }
 
 echo "=== a tampered manifest is refused loudly ==="
 SID2=0198cccc-dddd-7eee-8fff-000011112222
