@@ -25,6 +25,12 @@ Prompted by: the R28 design round — "checked automatically" was half the origi
 Why not now: the on-command sweep plus the round-wrap trigger question cover the need while sessions run frequently; harness cron is machinery without a demonstrated miss.
 **Revive when:** a fired Revisit-when trigger goes unnoticed across two consecutive rounds (lane two failed), or sessions go dormant for months.
 
+### Downloads auto-pruning (the disk watch's enforcement arm) · infrastructure · iced 2026-08-09 · recurrence 0
+The reaper's disk watch enforcing the per-volume quota itself: auto-pruning `data/downloads/` over a cap instead of only alarming (02 item 12's "disk quota per volume" clause taken to its enforcement end).
+Prompted by: the shipper round built the watch `du`-based and alarm-only; the enforcement arm was proposed alongside and rode to the philosopher, who ruled alarm-only fine (2026-08-09).
+Why not now: it deletes player-visible files on a machine's judgment; one friend on a 4 GB box leaves no pressure, downloads are re-fetchable but their loss would still surprise, and the alarm already names the moment a human should look.
+**Revive when:** any disk alarm actually fires (the 5 GiB line) · two friends sit over the 2 GiB warn line at once (manual pruning becoming a chore) · or stage-2 sizing re-opens per-volume budgets.
+
 ## Closed
 
 *(nothing yet — won't-dos land here with their one-line reasons)*

@@ -15,7 +15,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 |---|---|---|---|
 | Distribution architecture & stages | ● | R1–R2, R6 · [02](02-friends-web-service.md)–[08](08-stage1-web-ui.md) | stage gates inside each spec |
 | Auth doors & credential custody | ● | R5/R11 (revised 2026-08-08: on ice) · icebox entry · door table in [06](06-research-log.md) | doors + vault iced, house lane only — revival conditions in the icebox; the 2026-08-05 ⚠ ruling-request dissolved with the doors |
-| House lane & ledger | ● | R12 (revised 2026-08-08: the only lane) · [02](02-friends-web-service.md) | provider + billing ruling pending — recommendation in [06](06-research-log.md) §2026-08-08 the house key (Anthropic direct, prepaid) · Gemini EEA/under-18 facts re-verified 2026-08-08 |
+| House lane & ledger | ● | R12 (revised 2026-08-08: the only lane) · [02](02-friends-web-service.md) | provider + billing ruling = gate zero of the picked house-lane round (map in `deploy/README.md` §next round; recommendation in [06](06-research-log.md) §2026-08-08 the house key: Anthropic direct, prepaid) · Gemini EEA/under-18 facts re-verified 2026-08-08 |
 | Session recording & consent | ● | R13 · [06](06-research-log.md) 2026-08-05 | deletion dry-run before the first friend (02 checklist 9) |
 | Stage-1 page | ● | R14 · [08](08-stage1-web-ui.md) | build |
 | Licensing & copyright | ● | R3/R4 · [04](04-licensing-and-ip.md) | LICENSE line into the friend intro (02 checklist 11) |
