@@ -275,6 +275,8 @@ compaction path stands. Covenant context: R26.)*
 
 *(revised 2026-08-08, maintainer's ruling: **the house lane is THE lane** — R11's doors went on ice the same day, so "BYO players keep their own model choice" sleeps until a door revives; every friend plays metered on the org key from the first turn. The provider and billing model behind that key are this round's research question; the ruling lands as its own R entry. The 2026-08-05 funding-vehicle question settles in passing — the maintainer's provider ask presumes the org-key vehicle; the personal-subscription reading stays rejected.)*
 
+*(2026-08-09: that ruling landed — R29, Anthropic direct, prepaid.)*
+
 ---
 
 ## R13 — Play sessions are research data: recorded, disclosed, shipped at the seams
@@ -540,3 +542,17 @@ entry carries the verification.)*
 **Rejected:** *Cron/hook automation* — iced, the icebox's first resident: machinery without a demonstrated miss while sessions run frequently. *Per-entry last-verified stamps on every sweep* — churn in append-only entries; the sweep log carries the verified-on dates, entries gain notes only when something changed. *Auto-adaptation* — the instruction's "adapted automatically" lands as detected-automatically, ruled-by-the-maintainer; silently rewriting accepted law is the one move that destroys a registry's trustworthiness. *Calendar-only review* — fatigue, then theater.
 
 **Revisit when:** the first two sweeps grade the shape (too heavy → trim the order; findings missed → tighten it); or the icebox's cron entry revives (a fired trigger unnoticed across two consecutive rounds means lane two failed).
+
+---
+
+## R29 — The house key: Anthropic, direct, prepaid
+
+*(added 2026-08-09, house-lane round gate zero, on the maintainer's ruling. Evidence: [06-research-log.md](06-research-log.md) §2026-08-08 the house key; the at-creation re-verify §2026-08-09. Answers the question R12's 2026-08-08 revision left open — dated note there.)*
+
+**Decided:** The org key behind the house lane is **Anthropic, direct, prepaid** — an org account under Anthropic's Commercial Terms (exactly R12's evidenced vehicle: §A.1 covers powering products for our own end users, the DPA auto-incorporates with nothing to sign), funded by prepaid credits with a modest balance (the API stops cold at zero — overspend structurally impossible; auto-reload off or small), the provider-side spend cap SET from day 1: the belt under the ledger's monthly kill-switch (suspenders, R12). The maintainer confirms both halves 2026-08-09 — the early-minted key (custody per 02 item 8: password manager, never repo, never transcript) is exactly this shape, and the cap is set. The model MIX on the lane (Haiku- vs Sonnet-class keepers, cheap-routed side calls per 03) is design + telemetry's question, deliberately OUTSIDE this ruling: this entry names the key-holder and the billing shape, nothing else.
+
+**Why:** Chosen on FIT, four ways, and the fit choice priced out cheapest anyway (06 §the house key): the tuned voice — every play session and every ranked-findings report in the immutable quality history was measured on `claude-haiku-4-5`, and a provider switch would orphan that baseline; caching on our prompt shape — pi already fires `cache_control` in real play, and caching IS the cost model (~0.9¢/round cached vs ~2¢ uncached, Haiku-class); GDPR paper a solo operator can actually get (no training on API I/O, retention ≤30 days, auto-incorporated DPA); first-timer ops safety (prepaid hard stop + tier cap + self-set limit + workspace caps, stacked).
+
+**Rejected:** *OpenRouter as key-holder* — a 5.5% deposit fee for multi-model reach the iced doors no longer need, and an Art.-28 hole no discount buys back (its DPA is enterprise-only, unobtainable at our size). *Mistral as primary* — EU-sovereign and properly papered, but the keeper's register has never been played or measured there; it stays the NAMED FALLBACK if the EU→US transfer ground collapses, and any such move takes a playtest batch first. *OpenAI or Gemini as key-holder* — the same orphaned-baseline objection; Gemini adds the EEA-paid-tier-only and under-18-prohibition clauses besides. *Postpaid anything* — safety by alarm instead of safety by construction; the wrong shape for a first org account.
+
+**Revisit when:** the standing DPF watch fires (C-703/25 P — the Mistral fallback wakes) · house-lane telemetry contradicts the cache-adjusted cost model (06's estimates hold only until R6's real numbers replace them) · the stage-2 pricing draft (re-verify everything priced, 06's standing trigger) · test-phase spend breaches the monthly cap twice (R12's own trigger — the cap is the experiment's budget, not a suggestion).
