@@ -27,9 +27,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "=== up (caddy-local + wc-test) ==="
+echo "=== up (caddy-local + wc-test + waker) ==="
 compose config -q
-compose up -d caddy-local wc-test
+compose up -d caddy-local wc-test waker
 
 echo "=== door: wrong password is refused ==="
 for _ in $(seq 1 20); do
@@ -115,6 +115,21 @@ grep -q "stop: wc-test" <<<"$REAP_OUT" \
 	|| { echo "FAIL: the reaper left the idle friend running"; echo "$REAP_OUT"; exit 1; }
 compose ps --services --status running | grep -qx wc-test \
 	&& { echo "FAIL: wc-test still running after the reaper"; exit 1; }
+
+echo "=== the waker: a knock on the sleeping door wakes the friend ==="
+# The reaper just put wc-test to sleep. The first knock must serve the
+# waking page (second upstream) AND start the container; within a few
+# knocks the real page answers again — start-on-connect, end to end.
+BODY="$(curl -ks -u test:local-test-password "$DOOR/")"
+grep -qi "waking" <<<"$BODY" \
+	|| { echo "FAIL: a sleeping door did not serve the waking page"; echo "$BODY" | head -8; exit 1; }
+WOKE=0
+for _ in $(seq 1 40); do
+	BODY="$(curl -ks -u test:local-test-password "$DOOR/" || true)"
+	if grep -q "assets/app.js" <<<"$BODY"; then WOKE=1; break; fi
+	sleep 0.5
+done
+[ "$WOKE" = 1 ] || { echo "FAIL: the friend never woke behind the door"; exit 1; }
 
 echo "=== a tampered manifest is refused loudly ==="
 SID2=0198cccc-dddd-7eee-8fff-000011112222

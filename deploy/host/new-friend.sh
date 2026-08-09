@@ -35,13 +35,28 @@ PASS="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 20)"
 HASH="$(docker run --rm "$CADDY_IMG" caddy hash-password --plaintext "$PASS")"
 
 # The door: its own snippet, picked up by the play site block's import.
+# Two upstreams under lb_policy first: the friend's container, then the
+# waker — a sleeping (reaper-stopped) container fails the dial and the
+# waker answers with the waking page while starting it (02 item 12).
+# dial_timeout bounds dial INCLUDING the DNS lookup: a stopped container's
+# name can hang in resolution instead of NXDOMAINing, and an unbounded
+# lookup would eat the try window before the waker is ever consulted.
 cat > "$SNIPPET" <<EOF
 redir /f/$TOKEN /f/$TOKEN/ 308
 handle_path /f/$TOKEN/* {
 	basic_auth {
 		$NAME $HASH
 	}
-	reverse_proxy wc-$NAME:7681
+	reverse_proxy wc-$NAME:7681 waker:9000 {
+		lb_policy first
+		lb_try_duration 4s
+		lb_try_interval 250ms
+		fail_duration 3s
+		header_up X-Friend $NAME
+		transport http {
+			dial_timeout 1500ms
+		}
+	}
 }
 EOF
 

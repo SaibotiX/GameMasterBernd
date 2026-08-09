@@ -18,7 +18,22 @@ localhost, 127.0.0.1 {
 			# test / local-test-password
 			test $2a$14$Z/1Vc95yNgexVZApQgZHbOkDfgPwBKiwYF2fFp9w8LHQS3supWk8u
 		}
-		reverse_proxy wc-test:7681
+		# Same two-upstream shape new-friend.sh mints: sleeping container →
+		# the waker's page (02 item 12). dial_timeout bounds the whole dial
+		# INCLUDING the DNS lookup — a stopped container's name can hang in
+		# resolution (machines with broken upstream DNS answer slowly, not
+		# NXDOMAIN), and an unbounded lookup would eat the try window before
+		# the waker is ever consulted.
+		reverse_proxy wc-test:7681 waker:9000 {
+			lb_policy first
+			lb_try_duration 4s
+			lb_try_interval 250ms
+			fail_duration 3s
+			header_up X-Friend test
+			transport http {
+				dial_timeout 1500ms
+			}
+		}
 	}
 
 	handle {

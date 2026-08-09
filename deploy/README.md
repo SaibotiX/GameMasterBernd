@@ -87,6 +87,8 @@ Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit
 
 `reaper.sh` every 5 minutes (`cp deploy/host/systemd/worldconsole-reaper.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-reaper.timer`): any friend 30 minutes without a WebSocket client is stopped — the stop grace lets the app server seal, then `store-sweep.sh --friend` makes the seal a certainty and the compact immediate. An idle container costs nothing extra: pi only spawns on attach, and worlds persist — the next connect resumes the world, not the conversation. The same pass watches per-volume disk (`du` warn at 2 GiB, alarm at 5 GiB — **alarm-only**: automatic pruning of `data/downloads/` over a cap is proposed but unruled, since it deletes player-visible files) and prints one `docker stats` line per running friend into the journal.
 
+**Start-on-connect is the waker** (`host/waker/`, a compose service — `docker compose up -d` carries it): every minted door lists it as the second upstream under `lb_policy first`, so a knock on a sleeping container serves an auto-refreshing "the console is waking" page while the container starts by name over the docker socket. The socket rides in a container on the `wake` network that caddy alone shares — friends on `web` cannot route to it, and the waker's whole vocabulary is "start `wc-<validated-name>`"; a removed friend's knock gets the "closed" page instead.
+
 ## Backups (02 item 13; shape ruled in R18)
 
 Nightly, to a *different provider* (Hetzner Storage Box as the borg target) plus the periodic pull to the maintainer's machine. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir, never inside any volume, so a volume backup cannot contain it.
