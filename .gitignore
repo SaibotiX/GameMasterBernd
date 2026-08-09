@@ -41,6 +41,10 @@ deploy/host/.localcheck-gateway.*
 # The consent register (02 item 9, R13/R20): who agreed, when, over which
 # channel — personal data, box-local like every friend fact.
 deploy/host/consents.md
+# R16's first-use archive: the site as first served, rendered — the Impressum
+# copy carries R19's address, which never enters the repo (the Caddyfile's
+# law); box-local beside the consent register.
+deploy/host/first-use/
 
 # --- Playtest telemetry ----------------------------------------------------
 # Testers' session drops are private play data; reports stay tracked.

@@ -23,13 +23,13 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | In-game voice (TTS) | ◐ | [06](06-research-log.md) §2026-08-08 the voice | evidence landed, park proposed (trigger: 08 page build, or a friend asks) — adopt/spike ruling with the maintainer; licenses re-verified at adoption |
 | Hosting provider | ● | R18 · [06](06-research-log.md) §2026-08-06 hosting | purchase + AVV done 2026-08-08 · re-compare the field at renewal |
 | Domain, TLD, registrar | ● | R17 · [06](06-research-log.md) §2026-08-06 name's ground | worldconsole.eu bought 2026-08-08 · .com expiry watch late Oct 2026 |
-| Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | the page carries both names (words round) — dated public use + first-use archive fire at the box deploy |
+| Game & studio name | ● | R16 · [06](06-research-log.md) §§ name's ground + trademark | dated public use live + first-use set archived box-local 2026-08-09; web-archive save stopped by ruling (receipt: 06 §2026-08-09) |
 | Trademark & registrations | ◐ | [06](06-research-log.md) §2026-08-06 trademark | €0 now · professional search + EUTM 41+9 with SME voucher at stage 2→3 · Italian-mark check before filing |
 | Company form & Gewerbe (AT) | ● | R21 · [06](06-research-log.md) §2026-08-06 founding & tax | registration only pre-stage-2 (03 gate) · re-confirm the branch at registration |
 | Tax & VAT | ◐ | same section | tripwires: profit €730 · SVS €6,613.20 · EU-digital €10,000 · Familienbeihilfe limit (R21) · any ALG episode · January re-verify of indexed values · VAT path finalizes with the stage-2 payments ruling |
 | Payment processor & rails | ◐ | [06](06-research-log.md) §2026-08-06 payments · Stripe standing per [03](03-public-launch.md) | ruling deliberately deferred to the stage-2 build (maintainer, 2026-08-07): Stripe direct vs Stripe-MoR · €10 pack floor · Widerrufsbutton (in force 2026-10-01) in the checkout |
 | Consumer-law build-list | ◐ | same section | build with the shop: button wording, § 18 checkboxes, unused-credit refunds, gross prices, no ODR link |
-| Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | page built (words round) — live at the box deploy once WC_IMPRESSUM_ADDRESS is set in the box .env (maintainer errand) · ⚠ address re-ruled before stage-3 public |
+| Impressum & website duties | ● | R19 · [06](06-research-log.md) §2026-08-06 compliance gaps | live whole 2026-08-09 — address env set on the box, render verified · ⚠ address re-ruled before stage-3 public |
 | Privacy papers beyond R13 | ● | [10-privacy-papers.md](10-privacy-papers.md) (built 2026-08-09) | payments rows at the stage-2 build · threshold re-run at stage 3 |
 | AI Act (Art. 50, live 2026-08-02) | ● | [10-privacy-papers.md](10-privacy-papers.md) §5 · 06 §compliance | 50(1) sentence live ×3, 50(2) marking landed (words round) · ⚠ AT authority designation watch · the "placing on the market" question decides 50(2)'s formal start (06) |
 | Age policy | ● | R20 | 18+ assertion rides invite-acceptance since 2026-08-09 (consents gate, words round) · the purchase flow adds its own (stage 2) · revisit at stage-3 planning |
@@ -38,7 +38,7 @@ Game-design law is deliberately **not** mirrored here — [`research/design/unde
 | DSA duties | ◐ | [03](03-public-launch.md) + compliance section | Art. 11/12/14/16 land at stage-2 build |
 | Steam | ● | R7/R8 · [07](07-steam-launch.md) | re-verify all policy facts at stage-4 planning |
 | Offline copies | ● | [05](05-offline-distribution.md) | on demand |
-| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals · built in `deploy/` | box-side execution done, first deploy 2026-08-08 (TLS live, hardening + firewall standing) · restore test with the backup round (Storage Box still unbought) |
+| Security hardening & backups | ◐ | [02](02-friends-web-service.md) + compliance-section proposals · built in `deploy/` | box-side execution done, first deploy 2026-08-08 (TLS live, hardening + firewall standing) · backup round prepped 2026-08-09 (runbook §Next round; at-purchase facts 06 §2026-08-09; Storage Box purchase = the maintainer's errand) |
 | Ops runbooks (support · breach · deletion) | ◐ | [03](03-public-launch.md) §support · compliance §breach · R13 deletion | write with the stage-1 build; exercise per the exit gates |
 | Insurance (IT-Betriebshaftpflicht) | ○ | one line in the founding & tax section | quote at stage 2–3 |
 | Marketing, community, store presence | ○ | only [07](07-steam-launch.md)'s wishlist notes exist | stage-3 planning round |
