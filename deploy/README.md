@@ -102,20 +102,15 @@ Ruled 2026-08-09 (closing the ⚠ DEVIATION, R13 / 02 §research data): **the pl
 
 **Start-on-connect is the waker** (`host/waker/`, a compose service — `docker compose up -d` carries it): every minted door lists it as the second upstream under `lb_policy first`, so a knock on a sleeping container serves an auto-refreshing "the console is waking" page while the container starts by name over the docker socket. The socket rides in a container on the `wake` network that caddy alone shares — friends on `web` cannot route to it, and the waker's whole vocabulary is "start `wc-<validated-name>`"; a removed friend's knock gets the "closed" page instead.
 
-## Backups (02 item 13; shape ruled in R18)
+## Backups (02 item 13, R18 — the lane built 2026-08-10)
 
-Nightly, to a *different provider* (Hetzner Storage Box as the borg target) plus the periodic pull to the maintainer's machine. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir, never inside any volume, so a volume backup cannot contain it.
+Nightly at 05:11 (`worldconsole-backup.timer` → `backup.sh`, root, after the 04:17 store sweep has compacted the day's sessions): every `world-console_*` named volume is staged read-only as a plain tar (borg compresses; plain tars dedup across nights), then ONE borg archive carries the staged tars + `/srv/worldconsole/store` + the box-local gitignored state — `consents.md`, `.env`, `gateway-state/`, `caddy/friends/`, `compose.override.yaml`, `first-use/` — onto the **Hetzner Storage Box** (BX11 Falkenstein, cross-provider per R18; at-purchase facts 06 §2026-08-09) at `ssh://u648152@u648152.your-storagebox.de:23/./borg/worldconsole`. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir (R11), never inside any volume, so no backup can contain it.
 
-```bash
-# per named volume, e.g. data-alice, sessions-alice, caddy-data:
-docker run --rm -v data-alice:/v:ro -v /backup/staging:/out world-console:latest \
-  tar czf /out/data-alice.tar.gz -C /v .
-# then borg create onto the Storage Box; restore test = tar back into a
-# scratch volume and boot a scratch container against it (exit gate: proven
-# once before the first friend, again per the stage-2 gates)
-```
+Custody: the box's dedicated backup key `/root/.ssh/storagebox_ed25519` opens the Storage Box — its pubkey was pasted at order, so the lane has been keys-only from the first minute; the Storage Box host keys are pinned in root's `known_hosts`, verified against Hetzner's published fingerprints (2026-08-10); the box password rests in the password manager, never typed into any terminal. The repo is `repokey-blake2`: the passphrase sits root-600 at `/root/worldconsole-borg.pass`, and its recovery copy lives OFF-box in the password manager — read it yourself, off-transcript: `ssh -i ~/.ssh/worldconsole root@152.53.51.13 cat /root/worldconsole-borg.pass`. Box + passphrase from the manager = full restore anywhere; the `.env` (org key) and `gateway-state/` ride inside the encrypted repo on purpose — disaster recovery needs them.
 
-The central session store (R13's shipper, its own round) backs up separately — it is the research record, not a play volume. **Constraint from §deletion, binding on this item's build:** borg retention stays ≤ 28 days, so an erased player ages out of every backup inside the month the privacy note promises — deletion-from-backup by construction, never by hand-editing archives.
+**The month promise (§deletion's binding constraint):** `borg prune --keep-within 28d` + `borg compact` every night — an erased player ages out of every archive inside the month the privacy note promises, never by hand-editing archives; Storage-Box automated snapshots stay **OFF** (06 §2026-08-09) so no layer outlives the prune. Install on the box: `apt install borgbackup`, then `cp deploy/host/systemd/worldconsole-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-backup.timer`.
+
+The restore test — extract the latest archive, tar a data volume back into a scratch volume, boot a scratch container against it, prove a chronicle actually reads — is the exit gate: proven once before the first friend, again per the stage-2 gates.
 
 ## Deletion (02 item 9's tail, R13 — "we delete your sessions within a month")
 

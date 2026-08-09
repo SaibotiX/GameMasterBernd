@@ -1,0 +1,10 @@
+# 02 item 13's nightly borg lane — runbook §Backups.
+# Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
+[Unit]
+Description=World Console nightly backup (volumes + store + box-local state to the Storage Box)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/deploy/world-console/deploy/host/backup.sh
