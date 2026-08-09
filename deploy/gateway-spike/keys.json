@@ -1,0 +1,4 @@
+{
+	"wc-spike-good": { "player": "spike-good", "budgetMicro": 200000 },
+	"wc-spike-broke": { "player": "spike-broke", "budgetMicro": 50 }
+}

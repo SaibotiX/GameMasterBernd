@@ -1,0 +1,31 @@
+# Candidate A: LiteLLM — and the Postgres its virtual keys REQUIRE (their docs:
+# "Need a postgres database"; there is no config-only key store). That pairing
+# is itself a finding the shape decision weighs: two more services on a 4 GB
+# box that already carries the friends. Everything binds to 127.0.0.1.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: spike
+      POSTGRES_DB: litellm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      DATABASE_URL: postgresql://litellm:spike@db:5432/litellm
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-spike-master}
+      ANTHROPIC_ORG_KEY: ${ANTHROPIC_ORG_KEY}

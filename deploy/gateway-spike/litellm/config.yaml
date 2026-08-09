@@ -1,0 +1,14 @@
+# The house lane serves exactly the models the lane prices — default-deny by
+# omission, same posture as own-proxy.mjs's price table.
+model_list:
+  - model_name: claude-haiku-4-5
+    litellm_params:
+      model: anthropic/claude-haiku-4-5
+      api_key: os.environ/ANTHROPIC_ORG_KEY
+  - model_name: claude-sonnet-5
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+      api_key: os.environ/ANTHROPIC_ORG_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
