@@ -292,6 +292,36 @@ ws.on("error",()=>process.exit(1));')" \
 grep -q RESUMED <<<"$RESUME_OUT" \
 	|| { echo "FAIL: the woken console did not resume the sitting"; echo "$RESUME_OUT"; exit 1; }
 
+echo "=== reconciliation: the two meters agree, and a lie is caught (R12/R6) ==="
+# The first receipt for reconcile.sh, fully fabricated: a gateway ledger row
+# and a pi cost stamp that MATCH (4520 micro vs usage.cost.total 0.004520),
+# then a ledger row for a ghost with no sessions volume — the honest day
+# passes, the lie exits red. NTFY_TOPIC is forced empty: tests never page.
+RECON_DAY="$(date -u +%F)"
+cat >"$GATEWAY_STATE/recon-ledger.jsonl" <<RECON
+{"ts":"${RECON_DAY}T10:00:00.000Z","key":"wc-local-good","player":"test","model":"claude-haiku-4-5","usage":{},"costMicro":4520}
+RECON
+compose exec -T wc-test sh <<FIXTURE
+set -e
+SDIR=/home/player/.pi/agent/sessions/--home-player-game--
+mkdir -p "\$SDIR"
+cat >"\$SDIR/${RECON_DAY}T10-00-00_0198dddd-eeee-7fff-8aaa-bbbb22223333.jsonl" <<'SESSION'
+{"type":"session","version":3,"id":"0198dddd-eeee-7fff-8aaa-bbbb22223333","timestamp":"${RECON_DAY}T10:00:00.000Z","cwd":"/home/player/game"}
+{"type":"message","id":"bbbb0001","parentId":null,"timestamp":"${RECON_DAY}T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"a costed turn"}],"model":"claude-haiku-4-5","provider":"anthropic","usage":{"input":14,"output":349,"cacheRead":0,"cacheWrite":0,"totalTokens":363,"cost":{"input":0.000014,"output":0.001745,"cacheRead":0,"cacheWrite":0,"total":0.004520}},"timestamp":"${RECON_DAY}T10:00:05.000Z"}}
+SESSION
+FIXTURE
+RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl")" \
+	|| { echo "FAIL: matching meters reconciled red"; echo "$RECON_OUT"; exit 1; }
+grep -q "test: match" <<<"$RECON_OUT" \
+	|| { echo "FAIL: no match verdict"; echo "$RECON_OUT"; exit 1; }
+echo "$RECON_OUT" | tail -1
+echo '{"ts":"'"$RECON_DAY"'T11:00:00.000Z","key":"wc-ghost","player":"ghost","model":"claude-haiku-4-5","usage":{},"costMicro":999000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
+if RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl" 2>&1)"; then
+	echo "FAIL: a ledger row with no session counterpart passed"; echo "$RECON_OUT"; exit 1
+fi
+grep -q "ghost: MISMATCH" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the ghost was not called out"; echo "$RECON_OUT"; exit 1; }
+
 echo "=== a tampered manifest is refused loudly ==="
 SID2=0198cccc-dddd-7eee-8fff-000011112222
 S2="$WC_TEST_STORE/staging/test/$SID2"

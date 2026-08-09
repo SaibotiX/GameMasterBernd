@@ -1,0 +1,11 @@
+# R12/R6's nightly reconciliation — the gateway's ledger checked against
+# pi's own per-turn cost stamps; a mismatch is a red unit and a ntfy ping.
+# Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
+[Unit]
+Description=World Console ledger reconciliation (gateway meter vs pi cost stamps)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/deploy/world-console/deploy/host/reconcile.sh
