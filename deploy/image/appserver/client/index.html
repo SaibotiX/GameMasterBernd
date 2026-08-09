@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- The friend's page (08). Every URL is RELATIVE on purpose: the page
+     lives behind Caddy's /f/<token>/ prefix strip, so ./assets/… and
+     ./ws/… resolve under the door while the server sees clean paths. -->
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<!-- The door's path is the secret: never let a link carry it out. -->
+	<meta name="referrer" content="no-referrer" />
+	<title>World Console</title>
+	<link rel="stylesheet" href="./assets/vendor/xterm.css" />
+	<link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+	<main id="page">
+		<section id="terminal-pane">
+			<div id="terminal"></div>
+			<div id="overlay" hidden><span id="overlay-text"></span></div>
+		</section>
+	</main>
+	<script src="./assets/vendor/xterm.js"></script>
+	<script src="./assets/vendor/addon-fit.js"></script>
+	<script src="./assets/vendor/addon-webgl.js"></script>
+	<script src="./assets/vendor/marked.js"></script>
+	<script src="./assets/vendor/purify.js"></script>
+	<script src="./assets/app.js"></script>
+</body>
+</html>

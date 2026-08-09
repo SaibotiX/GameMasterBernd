@@ -7,8 +7,9 @@ The buildable half of [02-friends-web-service.md](../research/roadmap/02-friends
 ```bash
 deploy/image/build.sh          # image from a git-archive whitelist of HEAD
 deploy/image/verify.sh         # in-container: unit gate + three lenses live,
-                               # pseudo-TTY probe, ttyd WebSocket probe —
-                               # all in the production read-only shape
+                               # pseudo-TTY probe, app-server probe (page,
+                               # health, /ws/term stream), ttyd-fallback
+                               # probe — all in the production read-only shape
 deploy/host/localcheck.sh      # the whole door, production-shaped: TLS,
                                # secret path, basic auth, proxied WebSocket,
                                # hardened friend container

@@ -20,6 +20,8 @@ The live truth is the code — re-derive it any day with
 | 2 · public export, internal contract — **the known soft spots** | `FooterComponent` fed a hand-built `sessionLike` (the 0.84.0 wound; degrade guard active — drift shows a ⚠ marker, play continues) | `extension/index.ts` §footer | **tty-probe** + the marker itself |
 | 2 | `ctx.ui.setWidget` factory contract (`(ui, theme) => Component` — a bare object poisons tool results; learned in playtest 4) | `extension/index.ts` widgets | tty-probe + hard-wrapped widget paths |
 | 3 · external process | RPC line protocol — substring matches on event names, `message_end` authoritative, never the deltas (which is why 0.84.0's `message_update` slimming cost nothing) | `extension/test/integration.ts`, `aitester/tools/*` | integration + wrapper-smoke |
+| 3 | the app server spawns `pi` as a full-screen TUI in a PTY (node-pty, `encoding:null`), leans on repaint-on-SIGWINCH for client reattach, and the web probes assert the footer's `mood:` mark through the stream | `deploy/image/appserver/server.js`, `deploy/image/appserver-probe.mjs`, `deploy/image/ws-probe.mjs` | deploy verify legs 3–4 (`deploy/image/verify.sh`) |
+| 2 | the image pre-bakes `fdfind`/`rg` because pi's tools-manager tries `systemBinaryNames` on PATH before downloading from GitHub (undocumented internal; if the names drift, boots silently stall on downloads again) | `deploy/image/Dockerfile` | verify leg 2 going slow/red is the tell |
 
 A new coupling to pi — any import past the documented API, any hand-built object handed to a pi class — gets a row here in the same commit that introduces it.
 
