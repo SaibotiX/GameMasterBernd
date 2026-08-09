@@ -135,12 +135,20 @@ function models(): Promise<PiModels> {
  * VIRTUAL key, valid nowhere else (aimed at api.anthropic.com it earns a 401
  * and the fate planner dies silently). Unset (or the compose empty-string
  * case), the model passes untouched and laneless play never notices.
+ *
+ * Side calls ride the gateway's /side prefix — the marker the 2026-08-09
+ * ruling adopted: same lane, same caps, but the ledger row is tagged, because
+ * side spend never lands in pi's own cost stamps and reconcile subtracts
+ * tagged rows before comparing the two meters. pi's own turns (the lane
+ * extension) stay unprefixed on purpose.
  */
 export function laneModel<T extends { provider: string; baseUrl?: string }>(
 	model: T,
 	gatewayUrl: string | undefined,
 ): T {
-	return gatewayUrl && model.provider === "anthropic" ? { ...model, baseUrl: gatewayUrl } : model;
+	return gatewayUrl && model.provider === "anthropic"
+		? { ...model, baseUrl: `${gatewayUrl.replace(/\/+$/, "")}/side` }
+		: model;
 }
 
 async function complete(

@@ -138,13 +138,13 @@ function checkTripwires(day, month) {
 }
 checkTripwires(nowDay(), nowMonth());
 
-function record(key, player, model, usage) {
+function record(key, player, model, usage, side = false) {
 	const cost = costMicro(model, usage);
 	const ts = new Date().toISOString();
 	bucket(key, ts, cost);
 	fs.appendFileSync(
 		LEDGER_FILE,
-		JSON.stringify({ ts, key, player, model, usage, costMicro: cost }) + "\n",
+		JSON.stringify({ ts, key, player, model, usage, costMicro: cost, ...(side ? { side: true } : {}) }) + "\n",
 	);
 	checkTripwires(ts.slice(0, 10), ts.slice(0, 7));
 }
@@ -220,7 +220,15 @@ const server = http.createServer(async (req, res) => {
 		);
 		return;
 	}
-	if (req.method !== "POST" || !req.url.startsWith("/v1/messages")) {
+	// Side calls (gmchat's GM table, chronicler, fate planner, judges,
+	// crafting) arrive under the /side prefix — same lane, same caps and
+	// tripwires, but their ledger rows are TAGGED: side spend never lands in
+	// pi's own cost stamps, and reconcile subtracts tagged rows before
+	// comparing the two meters (the 2026-08-09 ruling on roadmap 09's
+	// house-lane question).
+	const side = req.url.startsWith("/side/");
+	const url = side ? req.url.slice("/side".length) : req.url;
+	if (req.method !== "POST" || !url.startsWith("/v1/messages")) {
 		refuse(res, 404, "the house gateway speaks only POST /v1/messages");
 		return;
 	}
@@ -293,7 +301,7 @@ const server = http.createServer(async (req, res) => {
 		if (upstream.ok) {
 			try {
 				const msg = JSON.parse(text);
-				if (msg.usage) record(virtual, grant.player, model, msg.usage);
+				if (msg.usage) record(virtual, grant.player, model, msg.usage, side);
 			} catch {}
 		}
 		res.end(text);
@@ -328,7 +336,7 @@ const server = http.createServer(async (req, res) => {
 		console.error(`gateway: stream broke mid-flight: ${e.message}`);
 	}
 	res.end();
-	if (upstream.ok && usage.input_tokens != null) record(virtual, grant.player, model, usage);
+	if (upstream.ok && usage.input_tokens != null) record(virtual, grant.player, model, usage, side);
 });
 
 server.listen(PORT, BIND, () => {

@@ -176,6 +176,28 @@ fetch("http://127.0.0.1:4100/healthz").then((r) => r.json()).then((h) => {
 	console.log("meter:", JSON.stringify(h.keys));
 });' || { echo "FAIL: the gateway meter recorded nothing"; exit 1; }
 
+echo "=== the house lane: a side call lands TAGGED in the ledger (2026-08-09 ruling) ==="
+# gmchat's side voices ride the /side prefix (laneModel); the gateway meters
+# them under the same caps but tags the row — reconcile subtracts the tag.
+compose exec -T wc-test node -e '
+(async () => {
+	const r = await fetch(process.env.WC_GATEWAY_URL + "/side/v1/messages", {
+		method: "POST",
+		headers: { "content-type": "application/json", "anthropic-version": "2023-06-01",
+			"x-api-key": process.env.ANTHROPIC_API_KEY },
+		body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 32,
+			messages: [{ role: "user", content: "a side voice" }] }),
+	});
+	const j = await r.json();
+	if (r.status !== 200 || !(j.usage?.output_tokens > 0)) { console.error("side call refused:", r.status, JSON.stringify(j)); process.exit(1); }
+	console.log("side call ok");
+})();' || { echo "FAIL: the side call did not flow through /side"; exit 1; }
+LAST_ROW="$(tail -1 "$GATEWAY_STATE/usage.jsonl")"
+grep -q '"side":true' <<<"$LAST_ROW" \
+	|| { echo "FAIL: the side call's ledger row is not tagged"; echo "$LAST_ROW"; exit 1; }
+[ "$(grep -c '"side":true' "$GATEWAY_STATE/usage.jsonl")" = "1" ] \
+	|| { echo "FAIL: plain turns were tagged side"; exit 1; }
+
 echo "=== the house lane: /grant shows a friend their own window only ==="
 compose exec -T wc-test node -e '
 (async () => {
@@ -334,8 +356,11 @@ echo "=== reconciliation: the two meters agree, and a lie is caught (R12/R6) ===
 # then a ledger row for a ghost with no sessions volume — the honest day
 # passes, the lie exits red. NTFY_TOPIC is forced empty: tests never page.
 RECON_DAY="$(date -u +%F)"
+# The side row (999000 micro, tagged) would blow the 5% tolerance ~20× over
+# if it were counted — "test: match" below is the subtraction's receipt.
 cat >"$GATEWAY_STATE/recon-ledger.jsonl" <<RECON
 {"ts":"${RECON_DAY}T10:00:00.000Z","key":"wc-local-good","player":"test","model":"claude-haiku-4-5","usage":{},"costMicro":4520}
+{"ts":"${RECON_DAY}T10:05:00.000Z","key":"wc-local-good","player":"test","model":"claude-haiku-4-5","usage":{},"costMicro":999000,"side":true}
 RECON
 compose exec -T wc-test sh <<FIXTURE
 set -e
@@ -350,6 +375,8 @@ RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATE
 	|| { echo "FAIL: matching meters reconciled red"; echo "$RECON_OUT"; exit 1; }
 grep -q "test: match" <<<"$RECON_OUT" \
 	|| { echo "FAIL: no match verdict"; echo "$RECON_OUT"; exit 1; }
+grep -q "side, subtracted" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the side sum was not named and subtracted"; echo "$RECON_OUT"; exit 1; }
 echo "$RECON_OUT" | tail -1
 echo '{"ts":"'"$RECON_DAY"'T11:00:00.000Z","key":"wc-ghost","player":"ghost","model":"claude-haiku-4-5","usage":{},"costMicro":999000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
 if RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl" 2>&1)"; then

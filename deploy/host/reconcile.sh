@@ -37,7 +37,11 @@ done
 
 [ -f "$LEDGER" ] || { echo "reconcile: no ledger at $LEDGER — nothing to check"; exit 0; }
 
-# Phase 1: the gateway's side — per-player micro-USD for the day.
+# Phase 1: the gateway's side — per-player micro-USD for the day. Side-tagged
+# rows (gmchat's side calls through /side — the 2026-08-09 ruling) are summed
+# separately and SUBTRACTED from the comparison: they meter real spend under
+# the same caps, but pi's cost stamps never contain them, so counting them
+# would page falsely on every chat-heavy sitting.
 GW_SUMS="$(docker run --rm -v "$LEDGER:/ledger:ro" -e DAY="$DAY" world-console:latest node -e '
 	const fs = require("fs");
 	const per = {};
@@ -45,19 +49,22 @@ GW_SUMS="$(docker run --rm -v "$LEDGER:/ledger:ro" -e DAY="$DAY" world-console:l
 		if (!line) continue;
 		try {
 			const r = JSON.parse(line);
-			if (r.ts.slice(0, 10) === process.env.DAY) per[r.player] = (per[r.player] ?? 0) + r.costMicro;
+			if (r.ts.slice(0, 10) === process.env.DAY) {
+				const t = (per[r.player] ??= { turn: 0, side: 0 });
+				t[r.side ? "side" : "turn"] += r.costMicro;
+			}
 		} catch {}
 	}
-	for (const [p, m] of Object.entries(per)) console.log(p, m);')"
+	for (const [p, m] of Object.entries(per)) console.log(p, m.turn, m.side);')"
 
 [ -n "$GW_SUMS" ] || { echo "reconcile: $DAY — the ledger holds no spend; nothing to check"; exit 0; }
 
 MISMATCH=0
 REPORT=""
-while read -r PLAYER GW_MICRO; do
+while read -r PLAYER GW_MICRO SIDE_MICRO; do
 	VOL="world-console_sessions-$PLAYER"
 	if ! docker volume inspect "$VOL" >/dev/null 2>&1; then
-		REPORT+="$DAY $PLAYER: MISMATCH — ledger says ${GW_MICRO} micro but no sessions volume $VOL exists"$'\n'
+		REPORT+="$DAY $PLAYER: MISMATCH — ledger says $((GW_MICRO + SIDE_MICRO)) micro but no sessions volume $VOL exists"$'\n'
 		MISMATCH=1
 		continue
 	fi
@@ -87,10 +94,11 @@ while read -r PLAYER GW_MICRO; do
 	BIG=$(( GW_MICRO > PI_MICRO ? GW_MICRO : PI_MICRO ))
 	TOL=$(( BIG / 20 )); [ "$TOL" -lt 1000 ] && TOL=1000
 	DIFF=$(( GW_MICRO - PI_MICRO )); [ "$DIFF" -lt 0 ] && DIFF=$(( -DIFF ))
+	SIDE_NOTE=""; [ "$SIDE_MICRO" -gt 0 ] && SIDE_NOTE=" (+${SIDE_MICRO} side, subtracted)"
 	if [ "$DIFF" -le "$TOL" ]; then
-		REPORT+="$DAY $PLAYER: match — gateway ${GW_MICRO} vs pi ${PI_MICRO} micro (Δ${DIFF} ≤ ${TOL})"$'\n'
+		REPORT+="$DAY $PLAYER: match — gateway ${GW_MICRO}${SIDE_NOTE} vs pi ${PI_MICRO} micro (Δ${DIFF} ≤ ${TOL})"$'\n'
 	else
-		REPORT+="$DAY $PLAYER: MISMATCH — gateway ${GW_MICRO} vs pi ${PI_MICRO} micro (Δ${DIFF} > ${TOL})"$'\n'
+		REPORT+="$DAY $PLAYER: MISMATCH — gateway ${GW_MICRO}${SIDE_NOTE} vs pi ${PI_MICRO} micro (Δ${DIFF} > ${TOL})"$'\n'
 		MISMATCH=1
 	fi
 done <<<"$GW_SUMS"
