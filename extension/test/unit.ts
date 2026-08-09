@@ -781,6 +781,18 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.equal(gm.extractJson("no json here"), null);
 	});
 
+	ok("gmchat: laneModel routes anthropic side calls through the lane, leaves all else untouched", () => {
+		const anthropic = { provider: "anthropic", baseUrl: "https://api.anthropic.com" };
+		assert.deepEqual(gm.laneModel(anthropic, "http://gateway:8402"), {
+			provider: "anthropic",
+			baseUrl: "http://gateway:8402",
+		});
+		assert.equal(gm.laneModel(anthropic, undefined), anthropic, "laneless play untouched");
+		assert.equal(gm.laneModel(anthropic, ""), anthropic, "an empty env var means unset (the compose forwarding lesson)");
+		const foreign = { provider: "openai", baseUrl: "https://api.openai.com" };
+		assert.equal(gm.laneModel(foreign, "http://gateway:8402"), foreign, "only anthropic rides the lane");
+	});
+
 	ok("gmchat: parseGmAnswer keeps valid fixes, drops junk, degrades gracefully", () => {
 		const answer = gm.parseGmAnswer(
 			'{"say": "The record backs you.", "bind": null, "invite": false, "fixes": [' +

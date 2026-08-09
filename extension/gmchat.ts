@@ -1,9 +1,10 @@
 /**
  * The GM table: an out-of-character channel between the seeker and the game
  * engine (/gm, alias /dm). The conversation happens OUTSIDE the pi session —
- * a side pi-ai call reusing pi's own credentials (~/.pi/agent/auth.json) —
- * so by design nothing said here enters the game's LLM context or its
- * ledger. The only thing that ever crosses over is a bound TRUTH:
+ * a side pi-ai call reusing pi's own credentials (~/.pi/agent/auth.json; on
+ * the house lane the env ANTHROPIC_API_KEY virtual key, routed through
+ * WC_GATEWAY_URL like every pi request — see laneModel below) — so by design
+ * nothing said here enters the game's LLM context or its ledger. The only thing that ever crosses over is a bound TRUTH:
  *   - conviction: the table settles a disputed or new fact and the meta-GM
  *     binds it through the structured "bind" field of its reply;
  *   - decree: the player binds it directly with "/gm truth <fact>" after a
@@ -31,6 +32,7 @@ interface PiModel {
 	provider: string;
 	id: string;
 	api?: string;
+	baseUrl?: string;
 }
 type PiChatMessage =
 	| { role: "user"; content: string; timestamp: number }
@@ -126,6 +128,21 @@ function models(): Promise<PiModels> {
 	return modelsPromise;
 }
 
+/**
+ * The house lane, side-call half: the same law .pi/extensions/gateway.ts sets
+ * for pi's own requests. When WC_GATEWAY_URL is set, an anthropic side call
+ * leaves through the gateway — the container's env key is the per-friend
+ * VIRTUAL key, valid nowhere else (aimed at api.anthropic.com it earns a 401
+ * and the fate planner dies silently). Unset (or the compose empty-string
+ * case), the model passes untouched and laneless play never notices.
+ */
+export function laneModel<T extends { provider: string; baseUrl?: string }>(
+	model: T,
+	gatewayUrl: string | undefined,
+): T {
+	return gatewayUrl && model.provider === "anthropic" ? { ...model, baseUrl: gatewayUrl } : model;
+}
+
 async function complete(
 	modelRef: { provider: string; id: string },
 	systemPrompt: string,
@@ -137,7 +154,7 @@ async function complete(
 		throw new Error(`model ${modelRef.provider}/${modelRef.id} is not in pi-ai's catalog`);
 	}
 	// pi-ai never throws on model errors; it returns a message carrying errorMessage.
-	const response = await catalog.complete(model, { systemPrompt, messages });
+	const response = await catalog.complete(laneModel(model, process.env.WC_GATEWAY_URL), { systemPrompt, messages });
 	if (response.errorMessage || response.stopReason === "error") {
 		throw new Error(response.errorMessage ?? "the model call failed");
 	}
