@@ -23,11 +23,12 @@ export function fitArt(art: string[], width: number): string[] {
 	return art;
 }
 
-/** The quiet opener under the title — the mood and the first commands a
- * seeker needs (the friend intro deliberately names none; this line is
- * where a player first learns the console answers to /). */
-export function bannerHint(mood: string): string {
-	return `mood: ${mood} · /quest opens the board · typing / lists every command`;
+/** The one hint under the world's face (refined at the seen-gate, R30):
+ * the friend intro deliberately names no commands, so this line is where
+ * a player first learns the console answers to / — and nothing more; the
+ * world is theirs to explore. */
+export function bannerHint(): string {
+	return "typing / lists every command";
 }
 
 // ---- the command surface (R30) -------------------------------------------

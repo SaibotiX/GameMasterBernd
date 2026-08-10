@@ -1329,20 +1329,25 @@ ok("asGameEvent: non-custom entries → null", () => {
 		assert.deepEqual(fitArt([], 80), []);
 	});
 
-	ok("player: the banner hint teaches the first commands", () => {
-		const hint = bannerHint("neutral");
-		assert.match(hint, /mood: neutral/);
-		assert.match(hint, /\/quest/);
-		assert.match(hint, /\//);
+	ok("player: the banner hint names / and nothing more (seen-gate ruling)", () => {
+		const hint = bannerHint();
+		assert.match(hint, /typing \/ lists every command/);
+		assert.ok(!hint.includes("mood"), "mood lives in the footer, not the hint");
+		assert.ok(!hint.includes("/quest"), "the world is theirs to explore");
 	});
 
-	ok("config: per-world banner art loads whole; a world without art gets none", () => {
+	ok("config: per-world banner art and intro load; absences stay quiet", () => {
 		const dragon = loadConfig(BASE, "dragon-realm");
 		assert.ok(dragon.world.banner.length > 0, "dragon-realm ships banner art");
 		assert.ok(dragon.world.banner.every((line: string) => !line.includes("\r") && line === line.trimEnd()));
 		assert.ok(Math.max(...dragon.world.banner.map((line: string) => line.length)) <= 58);
 		const frontier = loadConfig(BASE, "star-frontier");
 		assert.deepEqual(frontier.world.banner, [], "no banner file → the mark takes over");
+		// Both worlds wear a face; the face describes, never instructs.
+		for (const world of [dragon.world, frontier.world]) {
+			assert.ok(world.intro.length > 0, `${world.id} ships an intro`);
+			assert.ok(!/you should/i.test(world.intro), "the intro never instructs");
+		}
 	});
 
 	ok("player: the submit gate refuses the workshop, lets the game and the unknown flow", () => {

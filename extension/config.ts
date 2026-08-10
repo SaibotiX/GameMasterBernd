@@ -23,6 +23,10 @@ export interface World {
 	 * frontmatter; leading spaces are the drawing). [] when the file is
 	 * absent: player mode then shows the World Console mark (R30). */
 	banner: string[];
+	/** The world introducing itself (worlds/<id>.intro.md): a short
+	 * descriptive face — its nature and laws, never instructions — shown
+	 * under the player banner's title (R30). "" when the file is absent. */
+	intro: string;
 }
 
 export interface Mood {
@@ -87,6 +91,8 @@ function loadWorld(dir: string, id: string): World {
 	const banner = existsSync(bannerFile)
 		? readFileSync(bannerFile, "utf8").replace(/\s+$/, "").split("\n").map((line) => line.replace(/\r$/, "").trimEnd())
 		: [];
+	const introFile = join(dir, `${id}.intro.md`);
+	const intro = existsSync(introFile) ? parseFrontmatter(readFileSync(introFile, "utf8")).body : "";
 	return {
 		id,
 		title: meta.title ?? id,
@@ -96,6 +102,7 @@ function loadWorld(dir: string, id: string): World {
 		body,
 		laws,
 		banner,
+		intro,
 	};
 }
 

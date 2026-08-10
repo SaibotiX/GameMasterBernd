@@ -76,7 +76,7 @@ import {
 import { searchPicture, searchVideo } from "./mediasearch.ts";
 import { assembleSystemPrompt } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
-import { gridBox, type GridCell } from "./ui.ts";
+import { gridBox, wrapText, type GridCell } from "./ui.ts";
 import {
 	addItem,
 	chroniclerCreed,
@@ -521,7 +521,17 @@ export default function (pi: ExtensionAPI) {
 					for (const line of art) lines.push(theme.fg("accent", line));
 					if (art.length > 0) lines.push("");
 					lines.push(truncateToWidth(theme.fg("accent", config.world.title), width, theme.fg("dim", "...")));
-					lines.push(truncateToWidth(theme.fg("dim", bannerHint(st.mood)), width, theme.fg("dim", "...")));
+					// The world's face (worlds/<id>.intro.md): descriptive, short,
+					// never instructions — the world is the seeker's to explore.
+					if (config.world.intro) {
+						lines.push("");
+						const measure = Math.max(20, Math.min(width, 72));
+						for (const row of wrapText(config.world.intro.replace(/\s+/g, " "), measure)) {
+							lines.push(theme.fg("dim", row));
+						}
+					}
+					lines.push("");
+					lines.push(truncateToWidth(theme.fg("dim", bannerHint()), width, theme.fg("dim", "...")));
 					lines.push("");
 					return lines;
 				} catch {
