@@ -17,7 +17,7 @@ Created 2026-08-08 (decision R25). Two kinds of no live here: **On ice** — dec
 The multi-provider login: own-API-key and OpenRouter-PKCE doors, custody in the player's browser vault (IndexedDB ciphertext, WebCrypto device key, passkey-PRF/Argon2id wrap, tmpfs injection, rotation sync-back, structural wipe) — R11's whole door-and-vault architecture.
 Prompted by: R11 designed it 2026-08-05; the maintainer iced it 2026-08-08 — the private beta serves the house lane only (R11/R12 revised).
 Why not now: two auth architectures for an invited-friends audience is double the build and support surface for zero added players — the house lane already onboards everyone, and the vault plus door-table upkeep were the checklist's heaviest items.
-**Revive when:** a friend asks to play on their own key or model choice · house-lane spend strains the monthly cap · stage-2 auth/billing design re-runs the door table (R5/R11's standing trigger) — whichever fires first; R11 revives as the prepared shape, not from scratch.
+**Revive when:** a friend asks to play on their own key or model choice · house-lane spend strains the monthly cap · stage-2 auth/billing design re-runs the door table (R5/R11's standing trigger) — whichever fires first; R11 revives as the prepared shape, not from scratch. *(2026-08-10: revival also restores `/limits` to the player command surface — R30 gates it off the house lane, where the gateway strips its headers anyway.)*
 
 ### Automated guardrail-freshness runs · infrastructure · iced 2026-08-08 · recurrence 0
 Cron- or hook-driven `/audit-guardrails` sweeps, firing without the maintainer invoking them.
