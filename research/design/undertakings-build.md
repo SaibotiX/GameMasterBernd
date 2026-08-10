@@ -366,6 +366,23 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       keeps standing tales whole either way). The next session gives it the
       R25 verdict; if built it takes an R30 allowlist row + gate/popup/drift
       test updates, and each world's banner face already stands ready.
+      **Judged 2026-08-10 (R25): implement, enhancement** — intent clear (the
+      maintainer named the shape), no law conflict (the stamp law is the
+      picker's floor, not its obstacle: a choice binds only the next /new),
+      and the need is live, not speculative: both worlds ship in every seat's
+      image, yet star-frontier is unreachable except by the operator's hand —
+      dead cargo the day friends #1–2 minted onto the default. First raise,
+      nothing in the icebox. Proposed shape: `/worlds` bare lists id · title ·
+      one-line face and names the seat's current binding; `/worlds <id>`
+      persists the choice IN the data volume (a choice that lived only in
+      process memory would silently revert to the env seed at every reaper
+      wake), precedence choice-file > env > default; a standing tale is never
+      touched and the command says so in-register. One list edit widens both
+      R30 enforcement layers (popup + gate derive from PLAYER_COMMANDS);
+      tests: unit list-equality goes to sixteen, choice-file precedence unit,
+      tty-probe player leg sees the popup row. Blocked on the R30 allowlist
+      revision — the maintainer's ruling; build lands as its own round after
+      it.
 - [ ] Tests + smoke
 
 ## Decisions log
