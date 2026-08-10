@@ -22,7 +22,11 @@ const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
 const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
-const { WORLD_CONSOLE_MARK, fitArt, bannerHint } = await import(join(EXT, "player.ts"));
+const {
+	WORLD_CONSOLE_MARK, fitArt, bannerHint,
+	PI_BUILTIN_COMMANDS, HIDDEN_EXTRA_COMMANDS, PLAYER_COMMANDS,
+	playerGate, filterPlayerSuggestions,
+} = await import(join(EXT, "player.ts"));
 
 let passed = 0;
 function ok(name: string, fn: () => void) {
@@ -1339,6 +1343,54 @@ ok("asGameEvent: non-custom entries → null", () => {
 		assert.ok(Math.max(...dragon.world.banner.map((line: string) => line.length)) <= 58);
 		const frontier = loadConfig(BASE, "star-frontier");
 		assert.deepEqual(frontier.world.banner, [], "no banner file → the mark takes over");
+	});
+
+	ok("player: the submit gate refuses the workshop, lets the game and the unknown flow", () => {
+		// blocked: pi built-ins off the list, the hidden extras, the bash escape
+		for (const text of ["/model claude", "/settings", "/compact", "/limits", "/share", "/quit", "/debug", "  /MODEL x", "!ls -la", "!!rm -rf /", "!"]) {
+			assert.ok(playerGate(text) !== null, `must block: ${text}`);
+		}
+		const notice = playerGate("/model x");
+		assert.match(notice ?? "", /\/model is not at this table/);
+		assert.match(playerGate("!pwd") ?? "", /behind the curtain/);
+		// flowing: the fifteen, prose, unknown /words (the keeper deflects), lone "/"
+		for (const text of ["/quest", "/gm the footer is stale", "/pick 2 with care", "/tree", "/new", "/resume", "plain words of the tale", "/waves at the guard", "/", "a ! mid-sentence stays talk"]) {
+			assert.equal(playerGate(text), null, `must flow: ${text}`);
+		}
+	});
+
+	ok("player: the popup filters only at the command position", () => {
+		const items = [
+			{ value: "quest" }, { value: "model" }, { value: "settings" },
+			{ value: "gm" }, { value: "tree" }, { value: "limits" },
+		];
+		const atCommand = filterPlayerSuggestions(items, "/", "");
+		assert.deepEqual(atCommand.map((i) => i.value), ["quest", "gm", "tree"]);
+		assert.deepEqual(filterPlayerSuggestions(items, "/mo", "").map((i) => i.value), ["quest", "gm", "tree"], "prefix narrowing is pi's job; the fence is ours");
+		// argument position (text before the token) and paths pass untouched
+		assert.equal(filterPlayerSuggestions(items, "te", "/web ").length, items.length);
+		assert.equal(filterPlayerSuggestions(items, "/etc/hosts", "").length, items.length, "a path is not a command");
+		assert.equal(filterPlayerSuggestions(items, "/mo", "tell me about ").length, items.length);
+	});
+
+	ok("player: the block list holds pi's whole built-in set (upgrade drift turns this red)", async () => {
+		// unit.ts stays pi-runtime-free; this reads pi's command TABLE as a
+		// file, resolved through the pinned binary on PATH — the same pi the
+		// probes boot. Drift in either direction re-judges R30's lists.
+		const { execSync } = await import("node:child_process");
+		const { realpathSync } = await import("node:fs");
+		const { pathToFileURL } = await import("node:url");
+		const piBin = realpathSync(execSync("command -v pi", { encoding: "utf8" }).trim());
+		const table = join(dirname(piBin), "core", "slash-commands.js");
+		const mod = (await import(pathToFileURL(table).href)) as {
+			BUILTIN_SLASH_COMMANDS: { name: string }[];
+		};
+		const live = mod.BUILTIN_SLASH_COMMANDS.map((c) => c.name).sort();
+		assert.deepEqual(live, [...PI_BUILTIN_COMMANDS].sort(), "pi's built-in set moved — re-judge R30's block and allow lists");
+		for (const name of PLAYER_COMMANDS.filter((n) => PI_BUILTIN_COMMANDS.includes(n))) {
+			assert.ok(live.includes(name), `allowlisted built-in vanished from pi: /${name}`);
+		}
+		assert.ok(HIDDEN_EXTRA_COMMANDS.includes("limits"), "the icebox rider expects /limits named here");
 	});
 }
 

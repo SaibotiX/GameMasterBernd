@@ -27,13 +27,20 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FooterComponent, SettingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { CustomEditor, FooterComponent, SettingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
-import { bannerHint, fitArt, WORLD_CONSOLE_MARK } from "./player.ts";
+import {
+	bannerHint,
+	filterPlayerSuggestions,
+	fitArt,
+	PLAYER_BLOCKED_ACTIONS,
+	playerGate,
+	WORLD_CONSOLE_MARK,
+} from "./player.ts";
 import {
 	gmAsk,
 	gmChronicle,
@@ -522,6 +529,80 @@ export default function (pi: ExtensionAPI) {
 				}
 			},
 		}));
+	}
+
+	// ---- the player command surface (R30) ---------------------------------
+	// Two layers, because a filtered popup is theater alone: pi executes a
+	// typed built-in inside the default editor's onSubmit, before any
+	// extension event — so discovery narrows in the autocomplete and
+	// ENFORCEMENT lives at the editor's own submit.
+	/** pi assigns the default editor's onSubmit AFTER the factory returns
+	 * (setCustomEditorComponent) — an own accessor catches that assignment
+	 * and gates every submit path; a Map that refuses the workshop's keys
+	 * keeps the copied model/thinking-level/suspend handlers dead. Both are
+	 * shim-tier couplings, rowed in pi-upgrades.md. */
+	class PlayerEditor extends CustomEditor {
+		constructor(onBlocked: (notice: string) => void, ...args: ConstructorParameters<typeof CustomEditor>) {
+			super(...args);
+			let submit: ((text: string) => void) | undefined;
+			Object.defineProperty(this, "onSubmit", {
+				configurable: true,
+				get: () => submit,
+				set: (fn: ((text: string) => void) | undefined) => {
+					submit =
+						fn &&
+						((text: string) => {
+							const notice = playerGate(text);
+							if (notice) {
+								onBlocked(notice);
+								this.setText("");
+								return;
+							}
+							fn(text);
+						});
+				},
+			});
+			const filtered = new Map<string, () => void>();
+			const stockSet = Map.prototype.set.bind(filtered);
+			filtered.set = (key: string, value: () => void) => {
+				if (!PLAYER_BLOCKED_ACTIONS.has(key)) stockSet(key, value);
+				return filtered;
+			};
+			this.actionHandlers = filtered as typeof this.actionHandlers;
+		}
+	}
+
+	let playerChromeInstalled = false;
+	function installPlayerCommandChrome(ctx: ExtensionContext): void {
+		if (!PLAYER_UI || ctx.mode !== "tui" || playerChromeInstalled) return;
+		if (typeof ctx.ui.addAutocompleteProvider === "function") {
+			// Discovery: the "/" popup shows the player's fifteen; file
+			// completion (@…) stays off the player's console entirely.
+			ctx.ui.addAutocompleteProvider((current) => ({
+				triggerCharacters: current.triggerCharacters,
+				async getSuggestions(lines, cursorLine, cursorCol, options) {
+					const result = await current.getSuggestions(lines, cursorLine, cursorCol, options);
+					try {
+						if (!result) return result;
+						const line = lines[cursorLine] ?? "";
+						const beforePrefix = line.slice(0, Math.max(0, cursorCol - result.prefix.length));
+						return { ...result, items: filterPlayerSuggestions(result.items, result.prefix, beforePrefix) };
+					} catch {
+						return result; // a broken filter must never break typing
+					}
+				},
+				applyCompletion: (lines, cursorLine, cursorCol, item, prefix) =>
+					current.applyCompletion(lines, cursorLine, cursorCol, item, prefix),
+				shouldTriggerFileCompletion: () => false,
+			}));
+		}
+		if (typeof ctx.ui.setEditorComponent === "function") {
+			ctx.ui.setEditorComponent(
+				(tui, theme, keybindings) =>
+					new PlayerEditor((notice) => uiCtx?.ui.notify(notice, "warning"), tui, theme, keybindings),
+			);
+		}
+		playerChromeInstalled = true;
 	}
 
 	// ---- undertakings: shape draws, choice widget, hotkeys -----------------
@@ -1131,6 +1212,7 @@ export default function (pi: ExtensionAPI) {
 		}
 		if (!pi.getSessionName()) pi.setSessionName(`World Console — ${config.world.title}`);
 		installPlayerBanner(ctx);
+		installPlayerCommandChrome(ctx);
 		if (ctx.hasUI && (event.reason === "startup" || event.reason === "new")) {
 			if (!PLAYER_UI) {
 				ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
@@ -2212,10 +2294,16 @@ export default function (pi: ExtensionAPI) {
 				} catch {
 					// older pi without the label API — the setting alone suffices
 				}
+				// Player mode never names /settings (gated, R30): ctrl+t is the
+				// live toggle a player still holds for the current sitting.
 				ctx.ui.notify(
 					collapsed
-						? `⟡ ${chroniclerName()}'s thoughts are collapsed — persisted for every coming sitting. For THIS sitting pi applies it via /settings → "Hide thinking" (the setting file is already written).`
-						: `⟡ ${chroniclerName()}'s thoughts will show again — persisted. If /settings → "Hide thinking" is on for this sitting, toggle it there too.`,
+						? PLAYER_UI
+							? `⟡ ${chroniclerName()}'s thoughts fold away from the next sitting on — for THIS one, ctrl+t tucks them behind their label.`
+							: `⟡ ${chroniclerName()}'s thoughts are collapsed — persisted for every coming sitting. For THIS sitting pi applies it via /settings → "Hide thinking" (the setting file is already written).`
+						: PLAYER_UI
+							? `⟡ ${chroniclerName()}'s thoughts will show again from the next sitting on — ctrl+t reveals them in this one.`
+							: `⟡ ${chroniclerName()}'s thoughts will show again — persisted. If /settings → "Hide thinking" is on for this sitting, toggle it there too.`,
 					"info",
 				);
 				return;
@@ -2282,7 +2370,14 @@ export default function (pi: ExtensionAPI) {
 			].join("\n");
 			if (wantLong) {
 				if (!ctx.model) {
-					ctx.ui.notify("The chronicler needs a model — pick one with /model first.", "error");
+					// A player's console always carries a pinned model (WC_MODEL);
+					// reaching this without one is a broken console, not a choice.
+					ctx.ui.notify(
+						PLAYER_UI
+							? "The chronicler cannot reach his quill — the console is missing its voice; tell the maintainer."
+							: "The chronicler needs a model — pick one with /model first.",
+						"error",
+					);
 					return;
 				}
 				try {

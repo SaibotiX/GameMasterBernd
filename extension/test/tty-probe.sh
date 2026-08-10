@@ -14,16 +14,29 @@
 #                   research/design/pi-upgrades.md
 #
 # Run after EVERY pi upgrade and before any push that touched the TUI:
-#   bash extension/test/tty-probe.sh
+#   bash extension/test/tty-probe.sh                 # the maintainer's console
+#   WC_PLAYER_UI=1 bash extension/test/tty-probe.sh # the player's console (R30)
+#
+# The two lanes are each other's negative control: the player lane FAILS on
+# pi's stats line or a swallowed gate notice; the maintainer lane FAILS on
+# player chrome leaking in. A detector that cannot fail is decoration.
 set -u
 IA="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="$(mktemp /tmp/wc-tty-probe.XXXXXX)"
 trap 'rm -f "$OUT"' EXIT
 
+# The player lane also TYPES: a gated built-in and the bash escape, each of
+# which must draw its in-register refusal instead of executing.
+if [ "${WC_PLAYER_UI:-}" = "1" ]; then
+	keys() { sleep 8; printf '/model\r'; sleep 2; printf '!pwd\r'; sleep 2; printf '\003'; sleep 1; printf '\003'; sleep 2; }
+else
+	keys() { sleep 8; printf '\003'; sleep 1; printf '\003'; sleep 2; }
+fi
+
 (
 	cd "$IA" &&
-		{ sleep 8; printf '\003'; sleep 1; printf '\003'; sleep 2; } |
-		timeout --signal=KILL 25 script -qc "stty cols 110 rows 30; pi --no-session" "$OUT" >/dev/null 2>&1
+		keys |
+		timeout --signal=KILL 35 script -qc "stty cols 110 rows 30; pi --no-session" "$OUT" >/dev/null 2>&1
 )
 
 # Strip ANSI control sequences (CSI, OSC, charset selects) for stable greps.
@@ -39,6 +52,32 @@ if ! grep -q "mood:" <<<"$plain" && ! grep -q "the tale has ended" <<<"$plain"; 
 	echo "FAIL tty-probe: the game footer line never rendered"
 	fail=1
 fi
+if [ "${WC_PLAYER_UI:-}" = "1" ]; then
+	# The player's console (R30): no stats line, the banner's opener up, and
+	# both gate notices drawn — a swallowed notice means the gate gated nothing.
+	if grep -q "%/" <<<"$plain"; then
+		echo "FAIL tty-probe(player): pi's stats line leaked into the player footer"
+		fail=1
+	fi
+	if ! grep -q "lists every command" <<<"$plain"; then
+		echo "FAIL tty-probe(player): the banner's opener never rendered"
+		fail=1
+	fi
+	if ! grep -q "is not at this table" <<<"$plain"; then
+		echo "FAIL tty-probe(player): typed /model drew no refusal — the submit gate is not gating"
+		fail=1
+	fi
+	if ! grep -q "behind the curtain" <<<"$plain"; then
+		echo "FAIL tty-probe(player): typed !pwd drew no refusal — the bash escape is open"
+		fail=1
+	fi
+else
+	# The maintainer's console: player chrome leaking in is the mirrored failure.
+	if grep -q "lists every command\|is not at this table" <<<"$plain"; then
+		echo "FAIL tty-probe: player chrome leaked into the maintainer's console"
+		fail=1
+	fi
+fi
 if [ "$fail" -ne 0 ]; then
 	echo "--- last screen lines ---"
 	tail -25 <<<"$plain"
@@ -49,7 +88,9 @@ if grep -q "footer API drift" <<<"$plain"; then
 	grep "footer API drift" <<<"$plain" | head -2
 	exit 2
 fi
-if grep -q "%/" <<<"$plain"; then
+if [ "${WC_PLAYER_UI:-}" = "1" ]; then
+	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn"
+elif grep -q "%/" <<<"$plain"; then
 	echo "ok  tty-probe: boot clean — stock stats line and game line render"
 else
 	echo "ok  tty-probe: boot clean — game line renders (stats line not spotted; eyeball manually if unexpected)"
