@@ -129,6 +129,10 @@ const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "age
 /** Extension settings that survive sessions and worlds (thoughts collapse).
  * WORLD_CONSOLE_SETTINGS_FILE overrides for tests (like WORLD_CONSOLE_DATA_DIR). */
 const WC_SETTINGS_FILE = process.env.WORLD_CONSOLE_SETTINGS_FILE || join(AGENT_DIR, "world-console.json");
+/** Player mode (R30): the console wears the world, not the workshop — the
+ * friend image bakes WC_PLAYER_UI=1; the maintainer's play never sets it.
+ * `WC_PLAYER_UI=1 pi` previews the player's console anywhere. */
+const PLAYER_UI = process.env.WC_PLAYER_UI === "1";
 const SEARCH_KINDS = ["text", "picture", "video"] as const;
 const KIND_BY_TOOL: Record<string, string> = {
 	find_text: "text",
@@ -399,6 +403,21 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			requestFooterRender = () => tui.requestRender();
 			tuiRef = tui as unknown as { invalidate?(): void; requestRender?(): void };
+			// Player mode (R30): the game line alone — wounds/level/mood stay
+			// public law (F5), the workshop's meters go dark. This path never
+			// constructs the stock FooterComponent, so the shim seam below has
+			// no drift surface for a friend's sitting.
+			if (PLAYER_UI) {
+				return {
+					invalidate() {},
+					dispose() {
+						requestFooterRender = undefined;
+					},
+					render(width: number): string[] {
+						return [truncateToWidth(theme.fg("dim", gameFooterLine()), width, theme.fg("dim", "..."))];
+					},
+				};
+			}
 			// The stock footer (pi 0.84.0) reads state.model/state.thinkingLevel,
 			// sessionManager (entries/cwd/session name), getContextUsage() and
 			// modelRuntime.isUsingSubscription() — all reachable through the
@@ -1077,6 +1096,11 @@ export default function (pi: ExtensionAPI) {
 		updateFooter(ctx);
 		updateWidgets(ctx);
 		installChoiceHotkeys(ctx);
+		// Player mode: the streaming row speaks in the keeper's voice, not the
+		// workshop's ("working…"). Re-set each start — the voice is the world's.
+		if (PLAYER_UI && typeof ctx.ui.setWorkingMessage === "function") {
+			ctx.ui.setWorkingMessage(`${chroniclerName()} ponders …`);
+		}
 		if (!pi.getSessionName()) pi.setSessionName(`World Console — ${config.world.title}`);
 		if (ctx.hasUI && (event.reason === "startup" || event.reason === "new")) {
 			ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
