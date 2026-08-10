@@ -17,7 +17,9 @@ if [ ! -f "$AGENT/trust.json" ]; then
 fi
 
 if [ ! -f "$AGENT/settings.json" ]; then
-	printf '{\n  "lastChangelogVersion": "%s",\n  "theme": "dark"\n}\n' "${PI_VERSION:-0}" >"$AGENT/settings.json"
+	# quietStartup (R30): the [Context]/[Extensions] listings never greet a
+	# friend — the player banner replaces pi's header, this quiets the rest.
+	printf '{\n  "lastChangelogVersion": "%s",\n  "theme": "dark",\n  "quietStartup": true\n}\n' "${PI_VERSION:-0}" >"$AGENT/settings.json"
 fi
 
 # The data volume mounts here; first boot on a fresh volume needs the dir tree

@@ -56,6 +56,16 @@ ENV HOME=/home/player \
     LANG=C.UTF-8 \
     TERM=xterm-256color
 
+# Player mode (R30): every seat this image serves is a friend's, so the
+# switch rides the image, not the per-friend env — the extension dresses
+# the console (game footer line, banner, the fifteen commands, the submit
+# gate), and PI_OFFLINE keeps pi's startup network quiet on top of the
+# entrypoint's changelog seed. verify leg 2 runs the repo's tty-probe in
+# this env, which makes it the PLAYER leg — gate notices asserted and all.
+ENV WC_PLAYER_UI=1 \
+    PI_OFFLINE=1 \
+    PI_SKIP_VERSION_CHECK=1
+
 # The game folder, from the whitelist archive build.sh laid into the context.
 COPY --chown=player:player game/ /home/player/game/
 
