@@ -570,3 +570,29 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
   chronicle prose · notice + meta in the served page) · live receipts on
   the public door. Eyeballs riding (R9): the site in a real browser, the
   notice at the maintainer's next sitting.
+- 2026-08-10 · The player-UI round (R30): the console wears the world, not
+  the workshop. WC_PLAYER_UI=1 (friend image env) keeps only the game
+  footer line (the stock FooterComponent never constructed on that path —
+  no drift surface), opens under the banner (per-world art or the World
+  Console mark → title → the world's face from worlds/<id>.intro.md →
+  "typing / lists every command"), speaks the working row in the keeper's
+  voice, and narrows the commands to R30's fifteen in two layers — the
+  filtered popup plus a CustomEditor submit gate (own-accessor onSubmit;
+  a refusing actionHandlers Map; ctrl+o and ctrl+t alive, model/thinking-
+  level/suspend/external dead; !/!! refused; unknown /words flow to the
+  keeper). Judgment calls: enforcement at the editor because pi dispatches
+  built-ins before any extension event (a filtered popup alone is
+  theater); ctrl+t spared at build — it is the live half of /thoughts
+  bernd, whose persisted setting pi applies only from the next sitting
+  (dated into R30); the banner face refined at the seen-gate to the
+  maintainer's own proposition — intro instead of mood + /quest, the
+  world theirs to explore. Verified: unit 81/81 with the pi-table drift
+  test · tty-probe both lanes (each the other's negative control; the
+  gate detectors proven by disabling the gate) · integration 30 ·
+  wrapper-smoke 9 · verify five legs green on dev AND box, leg 2 now
+  asserting the player console in-container. Live: the box rebuilt at
+  7267e84, the maintainer's test seat minted on production (consent row
+  "probe" class; door 200/401 proven) — their eyeball rides it. One
+  rider: wc-tobias still runs the pre-R30 image (recreate skipped — the
+  seat was up and possibly mid-sitting); one `docker compose up -d` in
+  deploy/host when idle moves it over, chronicles safe by construction.
