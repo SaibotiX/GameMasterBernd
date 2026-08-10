@@ -5,6 +5,9 @@
 Description=World Console ledger reconciliation (gateway meter vs pi cost stamps)
 Requires=docker.service
 After=docker.service
+# The pager (runbook §the pager): reconcile's own mismatch ping tells the
+# details; OnFailure catches the script CRASHING before it can speak.
+OnFailure=worldconsole-alert@%n.service
 
 [Service]
 Type=oneshot

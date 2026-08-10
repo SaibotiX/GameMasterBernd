@@ -4,6 +4,8 @@
 Description=World Console store sweep (seal stopped friends, verify + compact the session store)
 Requires=docker.service
 After=docker.service
+# The pager (runbook §the pager): a red sweep rings the maintainer.
+OnFailure=worldconsole-alert@%n.service
 
 [Service]
 Type=oneshot

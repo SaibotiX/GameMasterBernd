@@ -4,6 +4,10 @@
 Description=World Console nightly backup (volumes + store + box-local state to the Storage Box)
 Requires=docker.service
 After=docker.service
+# The pager (runbook §the pager): red rings the maintainer, green — this
+# being the night's last unit — is the daily heartbeat.
+OnFailure=worldconsole-alert@%n.service
+OnSuccess=worldconsole-heartbeat@%n.service
 
 [Service]
 Type=oneshot
