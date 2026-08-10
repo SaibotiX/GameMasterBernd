@@ -25,10 +25,12 @@ IA="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="$(mktemp /tmp/wc-tty-probe.XXXXXX)"
 trap 'rm -f "$OUT"' EXIT
 
-# The player lane also TYPES: a gated built-in and the bash escape, each of
-# which must draw its in-register refusal instead of executing.
+# The player lane also TYPES: a gated built-in and the bash escape (each
+# must draw its in-register refusal instead of executing), then /worlds —
+# the sixteenth command must ANSWER with its listing (a bare /worlds never
+# writes the choice file, so the probe mutates nothing).
 if [ "${WC_PLAYER_UI:-}" = "1" ]; then
-	keys() { sleep 8; printf '/model\r'; sleep 2; printf '!pwd\r'; sleep 2; printf '\003'; sleep 1; printf '\003'; sleep 2; }
+	keys() { sleep 8; printf '/model\r'; sleep 2; printf '!pwd\r'; sleep 2; printf '/worlds\r'; sleep 2; printf '\003'; sleep 1; printf '\003'; sleep 2; }
 else
 	keys() { sleep 8; printf '\003'; sleep 1; printf '\003'; sleep 2; }
 fi
@@ -71,6 +73,10 @@ if [ "${WC_PLAYER_UI:-}" = "1" ]; then
 		echo "FAIL tty-probe(player): typed !pwd drew no refusal — the bash escape is open"
 		fail=1
 	fi
+	if ! grep -q "worlds this console can open" <<<"$plain"; then
+		echo "FAIL tty-probe(player): typed /worlds drew no listing — the sixteenth command is not answering"
+		fail=1
+	fi
 else
 	# The maintainer's console: player chrome leaking in is the mirrored failure.
 	if grep -q "lists every command\|is not at this table" <<<"$plain"; then
@@ -89,7 +95,7 @@ if grep -q "footer API drift" <<<"$plain"; then
 	exit 2
 fi
 if [ "${WC_PLAYER_UI:-}" = "1" ]; then
-	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn"
+	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn, /worlds answering"
 elif grep -q "%/" <<<"$plain"; then
 	echo "ok  tty-probe: boot clean — stock stats line and game line render"
 else

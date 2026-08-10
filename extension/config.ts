@@ -73,14 +73,26 @@ export function parseFrontmatter(raw: string): { meta: Record<string, string>; b
 	return { meta, body: raw.slice(end + fence[0].length).trim() };
 }
 
+/** A world's own file is <id>.md — .laws.md and .intro.md are its annexes,
+ * .banner.txt its art; none of them are worlds of their own. */
+const isWorldFile = (f: string) => f.endsWith(".md") && !f.endsWith(".laws.md") && !f.endsWith(".intro.md");
+
+/** The ids this console can open, sorted — the /worlds listing and the
+ * choice-file validity check both read from here. */
+export function listWorldIds(appDir: string): string[] {
+	const dir = join(appDir, "config", "worlds");
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir)
+		.filter(isWorldFile)
+		.map((f) => f.replace(/\.md$/, ""))
+		.sort();
+}
+
 function loadWorld(dir: string, id: string): World {
 	const file = join(dir, `${id}.md`);
 	if (!existsSync(file)) {
 		const available = existsSync(dir)
-			? readdirSync(dir)
-					.filter((f) => f.endsWith(".md") && !f.endsWith(".laws.md"))
-					.map((f) => f.replace(/\.md$/, ""))
-					.join(", ")
+			? readdirSync(dir).filter(isWorldFile).map((f) => f.replace(/\.md$/, "")).join(", ")
 			: `(none — missing directory ${dir})`;
 		throw new Error(`unknown world "${id}" — available: ${available}`);
 	}

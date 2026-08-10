@@ -7,6 +7,8 @@
  * loader, prompt assembly, and the live MediaWiki search adapter.
  */
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,7 +20,8 @@ const {
 	rollBand, BAND_TICKS, TIERS, drawQuestShape, LEDGER_TYPE, LEGACY_MOOD_TYPE,
 	renown, drawPerilTier, drawFuseTurns, MAX_WOUNDS,
 } = await import(join(EXT, "ledger.ts"));
-const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
+const { listWorldIds, loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
+const { readWorldChoice, writeWorldChoice } = await import(join(EXT, "world.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
 const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
@@ -1358,8 +1361,8 @@ ok("asGameEvent: non-custom entries → null", () => {
 		const notice = playerGate("/model x");
 		assert.match(notice ?? "", /\/model is not at this table/);
 		assert.match(playerGate("!pwd") ?? "", /behind the curtain/);
-		// flowing: the fifteen, prose, unknown /words (the keeper deflects), lone "/"
-		for (const text of ["/quest", "/gm the footer is stale", "/pick 2 with care", "/tree", "/new", "/resume", "plain words of the tale", "/waves at the guard", "/", "a ! mid-sentence stays talk"]) {
+		// flowing: the sixteen, prose, unknown /words (the keeper deflects), lone "/"
+		for (const text of ["/quest", "/gm the footer is stale", "/pick 2 with care", "/tree", "/new", "/resume", "/worlds star-frontier", "plain words of the tale", "/waves at the guard", "/", "a ! mid-sentence stays talk"]) {
 			assert.equal(playerGate(text), null, `must flow: ${text}`);
 		}
 	});
@@ -1367,11 +1370,11 @@ ok("asGameEvent: non-custom entries → null", () => {
 	ok("player: the popup filters only at the command position", () => {
 		const items = [
 			{ value: "quest" }, { value: "model" }, { value: "settings" },
-			{ value: "gm" }, { value: "tree" }, { value: "limits" },
+			{ value: "gm" }, { value: "tree" }, { value: "limits" }, { value: "worlds" },
 		];
 		const atCommand = filterPlayerSuggestions(items, "/", "");
-		assert.deepEqual(atCommand.map((i) => i.value), ["quest", "gm", "tree"]);
-		assert.deepEqual(filterPlayerSuggestions(items, "/mo", "").map((i) => i.value), ["quest", "gm", "tree"], "prefix narrowing is pi's job; the fence is ours");
+		assert.deepEqual(atCommand.map((i) => i.value), ["quest", "gm", "tree", "worlds"]);
+		assert.deepEqual(filterPlayerSuggestions(items, "/mo", "").map((i) => i.value), ["quest", "gm", "tree", "worlds"], "prefix narrowing is pi's job; the fence is ours");
 		// argument position (text before the token) and paths pass untouched
 		assert.equal(filterPlayerSuggestions(items, "te", "/web ").length, items.length);
 		assert.equal(filterPlayerSuggestions(items, "/etc/hosts", "").length, items.length, "a path is not a command");
@@ -1396,6 +1399,23 @@ ok("asGameEvent: non-custom entries → null", () => {
 			assert.ok(live.includes(name), `allowlisted built-in vanished from pi: /${name}`);
 		}
 		assert.ok(HIDDEN_EXTRA_COMMANDS.includes("limits"), "the icebox rider expects /limits named here");
+		assert.equal(PLAYER_COMMANDS.length, 16, "R30 revised 2026-08-10: the player's sixteen");
+		assert.ok(PLAYER_COMMANDS.includes("worlds"), "the sixteenth command is /worlds");
+	});
+
+	ok("worlds: the console lists exactly the config worlds; the /worlds choice round-trips", () => {
+		assert.deepEqual(listWorldIds(BASE), ["dragon-realm", "star-frontier"], "annex files (.laws/.intro/.banner) are not worlds");
+		const dir = mkdtempSync(join(tmpdir(), "wc-choice-"));
+		try {
+			const file = join(dir, "world-choice");
+			assert.equal(readWorldChoice(file), undefined, "no file → no choice");
+			writeWorldChoice(file, "star-frontier");
+			assert.equal(readWorldChoice(file), "star-frontier");
+			writeFileSync(file, " \n");
+			assert.equal(readWorldChoice(file), undefined, "blank → no choice");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 }
 

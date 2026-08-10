@@ -15,7 +15,7 @@
  *     personaLocation).
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 export interface WorldFiles {
 	/** data/world/<worldId>/<chronicle> (or the test override). */
@@ -40,6 +40,23 @@ function ensureDir(dir: string): void {
 
 function read(file: string): string {
 	return existsSync(file) ? readFileSync(file, "utf8") : "";
+}
+
+// ---- the seat's world choice (/worlds — R30, revised 2026-08-10) ----------
+
+/** The world bound for the NEXT /new: one id in a plain file in the data
+ * volume — process memory would lose the choice at the reaper's stop.
+ * Absent or blank → no choice; whether the id still names a world is the
+ * caller's question (a removed world must cost the seat nothing but the
+ * default, never the boot). */
+export function readWorldChoice(file: string): string | undefined {
+	const id = read(file).trim();
+	return id.length > 0 ? id : undefined;
+}
+
+export function writeWorldChoice(file: string, worldId: string): void {
+	mkdirSync(dirname(file), { recursive: true });
+	writeFileSync(file, worldId + "\n", "utf8");
 }
 
 // ---- places ---------------------------------------------------------------

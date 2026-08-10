@@ -359,7 +359,7 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       PULLED FORWARD and proven in playtest 4
 - [→] Pacing fingerprints — DEFERRED: the batch reports ARE the first
       fingerprints; automate what they prove useful
-- [ ] World-picker at the console (`/worlds`: list the config worlds, bind
+- [x] World-picker at the console (`/worlds`: list the config worlds, bind
       the choice to the next /new) — RAISED by the maintainer 2026-08-10 at
       the player-UI round's close, unjudged; today a player cannot switch
       (the world rides the seat's env, operator-set at mint; the stamp law
@@ -382,7 +382,16 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       tests: unit list-equality goes to sixteen, choice-file precedence unit,
       tty-probe player leg sees the popup row. Blocked on the R30 allowlist
       revision — the maintainer's ruling; build lands as its own round after
-      it.
+      it. **Built 2026-08-10 — the ruling landed the same day** ("implement
+      /worlds as command sixteen"; R30 carries the dated revision): shape
+      exactly as proposed — data/world-choice honored only while the world
+      exists (a removed world costs the default, never the boot), flag >
+      choice > env > default at both bind points, and the bound-tale notice
+      re-cut into the house voice (player-reachable now that /worlds can
+      create the mismatch). Unit holds the sixteen, the choice round-trip
+      and listWorldIds; the probe's player lane types /worlds and expects
+      its listing (a bare /worlds writes nothing, so the probe stays
+      read-only).
 - [ ] Tests + smoke
 
 ## Decisions log

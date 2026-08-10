@@ -32,7 +32,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
-import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
+import { listWorldIds, loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
 import {
 	bannerHint,
 	filterPlayerSuggestions,
@@ -100,12 +100,14 @@ import {
 	placeExists,
 	placePage,
 	questBySlug,
+	readWorldChoice,
 	recordPersona,
 	setQuestClock,
 	setQuestStatus,
 	shelvedQuests,
 	slugify,
 	visitPlace,
+	writeWorldChoice,
 	type Quest,
 	type WorldFiles,
 } from "./world.ts";
@@ -116,6 +118,10 @@ const DOWNLOAD_DIR = join(BASE_DIR, "data", "downloads");
 /** Persistent world chronicle (places/personas/quests/items); overridable for tests. */
 const DATA_ROOT = process.env.WORLD_CONSOLE_DATA_DIR || join(BASE_DIR, "data", "world");
 const DEFAULT_WORLD = "dragon-realm";
+/** The /worlds choice (R30, revised 2026-08-10): the world the NEXT /new
+ * opens — kept beside the chronicle in the data volume so it survives the
+ * reaper's sleep, which process memory would not. */
+const WORLD_CHOICE_FILE = join(BASE_DIR, "data", "world-choice");
 const GAME_TOOLS = [
 	"find_text", "find_picture", "find_video",
 	"set_mood", "grant_redemption", "record_name",
@@ -158,10 +164,21 @@ const TICK = 2; // standard beat = 2 clock segments
 const PERIL_GRACE_TURNS = 3;
 
 export default function (pi: ExtensionAPI) {
+	// The seat's standing /worlds choice, honored only while that world still
+	// exists — an update that removes a picked world must cost the seat
+	// nothing but the default, never the boot.
+	const chosenWorld = (): string | undefined => {
+		const chosen = readWorldChoice(WORLD_CHOICE_FILE);
+		return chosen && listWorldIds(BASE_DIR).includes(chosen) ? chosen : undefined;
+	};
+	/** Where the next /new opens: the seat's own pick, else the operator's
+	 * env, else the house default (the --world flag outranks all three, but
+	 * only session_start can read it). */
+	const nextNewWorld = (): string => chosenWorld() || process.env.WORLD_CONSOLE_WORLD || DEFAULT_WORLD;
 	// Fail loudly at load time if the config tree is broken — pi then reports
 	// the extension error and stays a plain coding agent, which is clearer
 	// than a half-loaded game.
-	let worldId = process.env.WORLD_CONSOLE_WORLD || DEFAULT_WORLD;
+	let worldId = nextNewWorld();
 	let config: WorldConfig = loadConfig(BASE_DIR, worldId);
 	let st: DerivedState = derive([], config.world.defaultMood);
 	let resumedFrom: string | undefined;
@@ -586,7 +603,7 @@ export default function (pi: ExtensionAPI) {
 	function installPlayerCommandChrome(ctx: ExtensionContext): void {
 		if (!PLAYER_UI || ctx.mode !== "tui" || playerChromeInstalled) return;
 		if (typeof ctx.ui.addAutocompleteProvider === "function") {
-			// Discovery: the "/" popup shows the player's fifteen; file
+			// Discovery: the "/" popup shows the player's sixteen; file
 			// completion (@…) stays off the player's console entirely.
 			ctx.ui.addAutocompleteProvider((current) => ({
 				triggerCharacters: current.triggerCharacters,
@@ -1177,15 +1194,16 @@ export default function (pi: ExtensionAPI) {
 		wcSettings = loadWcSettings();
 
 		const flagWorld = pi.getFlag("world");
-		const requested =
-			(typeof flagWorld === "string" && flagWorld) || process.env.WORLD_CONSOLE_WORLD || DEFAULT_WORLD;
+		const requested = (typeof flagWorld === "string" && flagWorld) || nextNewWorld();
 
-		// One world per session: an existing stamp wins over --world / env.
+		// One world per session: an existing stamp wins over --world, the
+		// /worlds choice and env alike. Player-reachable since /worlds, so
+		// the notice speaks the house register.
 		const stamped = derive(ctx.sessionManager.getBranch(), "neutral").world;
 		worldId = stamped ?? requested;
 		if (stamped && stamped !== requested && ctx.hasUI) {
 			ctx.ui.notify(
-				`This session is bound to world "${stamped}" — use /new to start a session in "${requested}".`,
+				`A standing tale keeps its world ("${stamped}") — /new begins one in "${requested}".`,
 				"warning",
 			);
 		}
@@ -2158,6 +2176,60 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("persons", {
 		description: "World Console: souls of the chronicle — /persons lists them, /persons <name> shows the page",
 		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "personas"),
+	});
+
+	// /worlds — the sixteenth command (R30, revised 2026-08-10): the console's
+	// worlds listed, the choice bound for the NEXT /new. The stamp law stands
+	// untouched — session_start lets an existing stamp win — so a standing
+	// tale never changes world underfoot.
+	pi.registerCommand("worlds", {
+		description: "World Console: the worlds this console can open — /worlds lists them, /worlds <id> binds the next /new",
+		handler: async (args, ctx) => {
+			const ids = listWorldIds(BASE_DIR);
+			const asked = (args ?? "").trim().toLowerCase();
+			if (asked !== "") {
+				if (!ids.includes(asked)) {
+					ctx.ui.notify(`no world "${asked}" on this console — /worlds lists them`, "warning");
+					return;
+				}
+				try {
+					writeWorldChoice(WORLD_CHOICE_FILE, asked);
+				} catch {
+					ctx.ui.notify("the choice would not hold — the console could not write it", "error");
+					return;
+				}
+				const title = (() => {
+					try {
+						return loadConfig(BASE_DIR, asked).world.title;
+					} catch {
+						return asked;
+					}
+				})();
+				const kept = asked === worldId ? "" : ` — the tale you stand in keeps its world ("${worldId}")`;
+				ctx.ui.notify(`the next /new opens in "${title}" (${asked})${kept}`, "info");
+				return;
+			}
+			const next = nextNewWorld();
+			const lines = ids.map((id) => {
+				let title = id;
+				let face = "";
+				try {
+					const world = loadConfig(BASE_DIR, id).world;
+					title = world.title;
+					// The face's first sentence alone — the listing is a signpost,
+					// the full face belongs to the world's own banner.
+					face = world.intro.replace(/\s+/g, " ").split(/(?<=[.!?])\s/)[0] ?? "";
+				} catch {
+					face = "(this world would not open)";
+				}
+				return `${id === next ? "→" : " "} ${id} — ${title}${face ? `: ${face}` : ""}`;
+			});
+			ctx.ui.notify(
+				`⟡ worlds this console can open (${ids.length})\n${lines.join("\n")}\n\n` +
+					`A standing tale keeps its world — the arrow marks where the next /new opens. Bind it: /worlds <id>`,
+				"info",
+			);
+		},
 	});
 
 	// /record — the COMPLETE structured record beside the minimalist ledger
