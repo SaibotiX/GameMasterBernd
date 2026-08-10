@@ -359,6 +359,13 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       PULLED FORWARD and proven in playtest 4
 - [→] Pacing fingerprints — DEFERRED: the batch reports ARE the first
       fingerprints; automate what they prove useful
+- [ ] World-picker at the console (`/worlds`: list the config worlds, bind
+      the choice to the next /new) — RAISED by the maintainer 2026-08-10 at
+      the player-UI round's close, unjudged; today a player cannot switch
+      (the world rides the seat's env, operator-set at mint; the stamp law
+      keeps standing tales whole either way). The next session gives it the
+      R25 verdict; if built it takes an R30 allowlist row + gate/popup/drift
+      test updates, and each world's banner face already stands ready.
 - [ ] Tests + smoke
 
 ## Decisions log
