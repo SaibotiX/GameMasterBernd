@@ -19,6 +19,10 @@ export interface World {
 	/** The world's laws (worlds/<id>.laws.md): physics, biology, special
 	 * mechanics, hard limits, interruption palette. "" when the file is absent. */
 	laws: string;
+	/** The world's banner art (worlds/<id>.banner.txt, raw lines — no
+	 * frontmatter; leading spaces are the drawing). [] when the file is
+	 * absent: player mode then shows the World Console mark (R30). */
+	banner: string[];
 }
 
 export interface Mood {
@@ -79,6 +83,10 @@ function loadWorld(dir: string, id: string): World {
 	const { meta, body } = parseFrontmatter(readFileSync(file, "utf8"));
 	const lawsFile = join(dir, `${id}.laws.md`);
 	const laws = existsSync(lawsFile) ? parseFrontmatter(readFileSync(lawsFile, "utf8")).body : "";
+	const bannerFile = join(dir, `${id}.banner.txt`);
+	const banner = existsSync(bannerFile)
+		? readFileSync(bannerFile, "utf8").replace(/\s+$/, "").split("\n").map((line) => line.replace(/\r$/, "").trimEnd())
+		: [];
 	return {
 		id,
 		title: meta.title ?? id,
@@ -87,6 +95,7 @@ function loadWorld(dir: string, id: string): World {
 		defaultMood: meta.default_mood ?? "neutral",
 		body,
 		laws,
+		banner,
 	};
 }
 

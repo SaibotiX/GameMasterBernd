@@ -22,6 +22,7 @@ const { loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
 const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
+const { WORLD_CONSOLE_MARK, fitArt, bannerHint } = await import(join(EXT, "player.ts"));
 
 let passed = 0;
 function ok(name: string, fn: () => void) {
@@ -1311,6 +1312,33 @@ ok("asGameEvent: non-custom entries → null", () => {
 		const bare = assembleSystemPrompt(config, { state: base, engineNonce: "t", justArrived: true });
 		assert.ok(!bare.includes("STILL LACK PAGES"));
 		assert.ok(!bare.includes("1¾ · the chronicler himself"));
+	});
+}
+
+// ---- player mode (R30): banner pieces and the per-world art loader --------
+{
+	ok("player: art fits whole or not at all; the mark itself fits 80 columns", () => {
+		const artWidth = Math.max(...WORLD_CONSOLE_MARK.map((line: string) => line.length));
+		assert.ok(artWidth <= 58, `the mark must fit modest terminals (widest line ${artWidth})`);
+		assert.deepEqual(fitArt(WORLD_CONSOLE_MARK, 80), WORLD_CONSOLE_MARK);
+		assert.deepEqual(fitArt(WORLD_CONSOLE_MARK, artWidth - 1), [], "a cut letterform is breakage, not style");
+		assert.deepEqual(fitArt([], 80), []);
+	});
+
+	ok("player: the banner hint teaches the first commands", () => {
+		const hint = bannerHint("neutral");
+		assert.match(hint, /mood: neutral/);
+		assert.match(hint, /\/quest/);
+		assert.match(hint, /\//);
+	});
+
+	ok("config: per-world banner art loads whole; a world without art gets none", () => {
+		const dragon = loadConfig(BASE, "dragon-realm");
+		assert.ok(dragon.world.banner.length > 0, "dragon-realm ships banner art");
+		assert.ok(dragon.world.banner.every((line: string) => !line.includes("\r") && line === line.trimEnd()));
+		assert.ok(Math.max(...dragon.world.banner.map((line: string) => line.length)) <= 58);
+		const frontier = loadConfig(BASE, "star-frontier");
+		assert.deepEqual(frontier.world.banner, [], "no banner file → the mark takes over");
 	});
 }
 

@@ -33,6 +33,7 @@ import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { chunkText, extractKeywords, formatArchiveLine, searchArchive, type ArchiveLine } from "./archive.ts";
 import { loadConfig, moodIdsBySeverity, type WorldConfig } from "./config.ts";
+import { bannerHint, fitArt, WORLD_CONSOLE_MARK } from "./player.ts";
 import {
 	gmAsk,
 	gmChronicle,
@@ -494,6 +495,33 @@ export default function (pi: ExtensionAPI) {
 
 	function updateFooter(_ctx: ExtensionContext): void {
 		requestFooterRender?.();
+	}
+
+	// ---- the player banner (R30) ------------------------------------------
+	// Player mode replaces pi's startup header (already quiet in the friend
+	// image) with the world's own face: per-world art when config brings it,
+	// the World Console mark otherwise, then the title and the quiet opener.
+	// Values read live from closures, so a /new re-renders the current world.
+	function installPlayerBanner(ctx: ExtensionContext): void {
+		if (!PLAYER_UI || ctx.mode !== "tui" || typeof ctx.ui.setHeader !== "function") return;
+		ctx.ui.setHeader((_tui, theme) => ({
+			invalidate() {},
+			render(width: number): string[] {
+				// A broken banner must never break a boot — fall to the title.
+				try {
+					const art = fitArt(config.world.banner.length > 0 ? config.world.banner : WORLD_CONSOLE_MARK, width);
+					const lines: string[] = [""];
+					for (const line of art) lines.push(theme.fg("accent", line));
+					if (art.length > 0) lines.push("");
+					lines.push(truncateToWidth(theme.fg("accent", config.world.title), width, theme.fg("dim", "...")));
+					lines.push(truncateToWidth(theme.fg("dim", bannerHint(st.mood)), width, theme.fg("dim", "...")));
+					lines.push("");
+					return lines;
+				} catch {
+					return [config.world.title];
+				}
+			},
+		}));
 	}
 
 	// ---- undertakings: shape draws, choice widget, hotkeys -----------------
@@ -1102,8 +1130,15 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.setWorkingMessage(`${chroniclerName()} ponders …`);
 		}
 		if (!pi.getSessionName()) pi.setSessionName(`World Console — ${config.world.title}`);
+		installPlayerBanner(ctx);
 		if (ctx.hasUI && (event.reason === "startup" || event.reason === "new")) {
-			ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
+			if (!PLAYER_UI) {
+				ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
+			} else if (event.reason === "new") {
+				// The banner opens a startup; a fresh tale mid-sitting gets its
+				// own quiet line (the death footer points here: "/new").
+				ctx.ui.notify(`a fresh tale begins — ${config.world.title}`, "info");
+			}
 		}
 	});
 
