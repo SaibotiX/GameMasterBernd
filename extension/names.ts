@@ -3,13 +3,71 @@
  * (2026-08-04 round, WC-15). Pure and unit-testable like ui.ts: no pi, no fs.
  *
  * The engine cannot know which capitalized words are souls or places — the
- * KEEPER judges that (the sweep's standing line asks it to, and the sweep
- * stops offering a name after two ignored offers). So this module leans
- * toward RECALL: a spurious candidate costs one ignored line; a missed
- * Garrick is WC-15 recurring. AI batch 2's misses — Garrick, Torvin, Bernd,
- * Crossed Stones, Millbrook, Saltmere, Ashford, Blackthorn Vale, the Salt
- * Marshes — all match.
+ * KEEPER judges that (the sweep's standing line asks it to; a name REPEATED
+ * across consecutive replies without a page escalates to the engine's nudge,
+ * ruled 2026-08-17, and after two quiet offers or one nudge the quill rests).
+ * So this module leans toward RECALL: a spurious candidate costs one ignored
+ * line; a missed Garrick is WC-15 recurring. AI batch 2's misses — Garrick,
+ * Torvin, Bernd, Crossed Stones, Millbrook, Saltmere, Ashford, Blackthorn
+ * Vale, the Salt Marshes — all match, as do the first human batch's (Kess,
+ * Herta, Aldous, the Anchor's Rest, Greystone Vale).
  */
+
+/** A swept name is offered at most this often through the standing layer
+ * before the quill lets it rest. Per process — a restart at worst re-offers
+ * a dismissed name twice more. */
+export const NAME_OFFER_CAP = 2;
+
+/** What the sweep remembers between replies (per process, reset per session). */
+export interface SweepMemory {
+	/** nameKey → standing-layer offers made so far. */
+	offered: Map<string, number>;
+	/** nameKey → the sweep generation that last saw the name unpaged. */
+	lastSeen: Map<string, number>;
+	/** nameKey → consecutive replies (as of lastSeen) naming it unpaged. */
+	streak: Map<string, number>;
+	/** Names that drew their one nudge — after teeth, the quill rests. */
+	nudged: Set<string>;
+	/** Monotone count of sweeps run (one per keeper reply examined). */
+	gen: number;
+}
+
+export function newSweepMemory(): SweepMemory {
+	return { offered: new Map(), lastSeen: new Map(), streak: new Map(), nudged: new Set(), gen: 0 };
+}
+
+/**
+ * One reply's sweep verdict (WC-15 escalation, ruled 2026-08-17): candidates
+ * are this reply's unpaged proper names. A name REPEATED across consecutive
+ * replies without gaining a page has already ignored a standing offer — the
+ * second consecutive miss earns the course-correction NUDGE, once per name
+ * (conservative by design; false positives accepted at this threshold, per
+ * the ruling). Every other candidate rides the standing layer as an offer,
+ * at most NAME_OFFER_CAP times.
+ */
+export function sweepNames(memory: SweepMemory, candidates: string[]): { offers: string[]; nudges: string[] } {
+	memory.gen += 1;
+	const offers: string[] = [];
+	const nudges: string[] = [];
+	for (const name of candidates) {
+		const key = nameKey(name);
+		if (!key) continue;
+		const streak = memory.lastSeen.get(key) === memory.gen - 1 ? (memory.streak.get(key) ?? 0) + 1 : 1;
+		memory.lastSeen.set(key, memory.gen);
+		memory.streak.set(key, streak);
+		if (memory.nudged.has(key)) continue; // teeth shown once — the quill rests
+		if (streak >= 2) {
+			memory.nudged.add(key);
+			nudges.push(name);
+			continue;
+		}
+		const count = memory.offered.get(key) ?? 0;
+		if (count >= NAME_OFFER_CAP) continue;
+		memory.offered.set(key, count + 1);
+		offers.push(name);
+	}
+	return { offers, nudges };
+}
 
 /** Grammar words and the game's own register nouns — never worth a page nag.
  * World nouns ("Thorne", "Ember") must NOT be here; the keeper judges those. */

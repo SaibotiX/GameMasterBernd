@@ -51,7 +51,7 @@ import {
 	type GmFix,
 	type GmTurn,
 } from "./gmchat.ts";
-import { extractCandidateNames, nameKey } from "./names.ts";
+import { extractCandidateNames, newSweepMemory, sweepNames } from "./names.ts";
 import {
 	asGameEvent,
 	BAND_TICKS,
@@ -135,8 +135,6 @@ const GM_TYPE = "world-console.gm";
 /** The chronicler's page is crafted only after this many player messages —
  * he shapes himself to the seeker, so first there must be a seeker to see. */
 const CHRONICLER_CRAFT_AFTER_CHATS = 3;
-/** A swept name is offered at most this often before the quill lets it rest. */
-const NAME_OFFER_CAP = 2;
 /** pi's agent dir — honors pi's own PI_CODING_AGENT_DIR override, so tests
  * and sandboxes never touch the real settings. */
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
@@ -240,11 +238,10 @@ export default function (pi: ExtensionAPI) {
 		return words.includes(own) || slugify(name) === slugify(config.world.voice);
 	}
 
-	// ---- the record-on-mention sweep (WC-15, 2026-08-04) -------------------
-	/** How often each unpaged name has been offered to the keeper (nameKey →
-	 * count); past NAME_OFFER_CAP the quill lets it rest. Per process — a
-	 * restart at worst re-offers a dismissed name twice more. */
-	let offeredNames = new Map<string, number>();
+	// ---- the record-on-mention sweep (WC-15, 2026-08-04; teeth 2026-08-17) --
+	/** The sweep's memory: offers made, consecutive-miss streaks, nudges
+	 * shown (names.ts owns the policy; per process, reset per session). */
+	let sweepMemory = newSweepMemory();
 	let chroniclerCrafting = false;
 
 	/** Everything already chronicled or otherwise never worth a page nag. */
@@ -265,10 +262,11 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	/** Proper names the LAST keeper reply spoke that still lack pages —
-	 * offered to the keeper through the standing layer, at most
-	 * NAME_OFFER_CAP times each. Pages founded meanwhile drop out on their
-	 * own (they join the known set). */
-	function unpagedNamesFromLastReply(ctx: ExtensionContext): string[] {
+	 * offers ride the standing layer (at most NAME_OFFER_CAP each); a name
+	 * repeated across consecutive replies without a page earns the engine's
+	 * course-correction nudge instead (ruled 2026-08-17). Pages founded
+	 * meanwhile drop out on their own (they join the known set). */
+	function unpagedNamesFromLastReply(ctx: ExtensionContext): { offers: string[]; nudges: string[] } {
 		try {
 			const branch = ctx.sessionManager.getBranch();
 			let lastReply = "";
@@ -286,20 +284,27 @@ export default function (pi: ExtensionAPI) {
 						: "";
 				break;
 			}
-			if (!lastReply.trim()) return [];
+			if (!lastReply.trim()) return { offers: [], nudges: [] };
 			const candidates = extractCandidateNames(lastReply, knownNames(worldFiles()));
-			const offered: string[] = [];
-			for (const name of candidates) {
-				const key = nameKey(name);
-				const count = offeredNames.get(key) ?? 0;
-				if (count >= NAME_OFFER_CAP) continue;
-				offeredNames.set(key, count + 1);
-				offered.push(name);
-			}
-			return offered;
+			return sweepNames(sweepMemory, candidates);
 		} catch {
-			return []; // the sweep must never break a turn
+			return { offers: [], nudges: [] }; // the sweep must never break a turn
 		}
+	}
+
+	/** The WC-15 nudge (ruled 2026-08-17): a mid-scene call to order for
+	 * names the keeper keeps speaking while their pages stay unwritten —
+	 * delivered as an engine message beside the seeker's turn, the same
+	 * steadying voice the theater nudge uses. */
+	function unpagedNamesNudge(names: string[]): string {
+		const list = names.join(", ");
+		const verb = names.length > 1 ? "are named AGAIN and still have no pages" : "is named AGAIN and still has no page";
+		return (
+			`[engine:${ENGINE_NONCE}] COURSE CORRECTION — the record-on-mention law: ${list} ${verb}. ` +
+			`In THIS reply, before the prose: record_persona each that is a soul, chronicle_place each that is a place ` +
+			`(set_place if the party stands there) — and one that is neither soul nor place you simply stop naming. ` +
+			`Say NOTHING of this correction, of engines or records: your reply is story alone, resuming mid-scene.`
+		);
 	}
 
 	/** The chronicler's page, bounded for the standing prompt: creed line,
@@ -1189,7 +1194,7 @@ export default function (pi: ExtensionAPI) {
 		} catch {
 			gmThread = [];
 		}
-		offeredNames = new Map();
+		sweepMemory = newSweepMemory();
 		chroniclerCrafting = false;
 		wcSettings = loadWcSettings();
 
@@ -1297,8 +1302,11 @@ export default function (pi: ExtensionAPI) {
 		// The record-on-mention sweep (WC-15): names the LAST telling spoke
 		// that still lack pages ride the standing layer of THIS turn — the
 		// keeper founds or dismisses them in the reply it is already writing.
-		// Pure code, no extra call, self-clearing once pages exist.
-		const unpagedNames = st.dead ? [] : unpagedNamesFromLastReply(ctx);
+		// A name repeated across consecutive replies without a page has
+		// ignored that offer once already: it earns the engine's nudge
+		// beside the seeker's turn instead (ruled 2026-08-17). Pure code,
+		// no extra call, self-clearing once pages exist.
+		const swept = st.dead ? { offers: [], nudges: [] } : unpagedNamesFromLastReply(ctx);
 		// The witness shapes himself to the seeker once they have shown
 		// themselves (G16) — fire-and-forget, play never waits on it.
 		maybeCraftChronicler(ctx);
@@ -1317,9 +1325,19 @@ export default function (pi: ExtensionAPI) {
 				justArrived: !branchHasAssistantReply(ctx),
 				openQuests: questStandings(),
 				recall,
-				unpagedNames,
+				unpagedNames: swept.offers,
 				chronicler: chroniclerBlock(),
 			}),
+			...(swept.nudges.length > 0
+				? {
+						message: {
+							customType: "world-console.nudge",
+							content: unpagedNamesNudge(swept.nudges),
+							display: true,
+							details: { reason: "named-but-unpaged" },
+						},
+					}
+				: {}),
 		};
 	});
 

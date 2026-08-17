@@ -720,6 +720,12 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /never repeat the same failing call unchanged/);
 	});
 
+	ok("prompt: WC-15 — record-on-mention is law, and a repeated miss has teeth", () => {
+		assert.match(p, /A name your telling REPEATS while its page stays unwritten/);
+		assert.match(p, /draws the engine's own correction into the scene/);
+		assert.match(p, /record-on-mention is law, not advice/);
+	});
+
 	ok("prompt: WC-17 — when the story moves, the record moves in the same reply", () => {
 		assert.match(p, /WHEN THE STORY MOVES, THE RECORD MOVES/);
 		assert.match(p, /A journey's stretches are places too/);
@@ -1200,7 +1206,9 @@ ok("asGameEvent: non-custom entries → null", () => {
 
 // ---- the chronicler round (2026-08-04): names, ventures, the witness ------
 {
-	const { extractCandidateNames, nameKey } = await import(join(EXT, "names.ts"));
+	const { extractCandidateNames, nameKey, newSweepMemory, sweepNames, NAME_OFFER_CAP } = await import(
+		join(EXT, "names.ts")
+	);
 
 	ok("names: batch-2 misses all caught (souls and places, spoken-of)", () => {
 		const known = ["Marta", "The Salt Road North", "Dragon Realm of Aeldenmoor"];
@@ -1232,6 +1240,46 @@ ok("asGameEvent: non-custom entries → null", () => {
 			6,
 		);
 		assert.equal(many.length, 6);
+	});
+
+	ok("names: first-friends misses all caught (Kess, Herta, Aldous)", () => {
+		const kess = extractCandidateNames("Kess waits by the ford — the creditor's agent expects the debt at dusk.", []);
+		assert.ok(kess.includes("Kess"));
+		// "Her" is a stopword at the sentence head; the soul's name survives.
+		const herta = extractCandidateNames("Her name is Herta, and she rules the archive with a dry cough.", []);
+		assert.ok(herta.includes("Herta"));
+		assert.ok(!herta.some((name) => nameKey(name) === "her"));
+		const kilian = extractCandidateNames("Seek out Aldous the herder in Greystone Vale, past the Scar.", []);
+		assert.ok(kilian.includes("Aldous") && kilian.includes("Greystone Vale"));
+	});
+
+	ok("names: the sweep offers, then nudges on the second consecutive miss, then rests", () => {
+		const memory = newSweepMemory();
+		// Reply 1 names Kess → a standing offer, no teeth yet.
+		assert.deepEqual(sweepNames(memory, ["Kess"]), { offers: ["Kess"], nudges: [] });
+		// Reply 2 repeats her, still unpaged → the nudge, not another offer.
+		assert.deepEqual(sweepNames(memory, ["Kess"]), { offers: [], nudges: ["Kess"] });
+		// Reply 3 repeats her again → the quill rests (one nudge per name).
+		assert.deepEqual(sweepNames(memory, ["Kess"]), { offers: [], nudges: [] });
+	});
+
+	ok("names: non-consecutive mentions stay offers up to the cap; a later repeat still bites", () => {
+		const memory = newSweepMemory();
+		assert.deepEqual(sweepNames(memory, ["Herta"]).offers, ["Herta"]); // gen 1: offer 1
+		assert.deepEqual(sweepNames(memory, []), { offers: [], nudges: [] }); // gen 2: quiet reply
+		assert.deepEqual(sweepNames(memory, ["Herta"]).offers, ["Herta"]); // gen 3: offer 2 (cap)
+		assert.deepEqual(sweepNames(memory, []), { offers: [], nudges: [] }); // gen 4
+		assert.equal(NAME_OFFER_CAP, 2);
+		assert.deepEqual(sweepNames(memory, ["Herta"]), { offers: [], nudges: [] }); // gen 5: capped, quiet
+		assert.deepEqual(sweepNames(memory, ["Herta"]), { offers: [], nudges: ["Herta"] }); // gen 6: repeated — teeth
+	});
+
+	ok("names: several second-miss names nudge together; fresh ones still get offers", () => {
+		const memory = newSweepMemory();
+		sweepNames(memory, ["Kess", "Herta"]);
+		const swept = sweepNames(memory, ["Kess", "Herta", "Aldous"]);
+		assert.deepEqual(swept.nudges, ["Kess", "Herta"]);
+		assert.deepEqual(swept.offers, ["Aldous"]);
 	});
 
 	ok("venture: check derives a pending roll with kind and flesh; roll clears it", () => {
