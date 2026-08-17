@@ -15,7 +15,10 @@ and walks the agent through exactly this file). Or paste the prompt from §6.
 ## 0. Intake
 
 - Testers hand in per `playtester-guide.md`: session `.jsonl`, their
-  chronicle folder, `ledger.md`, and their notes file.
+  chronicle folder, `ledger.md`, and their notes file. Since 2026-08-17 the
+  console also collects notes IN PLAY — `/note` lines land in the story
+  folder's `notes.md` and arrive with the shipper (R13); a hand-written
+  file is still welcome beside them.
 - Drop each batch under `research/analysis/sessions-in/<batch-name>/<tester>/…`
   (gitignored — sessions are private play).
 - AI batches arrive ready-made: the driver (`aitester/tools/ai-playtest.mjs`)

@@ -493,6 +493,33 @@ export function logEvent(world: WorldFiles, line: string): void {
 	}
 }
 
+// ---- notes to the makers ---------------------------------------------------
+
+/**
+ * Append one line of the seeker's own words to the story's notes file — the
+ * in-play tester notes (R13; ruled 2026-08-17: the player console asks every
+ * few turns, /note writes). Out-of-world by design: nothing reads it back
+ * into play; it ships with the story folder. Must never break a turn.
+ */
+export function addNote(world: WorldFiles, text: string): void {
+	try {
+		ensureDir(world.root);
+		const file = join(world.root, "notes.md");
+		if (!existsSync(file)) {
+			writeFileSync(
+				file,
+				`# Notes to the makers\n` +
+					`What the seeker set down in play (/note). Out-of-world: the game never reads this;\n` +
+					`it travels with the story folder to the makers.\n\n`,
+				"utf8",
+			);
+		}
+		appendFileSync(file, `- ${stamp()} · ${text.trim()}\n`, "utf8");
+	} catch {
+		// a note must never break a turn
+	}
+}
+
 // ---- items ----------------------------------------------------------------
 
 const itemsFile = (world: WorldFiles) => join(world.root, "items.md");

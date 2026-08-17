@@ -91,5 +91,5 @@ for PDIR in "$MIRROR"/*/; do
 done
 
 echo "landed $LANDED session(s), $SKIPPED already present: $BASE/sessions-in/$BATCH/"
-echo "notes.md per tester still arrives by hand — drop it beside their session dirs"
+echo "in-play /note lines ride inside story/notes.md; a hand-written notes.md still arrives by hand — drop it beside their session dirs"
 echo "audit: /analyze-sessions research/analysis/sessions-in/$BATCH/"

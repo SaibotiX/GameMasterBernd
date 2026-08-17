@@ -79,6 +79,7 @@ import { searchText } from "./textsearch.ts";
 import { gridBox, wrapText, type GridCell } from "./ui.ts";
 import {
 	addItem,
+	addNote,
 	chroniclerCreed,
 	chroniclerExists,
 	chroniclerPage,
@@ -151,6 +152,11 @@ const KIND_BY_TOOL: Record<string, string> = {
 	find_picture: "picture",
 	find_video: "video",
 };
+/** The player console asks for tester notes every this many player turns
+ * (R13 in-play notes, ruled 2026-08-17; default proposed 10 — settle at
+ * the seen-gate). Skippable by nature: the ask is a quiet line, /note
+ * answers it, playing on passes. */
+const NOTES_ASK_EVERY_CHATS = 10;
 /** Trouble kinds a twist may be drawn from (the complication taxonomy). */
 const SUITS = [
 	"material failure", "world-law surprise", "persona interruption", "rival interference",
@@ -2248,6 +2254,39 @@ export default function (pi: ExtensionAPI) {
 				"info",
 			);
 		},
+	});
+
+	// /note — a word to the makers, outside the tale (R13 in-play tester
+	// notes, ruled 2026-08-17). Free-form lines land in the story folder's
+	// notes.md and ship with the R13 batch; the game never reads them back.
+	pi.registerCommand("note", {
+		description: "World Console: a word to the makers, outside the tale — /note <what you noticed>",
+		handler: async (args, ctx) => {
+			const text = (args ?? "").trim();
+			if (!text) {
+				ctx.ui.notify("what should the quill set down for the makers? /note <your words>", "info");
+				return;
+			}
+			replay(ctx); // the note belongs to THIS story's folder
+			addNote(worldFiles(), clip(text, 500));
+			ctx.ui.notify("⟡ noted for the makers — the tale keeps none of it", "info");
+		},
+	});
+
+	// The player console asks for notes on a quiet cadence (every
+	// NOTES_ASK_EVERY_CHATS player turns) — skippable by nature: the ask is
+	// one dim line after the keeper's reply, /note answers, playing on
+	// passes. The maintainer's own console never asks.
+	let notesAskedAt = 0;
+	pi.on("agent_end", async (_event, ctx) => {
+		if (!PLAYER_UI || st.dead) return;
+		if (st.chats < NOTES_ASK_EVERY_CHATS || st.chats % NOTES_ASK_EVERY_CHATS !== 0) return;
+		if (notesAskedAt === st.chats) return;
+		notesAskedAt = st.chats;
+		ctx.ui.notify(
+			"the makers ask, from beyond the tale: anything odd, delightful or broken so far? /note <your words> sets it down — or simply play on",
+			"info",
+		);
 	});
 
 	// /record — the COMPLETE structured record beside the minimalist ledger

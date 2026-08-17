@@ -27,10 +27,11 @@ trap 'rm -f "$OUT"' EXIT
 
 # The player lane also TYPES: a gated built-in and the bash escape (each
 # must draw its in-register refusal instead of executing), then /worlds —
-# the sixteenth command must ANSWER with its listing (a bare /worlds never
-# writes the choice file, so the probe mutates nothing).
+# it must ANSWER with its listing — and a bare /note, which must ask back
+# in register (bare forms never write: no choice file, no notes.md — the
+# probe mutates nothing).
 if [ "${WC_PLAYER_UI:-}" = "1" ]; then
-	keys() { sleep 8; printf '/model\r'; sleep 2; printf '!pwd\r'; sleep 2; printf '/worlds\r'; sleep 2; printf '\003'; sleep 1; printf '\003'; sleep 2; }
+	keys() { sleep 8; printf '/model\r'; sleep 2; printf '!pwd\r'; sleep 2; printf '/worlds\r'; sleep 2; printf '/note\r'; sleep 2; printf '\003'; sleep 1; printf '\003'; sleep 2; }
 else
 	keys() { sleep 8; printf '\003'; sleep 1; printf '\003'; sleep 2; }
 fi
@@ -74,7 +75,11 @@ if [ "${WC_PLAYER_UI:-}" = "1" ]; then
 		fail=1
 	fi
 	if ! grep -q "worlds this console can open" <<<"$plain"; then
-		echo "FAIL tty-probe(player): typed /worlds drew no listing — the sixteenth command is not answering"
+		echo "FAIL tty-probe(player): typed /worlds drew no listing — the command surface is not answering"
+		fail=1
+	fi
+	if ! grep -q "set down for the makers" <<<"$plain"; then
+		echo "FAIL tty-probe(player): typed /note drew no ask-back — the notes surface is dark"
 		fail=1
 	fi
 else
@@ -95,7 +100,7 @@ if grep -q "footer API drift" <<<"$plain"; then
 	exit 2
 fi
 if [ "${WC_PLAYER_UI:-}" = "1" ]; then
-	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn, /worlds answering"
+	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn, /worlds and /note answering"
 elif grep -q "%/" <<<"$plain"; then
 	echo "ok  tty-probe: boot clean — stock stats line and game line render"
 else

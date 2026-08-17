@@ -31,9 +31,11 @@ people, chase your own goals, escalate things. Do not try to be a good
 tester, do not try to be nice to the game, and do not read the design
 documents first — we need your unspoiled reactions.
 
-**While playing, keep a notes file open** (`notes.md`, any format). When
-anything surprises you — good or bad — jot one line as you play, like a
-running commentary of your thoughts:
+**While playing, note what surprises you** — good or bad, one line while
+it's fresh. Easiest: type `/note <your words>` right in the game (the
+console itself will invite you every so often; it lands outside the story,
+the keeper never sees it). A `notes.md` file kept open beside the game
+works just as well, like a running commentary of your thoughts:
 
 ```
 [~13:25] expected: quest done after I handed over the apple
@@ -82,8 +84,9 @@ maintainer drops it into `research/analysis/sessions-in/<batch>/<you>/`.
 
 **Playing hosted?** If you were handed a web link instead of a local
 install (the friends web service), skip items 1–2: the maintainer pulls
-your session and story folder straight from the server. You send only
-`notes.md` and the one sentence.
+your session and story folder straight from the server — `/note` lines
+travel with it automatically. You send only a `notes.md` (if you kept one
+outside the game) and the one sentence.
 
 ## Privacy — read once
 

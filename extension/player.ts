@@ -47,12 +47,12 @@ export const PI_BUILTIN_COMMANDS = [
  * the retired /limits (iced with R11; the icebox entry remembers it). */
 export const HIDDEN_EXTRA_COMMANDS = ["limits", "debug", "arminsayshi", "dementedelves"];
 
-/** The player's sixteen (R30, revised 2026-08-10): the game's thirteen
- * plus pi's /tree /new /resume — /compact ruled off the list
- * (auto-compaction carries it). */
+/** The player's seventeen (R30, revised 2026-08-17: /note joins — the
+ * in-play tester-notes ruling): the game's fourteen plus pi's /tree /new
+ * /resume — /compact ruled off the list (auto-compaction carries it). */
 export const PLAYER_COMMANDS = [
 	"web", "pick", "roll", "ledger", "quest", "place", "persons", "record",
-	"thoughts", "history", "gm", "dm", "worlds",
+	"thoughts", "history", "gm", "dm", "worlds", "note",
 	"tree", "new", "resume",
 ];
 

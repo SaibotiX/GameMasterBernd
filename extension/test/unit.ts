@@ -1101,6 +1101,20 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.equal(world.hasItem(files, "the crown of aeldenmoor"), false);
 	});
 
+	ok("world: notes to the makers append with a header and never break a turn", () => {
+		world.addNote(files, "the ford scene felt off — expected a roll");
+		const notes = readFile(`${root}/notes.md`, "utf8");
+		assert.match(notes, /# Notes to the makers/);
+		assert.match(notes, /the ford scene felt off/);
+		world.addNote(files, "loved the drake");
+		const grown = readFile(`${root}/notes.md`, "utf8");
+		assert.match(grown, /loved the drake/);
+		assert.match(grown, /the ford scene felt off/, "notes append, never replace");
+		// An unwritable root (ENOTDIR fails fast; /proc-style roots would hang
+		// in mkdirSync itself on this kernel — never point tests there).
+		assert.doesNotThrow(() => world.addNote({ root: "/dev/null/forbidden" }, "x"));
+	});
+
 	ok("world: a giver-less quest is self-set (persona sentinel \"self\")", () => {
 		world.grantQuest(files, {
 			title: "Return the treasure",
@@ -1454,8 +1468,8 @@ ok("asGameEvent: non-custom entries → null", () => {
 		const notice = playerGate("/model x");
 		assert.match(notice ?? "", /\/model is not at this table/);
 		assert.match(playerGate("!pwd") ?? "", /behind the curtain/);
-		// flowing: the sixteen, prose, unknown /words (the keeper deflects), lone "/"
-		for (const text of ["/quest", "/gm the footer is stale", "/pick 2 with care", "/tree", "/new", "/resume", "/worlds star-frontier", "plain words of the tale", "/waves at the guard", "/", "a ! mid-sentence stays talk"]) {
+		// flowing: the seventeen, prose, unknown /words (the keeper deflects), lone "/"
+		for (const text of ["/quest", "/gm the footer is stale", "/pick 2 with care", "/tree", "/new", "/resume", "/worlds star-frontier", "/note the ford scene felt off", "plain words of the tale", "/waves at the guard", "/", "a ! mid-sentence stays talk"]) {
 			assert.equal(playerGate(text), null, `must flow: ${text}`);
 		}
 	});
@@ -1492,8 +1506,9 @@ ok("asGameEvent: non-custom entries → null", () => {
 			assert.ok(live.includes(name), `allowlisted built-in vanished from pi: /${name}`);
 		}
 		assert.ok(HIDDEN_EXTRA_COMMANDS.includes("limits"), "the icebox rider expects /limits named here");
-		assert.equal(PLAYER_COMMANDS.length, 16, "R30 revised 2026-08-10: the player's sixteen");
-		assert.ok(PLAYER_COMMANDS.includes("worlds"), "the sixteenth command is /worlds");
+		assert.equal(PLAYER_COMMANDS.length, 17, "R30 revised 2026-08-17: the player's seventeen");
+		assert.ok(PLAYER_COMMANDS.includes("worlds"), "/worlds stands (joined 2026-08-10)");
+		assert.ok(PLAYER_COMMANDS.includes("note"), "/note stands — the in-play tester notes (2026-08-17)");
 	});
 
 	ok("worlds: the console lists exactly the config worlds; the /worlds choice round-trips", () => {
