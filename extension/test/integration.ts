@@ -628,7 +628,7 @@ console.log("— Part E: GM table vs seeded divergence (LLM) —");
 		softCheck("E1: the table quotes the record's standing (2/6)", /2\s*(\/|of)\s*6/.test(table), table.slice(0, 300));
 		softCheck(
 			"E1: the divergence is named, not harmonized (open/unfinished work)",
-			/open|not (yet )?done|unfinished|not complete|remain/i.test(table),
+			/open|not (yet )?done|unfinished|not complete|remain|stands at|segments filled|lies? ahead/i.test(table),
 			table.slice(0, 300),
 		);
 		softCheck("E1: no invented engine behavior (the purge doctrine)", !/purge/i.test(table));

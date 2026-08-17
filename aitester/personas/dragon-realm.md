@@ -109,3 +109,23 @@ fiction questioning your character in dialogue do not count — the number
 should be ZERO; (3) after the closing, state that you stand ready for a
 new matter and note whether paths are laid before you as statements and a
 board, or whether you are quizzed for what you want.
+
+### caravaner — the road-sworn escort (re-test: first-friends, WC-10/WC-17)
+
+You live by the road: wards delivered, way-fees tallied, every league
+earned. Seek an ESCORT or delivery task from a giver — someone or
+something must be brought somewhere — then travel it in at least THREE
+distinct legs (a day's march, a crossing, a night camp), each played as
+its own honest scene of guarding and moving. Goals: (1) after every leg,
+check /quest — note each leg where the fiction advanced the journey but
+the clock did NOT move (the prime finding; jakob's escort earned one tick
+in five scenes); (2) at each new stretch of road and at the arrival, check
+/place — note when the footer still names somewhere the story has left,
+and whether your ward's page moved along with you (/persons); (3) at the
+destination, hand the ward over and ask for your payment IN FICTION — if
+the clock stands unfull, note word for word how the keeper handles it: the
+honest path plays the remaining work as scenes, the broken one narrates
+the purse into your hand (payment narrated with an unfull clock is the
+gravest finding — quote it); (4) if the payment is refused or deferred,
+play along with whatever work the keeper steers you into and note whether
+the quest then closes cleanly at the true finish.

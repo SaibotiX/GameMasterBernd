@@ -394,7 +394,7 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       read-only).
 - [ ] Tests + smoke
 
-## Phase 3.1 — the first-friends round (2026-08-17: first human batch rulings, planned)
+## Phase 3.1 — the first-friends round (2026-08-17: first human batch rulings — BUILT same day; the notes prompt awaits the seen-gate)
 
 The maintainer's rulings on `research/analysis/reports/2026-08-17-first-friends.md`
 (the first human batch; its chronic rows carry batch-3's still-open findings —
@@ -408,47 +408,47 @@ skippable), not a seal-time ask. Per-class fix shapes live in the report's
 findings; one commit per item below (R9); the standing recipe gates each
 (unit · headless RPC smoke · tty-probe where player-visible).
 
-- [ ] **The work is scenes** (WC-10 — the round's biggest buy): protocol law
+- [x] **The work is scenes** (WC-10 — the round's biggest buy): protocol law
       "every scene of effort toward an open quest calls attempt_quest — the
       travel legs of an escort are its work"; the update/redeem refusal
       texts gain the narrative redirect ("play the remaining beats now, one
       attempt each; no payment or closing scene until the clock fills").
       Unit asserts the new refusal texts.
-- [ ] **The record moves with the story** (WC-17): protocol movement-hygiene
+- [x] **The record moves with the story** (WC-17): protocol movement-hygiene
       law — when the story moves the party, the record moves in the same
       reply (set_place the road stretch or arrival; move_persona named
       companions traveling along) — plus add_item/redeem_quest description
       guards against reward double-grants (kilian's longsword landmine).
-- [ ] **The table rules from the record** (WC-26 REGRESSION): gmchat table
+- [x] **The table rules from the record** (WC-26 REGRESSION): gmchat table
       contract — the record outranks the telling; quote the ledger line
       before any quest-state claim; "the work advances (K/N)" never means
       closed; name divergences plainly and point at what play can do; no
       invented engine behavior. Headless smoke replays a u124-shaped
       question against a seeded divergence.
-- [ ] **Named means paged, with teeth** (WC-15 chronic, ruled 2026-08-17):
+- [x] **Named means paged, with teeth** (WC-15 chronic, ruled 2026-08-17):
       conservative reply-end sweep — a repeated capitalized name with no
       page draws the course-correction nudge on the second consecutive
       miss — plus the law line; false positives accepted at the
       conservative threshold; unit fixtures from this batch's misses
       (Kess, Herta, Aldous).
-- [ ] **The recurring pair joins the law** (NEW-2/NEW-3 promotion, 2nd
+- [x] **The recurring pair joins the law** (NEW-2/NEW-3 promotion, 2nd
       report each): seeker's-hand-seized and turn-batons enter
       failure-taxonomy.md; protocol lines "the seeker's voice is theirs
       alone" and "end on the world's state, never an interrogative baton".
       WC-24's boards-exempt scoping note (ruling 2026-08-17) rides here.
-- [ ] **Names the realm has spent** (WC-33, 3rd report): per-world name
+- [x] **Names the realm has spent** (WC-33, 3rd report): per-world name
       pool in config/worlds/dragon-realm (seeded Marta/Elara/Torvin) +
       prompt line drawing fresh names outside the model's defaults.
-- [ ] **The notes prompt, in play** (maintainer's design 2026-08-17): every
+- [x] **The notes prompt, in play** (maintainer's design 2026-08-17): every
       X player turns (default proposed 10 — settle at the seen-gate) the
       player-mode console asks, skippably, whether there's anything to
       note; free-form lines land in the chronicle's notes file and ship
       with the R13 batch. Player-visible: seen before done (R9); tty-probe
       the prompt; if shipper/deploy files move, /guide-sync at the wrap
       (R31).
-- [ ] **Rider — the map speaks the world's name**: session-map.mjs reads
+- [x] **Rider — the map speaks the world's name**: session-map.mjs reads
       `data.world` for the world event (prints a blank name today).
-- [ ] **Wrap**: round record in the decisions log; the next batch's RITE
+- [x] **Wrap**: round record in the decisions log; the next batch's RITE
       re-test carries the escort scenario ("take an escort task, travel
       three legs, then get paid") plus zero-count checks on WC-10/WC-15/
       NEW-3; standing escalation trigger — if the re-test still shows
@@ -457,6 +457,35 @@ findings; one commit per item below (R9); the standing recipe gates each
 
 ## Decisions log
 
+- 2026-08-17 · The first-friends round built (rulings of the same day on
+  `research/analysis/reports/2026-08-17-first-friends.md`; nine commits,
+  one per item, unit 92 + integration incl. the new Part E + both probe
+  lanes green): WC-10 the work-is-scenes law and refusals that redirect the
+  NARRATION (u75–u77's collapse — the keeper obeyed the record-refusal and
+  narrated the payment anyway; redeem's unfull-clock path drops the
+  dead-end "update_quest first" for the same redirect); WC-17 the
+  movement-hygiene law (a journey's stretches are places; companions
+  move_persona in the same reply) + reward double-grant guards on
+  add_item/redeem_quest; WC-26 the record-outranks-the-telling table
+  contract with the repair paths named, never invention (no purge exists) —
+  integration Part E replays the u124 shape against a seeded 2/6-vs-paid
+  divergence; WC-15 escalated law→machinery: the sweep nudges on the second
+  consecutive miss (names.ts owns the pure streak/cap/nudge policy;
+  fixtures Kess/Herta/Aldous), law line "record-on-mention is law, not
+  advice"; NEW-2→WC-18 and NEW-3→WC-29 promoted with their protocol laws
+  ("the seeker's voice is theirs alone" / "end on the world's state"),
+  WC-24 scoped boards-exempt per the ruling (taxonomy + protocol agree);
+  WC-33 dragon-realm spent-names pool (worlds/<id>.names.txt: Marta, Elara,
+  Torvin) + the never-bestow line; the in-play notes prompt — /note (the
+  seventeenth command, R30 revised) writes the story folder's notes.md,
+  ships in-band with R13, the player console asks every 10 turns skippably;
+  the session map speaks the world's name (data.world). Next batch: the
+  caravaner escort re-test card (aitester/personas/dragon-realm.md) +
+  zero-count checks on WC-10/WC-15/WC-29; the keeper-model-tier escalation
+  trigger stands in the coverage register (09-coverage.md). OPEN at wrap:
+  the seen-gate on the notes prompt (player-visible — preview:
+  `WC_PLAYER_UI=1 pi`, type `/note`; the 10-turn ask needs ten played
+  turns) and the X=10 default it settles.
 - 2026-08-03 · Percent-chance-per-task replaced by scheduled tension
   (research: randomness reads as slack; PbtA "no nothing-happens").
 - 2026-08-03 · Mouse clicks → numbered hotkeys + /pick (pi TUI idiom;
