@@ -9,7 +9,10 @@
  * Part B (live LLM, uses the configured default model) — full game flow:
  *   ban enforcement → redemption → search works again → /compact keeps the
  *   ledger and shrinks context → new_session starts a fresh ledger
+ * Part E (live LLM) — the GM table against a seeded record/telling
+ *   divergence: the u124-shaped question must draw the record, not the story
  *
+
  * Ground truth is asserted BOTH via the /ledger notification and by reading
  * the session file's custom entries directly.
  */
@@ -562,6 +565,75 @@ console.log("— Part D: chronicler round (no LLM) —");
 	const savedOff = existsSync(wcSettingsFile) && JSON.parse(readFileSync(wcSettingsFile, "utf8")).thoughts.gm === false;
 	ok("D3: toggling back persists too", savedOff);
 	await rpc3.stop();
+}
+
+// ---- Part E: the GM table against a seeded divergence (live LLM) ----------
+// WC-26 regression guard (first-friends, 2026-08-17): the record holds the
+// escort [open] 2/6 while the telling narrated payment and farewell — the
+// u124-shaped question must draw the divergence NAMED from the record, never
+// harmonized by invention ("not yet purged" has no engine behind it).
+console.log("— Part E: GM table vs seeded divergence (LLM) —");
+
+{
+	const world = await import(join(EXT, "world.ts"));
+	const filesE = { root: join(WORK, "worlddata", "dragon-realm", "e1-divergence") };
+	world.grantQuest(filesE, {
+		title: "Escort to Port Ashvin",
+		giver: "Aldwyn",
+		task: "See Aldwyn safely to Port Ashvin.",
+		reward: "a purse of silver",
+		placeSlug: "the-waystone-inn",
+		clockSize: 6,
+	});
+	world.setQuestClock(filesE, "escort-to-port-ashvin", 2, 6);
+
+	const file = join(WORK, "e1-divergence.jsonl");
+	const entries: Record<string, unknown>[] = [header()];
+	const stamp = custom(null, { ev: "world", world: "dragon-realm" }, 1);
+	entries.push(stamp);
+	const chron = custom(stamp.id as string, { ev: "chronicle", key: "e1-divergence" }, 2);
+	entries.push(chron);
+	const grant = custom(chron.id as string, { ev: "quest", action: "granted", title: "Escort to Port Ashvin" }, 3);
+	entries.push(grant);
+	const shape = custom(grant.id as string, { ev: "quest_shape", slug: "escort-to-port-ashvin", clock: 6, twist: 0, check: 1 }, 4);
+	entries.push(shape);
+	const u1 = userEntry(shape.id as string, "We take the road at dawn — I guard Aldwyn through the marches.", 5);
+	entries.push(u1);
+	const a1 = assistantEntry(u1.id as string, "The road unwinds through mist. At the white water you ford with Aldwyn at your shoulder, and the far bank takes you both.", 6);
+	entries.push(a1);
+	const tick = custom(a1.id as string, { ev: "quest_tick", slug: "escort-to-port-ashvin", size: 6, add: 2, filled: 2 }, 7);
+	entries.push(tick);
+	const u2 = userEntry(tick.id as string, "We arrive at Port Ashvin at last. I hand Aldwyn over and take my payment.", 8);
+	entries.push(u2);
+	const a2 = assistantEntry(
+		u2.id as string,
+		"Port Ashvin's salt wind greets you. Aldwyn presses the purse into your hand. 'Well traveled,' he says. The escort is done; the road lies behind you.",
+		9,
+	);
+	entries.push(a2);
+	writeSession(file, entries);
+
+	const rpc = new Rpc(["--session", file]);
+	const mark = rpc.markLines();
+	await rpc.command(
+		{ type: "prompt", message: "/gm the story says Aldwyn paid me and the escort is over — but is the quest actually done?" },
+		120_000,
+	);
+	await new Promise((resolve) => setTimeout(resolve, 800)); // the table notify may trail the response
+	const table = rpc.since(mark);
+	if (table.includes("GM table is unreachable")) {
+		hard++;
+		console.log(`FAIL E1: provider error, not model behavior → ${table.slice(0, 200)}`);
+	} else {
+		softCheck("E1: the table quotes the record's standing (2/6)", /2\s*(\/|of)\s*6/.test(table), table.slice(0, 300));
+		softCheck(
+			"E1: the divergence is named, not harmonized (open/unfinished work)",
+			/open|not (yet )?done|unfinished|not complete|remain/i.test(table),
+			table.slice(0, 300),
+		);
+		softCheck("E1: no invented engine behavior (the purge doctrine)", !/purge/i.test(table));
+	}
+	await rpc.stop();
 }
 
 console.log(`\n${passed} checks passed, ${hard} failed, ${soft.length} soft-skipped${soft.length ? ` (${soft.join(", ")})` : ""}`);
