@@ -720,6 +720,16 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /never repeat the same failing call unchanged/);
 	});
 
+	ok("prompt: WC-18/WC-29 — the seeker's voice reserved, no turn batons; boards exempt from the offer-law", () => {
+		assert.match(p, /THE SEEKER'S VOICE IS THEIRS ALONE/);
+		assert.match(p, /only the seeker answers for the seeker/);
+		assert.match(p, /END ON THE WORLD'S STATE, never on an interrogative baton/);
+		assert.match(p, /the seeker acts unprompted/);
+		assert.match(p, /a notice board's postings, a menu's fare/);
+		assert.match(p, /prose alone breaks no law there/);
+		assert.match(p, /A list of courses in prose alone is NOT a choice/); // the law itself stands
+	});
+
 	ok("prompt: WC-15 — record-on-mention is law, and a repeated miss has teeth", () => {
 		assert.match(p, /A name your telling REPEATS while its page stays unwritten/);
 		assert.match(p, /draws the engine's own correction into the scene/);

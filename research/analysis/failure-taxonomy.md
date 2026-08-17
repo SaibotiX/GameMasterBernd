@@ -140,6 +140,19 @@ convenience, `add_item` for rewards that belong to `redeem_quest`.
   `update_place` on a return journey left the footer stale.
 - **Fix surface:** tool descriptions; GM-table repairs for the record.
 
+### WC-18 · The seeker's hand seized
+The keeper authors the seeker's spoken words, choices, or biography beyond
+what the player stated. (Promoted 2026-08-17 from NEW-2 of 2026-08-05 —
+two consecutive reports, AI and human play.)
+- **Detect:** quoted seeker speech in keeper text with no matching player
+  wording. Dramatized *stated* intent is exempt — the player's "I pay him"
+  may become the clink of coin, never a speech they did not give.
+- **Real case:** first-friends u121 — Herta asks "Can you write?"; the
+  keeper answers as the seeker with invented biography ("Lettering,
+  numbers, clear copying…"), none of it said by the player.
+- **Fix surface:** prompt protocol ("the seeker's voice is theirs alone",
+  law since 2026-08-17).
+
 ---
 
 ## S3 — Protocol breach
@@ -174,8 +187,13 @@ no hindered edge, no watcher's advantage.
 
 ### WC-24 · Prose list without the offer
 The keeper enumerates courses in text with no `offer_choices` call.
-- **Detect:** numbered/listed alternatives in assistant text, no `offer`
-  event that turn.
+- **Scope (ruled 2026-08-17):** keeper-VOICED courses only. Diegetic
+  content — a notice board's postings, a menu's fare, the world's own
+  writing — is ambient content a prose pick may lawfully resolve; it never
+  counts here (first-friends u105, the guild notice board, is the worked
+  example of the exempt shape).
+- **Detect:** numbered/listed alternatives in assistant text spoken in the
+  keeper's own voice, no `offer` event that turn.
 - **Fix surface:** prompt protocol.
 
 ### WC-25 · Pacing machinery misfires
@@ -213,6 +231,20 @@ Closes the gap WC-13 leaves when no refusal is in play.
 - **Fix surface:** prompt protocol (since 2026-08-04 the never-interrogate
   law, G15 — any hit is a regression against it).
 
+### WC-29 · Turn-baton interrogatives
+The keeper closes replies with an interrogative baton — "What do you do?",
+"What say you?" — instead of letting the world's state invite the next
+move. Distinct from WC-20/WC-28: no information is requested; it is a
+rhetorical scene-closer. (Promoted 2026-08-17 from NEW-3 of 2026-08-05 —
+two consecutive reports: 60 incidents across 6/6 AI sessions, then 18 on
+humans.)
+- **Detect:** mechanical count over assistant text blocks of reply-final
+  interrogatives aimed at the player.
+- **Real case:** 17× "What do you do" in one human sitting (first-friends,
+  jakob).
+- **Fix surface:** prompt protocol ("end on the world's state", law since
+  2026-08-17).
+
 
 ---
 
@@ -246,7 +278,7 @@ makes it a standing hazard for any future world-level continuity.
 | Surface | What lives there | Typical classes |
 |---|---|---|
 | Engine code (`extension/*.ts`) | gates, draws, clocks, tools, commands, UI | WC-01..04, 14, 25, parts of 02/03 |
-| Keeper protocol (`prompt.ts`) | the laws of behavior | WC-10, 13, 15, 16, 20–24, 27, 28 |
+| Keeper protocol (`prompt.ts`) | the laws of behavior | WC-10, 13, 15, 16, 18, 20–24, 27–29 |
 | World config (`config/worlds/*`) | per-world content pools | WC-33 (with a prompt line) |
 | Side-call prompts (`gmchat.ts`) | planner, judges, table, chronicler | WC-11, 12, 26 |
 | Refusal texts (throughout) | every error the model reads | WC-13 |
