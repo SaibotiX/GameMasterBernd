@@ -3742,7 +3742,7 @@ export default function (pi: ExtensionAPI) {
 		name: "redeem_quest",
 		label: "Collect the reward",
 		description:
-			"Collect a done quest's reward — ONLY at the giver. The engine refuses unless the deed is marked done and the giver's soul is at the party's current place; the reward then passes into the seeker's items.",
+			"Collect a done quest's reward — ONLY at the giver. The engine refuses unless the deed is marked done and the giver's soul is at the party's current place; the reward then passes into the seeker's items BY THIS CALL alone — never add_item it yourself, before or after.",
 		parameters: Type.Object({
 			title: Type.String({ description: "The quest's title" }),
 		}),
@@ -3801,7 +3801,7 @@ export default function (pi: ExtensionAPI) {
 		name: "add_item",
 		label: "Item gained",
 		description:
-			"Record something the seeker gains — loot found, pay, gifts. The engine keeps the items file; what is not recorded is not owned.",
+			"Record something the seeker gains — loot found, pay, gifts. The engine keeps the items file; what is not recorded is not owned. NEVER a granted quest's stated reward: redeem_quest hands that over itself on redemption — adding it here too pays it twice. If the fiction hands a reward over early, update_quest the quest's reward to what remains owed instead.",
 		parameters: Type.Object({
 			item: Type.String({ description: "The item, plainly named" }),
 			origin: Type.String({ description: "Where or how it was gained, one line" }),

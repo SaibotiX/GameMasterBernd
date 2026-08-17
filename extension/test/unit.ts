@@ -720,6 +720,13 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /never repeat the same failing call unchanged/);
 	});
 
+	ok("prompt: WC-17 — when the story moves, the record moves in the same reply", () => {
+		assert.match(p, /WHEN THE STORY MOVES, THE RECORD MOVES/);
+		assert.match(p, /A journey's stretches are places too/);
+		assert.match(p, /every named soul who travels WITH the party walks by move_persona/);
+		assert.match(p, /leaves the ward at the trailhead/);
+	});
+
 	ok("prompt: WC-10 — the work is scenes, and the refusals redirect the narration", () => {
 		assert.match(p, /EVERY scene of effort toward an open task/);
 		assert.match(p, /travel legs of an escort or a delivery are its work/);
