@@ -12,6 +12,7 @@ World Console: a terminal story game built as extensions on the pi coding agent.
 | `research/analysis/` | the playtest method kit; `research/analysis/reports/` is the immutable quality history |
 | `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log, coverage register (what's answered / what's open) |
 | `research/icebox.md` | declined ideas, kept cold (R25): On ice (revival conditions, recurrence counts) and Closed (won't-dos with reasons) — the judge checks it on every new idea |
+| `deploy/` | the stage-1 hosting machinery. `deploy/README.md` is the runbook — live ops truth, procedures, dated state notes; `deploy/guide/` is the teaching layer — from-zero explanations, how-tos, reference and the next-project blueprint, each page stamped with the deploy/ commit it was synced against. Where they disagree, the runbook wins |
 | `aitester/` | the AI playtesting harness, its batches and reports |
 | `data/`, `*/sessions-in/`, `auth.json` | private play & credentials — gitignored, never committed, never shipped |
 
