@@ -1,6 +1,6 @@
 # 30 — The blueprint: your next project, from blank to running
 
-*Transfer. The distilled, ordered recipe this deployment proved — provider-agnostic where possible, with the World Console file to crib at every step. A minimal living template built from this blueprint lives at `~/Desktop/CurrPC/Programming/Example_Web_Server_Project` — built and verified 2026-08-17 (its own repo, nothing of it in this one; localcheck green end to end: door auth, hardening headers, healthz through the stripped prefix, a note surviving a clean-SIGTERM stop, borg cycle with stale-prune and the restore drill reading the note back). Synced: `4ba34eb` (2026-08-17).*
+*Transfer. The distilled, ordered recipe this deployment proved — provider-agnostic where possible, with the World Console file to crib at every step. A minimal living template built from this blueprint lives at `~/Desktop/CurrPC/Programming/Example_Web_Server_Project` — built and verified 2026-08-17 (its own repo, nothing of it in this one; localcheck green end to end: door auth, hardening headers, healthz through the stripped prefix, a note surviving a clean-SIGTERM stop, borg cycle with stale-prune and the restore drill reading the note back; since the same day it also carries the portable WORKING law — CLAUDE.md, the triage/salvage/audit commands, seeded records — adapted per R32, its own `/law-sync` pulling this repo's law changes on demand). Synced: `4ba34eb` (2026-08-17).*
 
 ## Phase 0 — decide the shape (an evening, on paper)
 
