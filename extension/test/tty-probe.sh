@@ -16,6 +16,9 @@
 # Run after EVERY pi upgrade and before any push that touched the TUI:
 #   bash extension/test/tty-probe.sh                 # the maintainer's console
 #   WC_PLAYER_UI=1 bash extension/test/tty-probe.sh # the player's console (R30)
+#   WC_NARROW=1 bash extension/test/tty-probe.sh    # 59 columns, a standing
+#       world-strike: pi CRASHES on any widget line wider than the terminal
+#       (the 2026-08-17 strike-banner crash) — this lane holds the contract
 #
 # The two lanes are each other's negative control: the player lane FAILS on
 # pi's stats line or a swallowed gate notice; the maintainer lane FAILS on
@@ -36,10 +39,31 @@ else
 	keys() { sleep 8; printf '\003'; sleep 1; printf '\003'; sleep 2; }
 fi
 
+# The narrow lane boots a crafted session whose ledger stands a world-strike
+# (ev:check, kind:peril) at 59 columns — narrower than the strike banner's
+# foot line once was. The session lives and dies in /tmp; nothing real is
+# read or written.
+COLS=110
+PI_CMD="pi --no-session"
+if [ "${WC_NARROW:-}" = "1" ]; then
+	NARROW_DIR="$(mktemp -d /tmp/wc-tty-narrow.XXXXXX)"
+	trap 'rm -f "$OUT"; rm -rf "$NARROW_DIR"' EXIT
+	uuid="$(cat /proc/sys/kernel/random/uuid)"
+	# The header's cwd must be the repo: pi loads project extensions from the
+	# SESSION's cwd, not the launch dir — a /tmp cwd boots a bare pi.
+	{
+		printf '%s\n' "{\"type\":\"session\",\"version\":3,\"id\":\"$uuid\",\"timestamp\":\"2026-08-17T10:00:00.000Z\",\"cwd\":\"$IA\"}"
+		printf '%s\n' '{"type":"custom","id":"aa000001","parentId":null,"timestamp":"2026-08-17T10:00:01.000Z","customType":"world-console.ledger","data":{"ev":"world","world":"dragon-realm"}}'
+		printf '%s\n' '{"type":"custom","id":"aa000002","parentId":"aa000001","timestamp":"2026-08-17T10:00:02.000Z","customType":"world-console.ledger","data":{"ev":"check","slug":"","tier":"hard","dc":20,"trial":"a rival moving first — the caravan rest at Brookside under sudden challenge","kind":"peril"}}'
+	} >"$NARROW_DIR/trial.jsonl"
+	COLS=59
+	PI_CMD="pi --session $NARROW_DIR/trial.jsonl"
+fi
+
 (
 	cd "$IA" &&
 		keys |
-		timeout --signal=KILL 35 script -qc "stty cols 110 rows 30; pi --no-session" "$OUT" >/dev/null 2>&1
+		timeout --signal=KILL 35 script -qc "stty cols $COLS rows 30; $PI_CMD" "$OUT" >/dev/null 2>&1
 )
 
 # Strip ANSI control sequences (CSI, OSC, charset selects) for stable greps.
@@ -89,6 +113,18 @@ else
 		fail=1
 	fi
 fi
+if [ "${WC_NARROW:-}" = "1" ]; then
+	# Both greps must hit or the lane proves nothing: the banner UP shows the
+	# session armed its trial; the foot line WAS the crashing overflow.
+	if ! grep -q "THE WORLD STRIKES" <<<"$plain"; then
+		echo "FAIL tty-probe(narrow): the strike banner never rendered — no trial stood, nothing was tested"
+		fail=1
+	fi
+	if ! grep -q "cast the die" <<<"$plain"; then
+		echo "FAIL tty-probe(narrow): the banner's foot line is missing at 59 columns"
+		fail=1
+	fi
+fi
 if [ "$fail" -ne 0 ]; then
 	echo "--- last screen lines ---"
 	tail -25 <<<"$plain"
@@ -99,7 +135,9 @@ if grep -q "footer API drift" <<<"$plain"; then
 	grep "footer API drift" <<<"$plain" | head -2
 	exit 2
 fi
-if [ "${WC_PLAYER_UI:-}" = "1" ]; then
+if [ "${WC_NARROW:-}" = "1" ]; then
+	echo "ok  tty-probe(narrow): the 59-column strike banner renders truncated — no crash"
+elif [ "${WC_PLAYER_UI:-}" = "1" ]; then
 	echo "ok  tty-probe(player): boot clean — game line only, banner up, both gate notices drawn, /worlds and /note answering"
 elif grep -q "%/" <<<"$plain"; then
 	echo "ok  tty-probe: boot clean — stock stats line and game line render"

@@ -532,6 +532,15 @@ export default function (pi: ExtensionAPI) {
 		requestFooterRender?.();
 	}
 
+	/** pi-tui's widget contract: a rendered line wider than the terminal
+	 * CRASHES pi (TuiMainScreen.doRender throws — the 59-column strike-banner
+	 * crash, 2026-08-17). Composition may aim wider (margins, floors, art),
+	 * so every widget render ends here: no line leaves wider than the
+	 * terminal. Overlays are exempt — pi truncates those itself. */
+	function fitLines(lines: string[], width: number): string[] {
+		return lines.map((line) => truncateToWidth(line, width, "…"));
+	}
+
 	// ---- the player banner (R30) ------------------------------------------
 	// Player mode replaces pi's startup header (already quiet in the friend
 	// image) with the world's own face: per-world art when config brings it,
@@ -561,9 +570,9 @@ export default function (pi: ExtensionAPI) {
 					lines.push("");
 					lines.push(truncateToWidth(theme.fg("dim", bannerHint()), width, theme.fg("dim", "...")));
 					lines.push("");
-					return lines;
+					return fitLines(lines, width);
 				} catch {
-					return [config.world.title];
+					return fitLines([config.world.title], width);
 				}
 			},
 		}));
@@ -749,11 +758,14 @@ export default function (pi: ExtensionAPI) {
 				const factory = (_ui: unknown, theme: { fg(color: string, text: string): string }) => ({
 					render(width: number): string[] {
 						const boxWidth = Math.max(24, Math.min(width - 2, 76));
-						return [
-							theme.fg(color, head),
-							...gridBox(cells, boxWidth, (border) => theme.fg(color, border)),
-							theme.fg("dim", foot),
-						];
+						return fitLines(
+							[
+								theme.fg(color, head),
+								...gridBox(cells, boxWidth, (border) => theme.fg(color, border)),
+								theme.fg("dim", foot),
+							],
+							width,
+						);
 					},
 				});
 				ctx.ui.setWidget("world-console.choice", factory as never);
@@ -768,10 +780,13 @@ export default function (pi: ExtensionAPI) {
 							(trial.edge ? ` · ${trial.edge}: two dice, ${trial.edge === "favored" ? "best" : "worst"} counts` : "");
 				const factory = (_ui: unknown, theme: { fg(color: string, text: string): string }) => ({
 					render(width: number): string[] {
-						return [
-							truncateToWidth(theme.fg(color, head), Math.max(24, width - 2), "…"),
-							theme.fg("dim", `  cast the die: /roll — talk stays free, but NO work moves until it falls`),
-						];
+						return fitLines(
+							[
+								truncateToWidth(theme.fg(color, head), Math.max(24, width - 2), "…"),
+								theme.fg("dim", `  cast the die: /roll — talk stays free, but NO work moves until it falls`),
+							],
+							width,
+						);
 					},
 				});
 				ctx.ui.setWidget("world-console.choice", factory as never);

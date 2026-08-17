@@ -539,6 +539,10 @@ ok("ui: wrapText and the four-slot board keep honest widths", () => {
 	assert.ok(box.some((line: string) => line.includes("├")), "the middle bar divides the rows");
 	const height = box.filter((line: string) => line.startsWith("│")).length;
 	assert.ok(height >= 3, "cells wrap to multiple rows");
+	// The choice panel's floor width (24): the box must never outgrow its
+	// bound — the caller caps at the terminal, but the layout keeps its word.
+	const narrow = gridBox([{ lines: ["[1] a long option label that must wrap"] }, { lines: ["[2] short"] }], 24);
+	assert.ok(narrow.every((line: string) => line.length <= 24), "the floor-width box stays within its bound");
 });
 
 ok("derive: legacy milestone mood entries honored", () => {
