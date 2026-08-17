@@ -66,7 +66,7 @@ The project's records use a small in-house vocabulary. It is worth learning — 
 A guide that silently rots is worse than none. The rules:
 
 1. **One truth, one home.** Live operational facts — unit names, timer times, paths, current image ids, the exact box state — are owned by the runbook and the files themselves. This guide teaches the *shapes* and *reasons*, quotes concrete values for readability, and every page carries a `Synced:` commit hash: the state of `deploy/` it was checked against.
-2. **When `deploy/` changes**, the guide is re-checked against it and the `Synced:` hashes move. This is the job of the `/guide-sync` workflow (lands as its own round with a registry entry; until then, the check is manual: `git diff <synced-hash>..HEAD -- deploy/ ':!deploy/guide'` and re-read the touched pages).
+2. **When `deploy/` changes**, the guide is re-checked against it and the `Synced:` hashes move. This is `/guide-sync`'s job (R31; method owned by `.claude/commands/guide-sync.md`) — any round that lands changes under `deploy/` outside this folder runs it before its wrap.
 3. **Additions** get a new file in the right number range (gaps are left on purpose), one row in the index table above, and their own `Synced:` line. Never bolt a new topic onto an unrelated page.
 4. **Corrections** are normal edits — this guide is a living document, not an immutable record (unlike `research/analysis/reports/`).
 
