@@ -8,7 +8,7 @@ The game running inside the stock [pi coding agent](https://github.com/earendil-
 |---|---|
 | `.pi/extensions/` | pi's loader shims — how pi finds the game when run inside this folder |
 | `extension/` | the whole engine: prompt takeover, tools, ledger, GM table, world files |
-| `config/` | constitution, worlds (+ per-world `*.laws.md`), moods, web sources — plain markdown, hot-reloaded |
+| `config/` | constitution, worlds (+ per-world `*.laws.md` and `*.names.txt` spent-name pools), moods, web sources — plain markdown, hot-reloaded |
 | `research/design/` | the undertakings design: goals & invariants, mechanics spec, research record, build progress — and the design↔code audit |
 | `research/analysis/` | the playtest telemetry kit: session anatomy, failure taxonomy, audit workflow, report template, tester guide (`/analyze-sessions` runs it) |
 | `research/roadmap/` | the product path: decision registry (R1…, open-ended), stage specs (friends web service → paid beta → public → Steam), licensing & IP, platform research log |

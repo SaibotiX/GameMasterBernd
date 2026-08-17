@@ -27,6 +27,10 @@ export interface World {
 	 * descriptive face — its nature and laws, never instructions — shown
 	 * under the player banner's title (R30). "" when the file is absent. */
 	intro: string;
+	/** Names the realm has already spent (worlds/<id>.names.txt, one per
+	 * line) — the keeper must never bestow one on a NEW soul or place
+	 * (WC-33, ruled 2026-08-17). [] when the file is absent. */
+	spentNames: string[];
 }
 
 export interface Mood {
@@ -105,6 +109,13 @@ function loadWorld(dir: string, id: string): World {
 		: [];
 	const introFile = join(dir, `${id}.intro.md`);
 	const intro = existsSync(introFile) ? parseFrontmatter(readFileSync(introFile, "utf8")).body : "";
+	const namesFile = join(dir, `${id}.names.txt`);
+	const spentNames = existsSync(namesFile)
+		? readFileSync(namesFile, "utf8")
+				.split("\n")
+				.map((line) => line.trim())
+				.filter(Boolean)
+		: [];
 	return {
 		id,
 		title: meta.title ?? id,
@@ -115,6 +126,7 @@ function loadWorld(dir: string, id: string): World {
 		laws,
 		banner,
 		intro,
+		spentNames,
 	};
 }
 

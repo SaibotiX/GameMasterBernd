@@ -720,6 +720,17 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /never repeat the same failing call unchanged/);
 	});
 
+	ok("prompt: WC-33 — the spent-names pool binds the keeper's inventions per world", () => {
+		assert.match(p, /Names this realm has already SPENT on souls of tales past: Marta, Elara, Torvin/);
+		assert.match(p, /NEVER bestow one on a NEW soul or place/);
+		const frontier = assembleSystemPrompt(loadConfig(BASE, "star-frontier"), {
+			state: derive([], "neutral"),
+			engineNonce: "t3stn0nc3",
+			justArrived: true,
+		});
+		assert.doesNotMatch(frontier, /already SPENT/);
+	});
+
 	ok("prompt: WC-18/WC-29 — the seeker's voice reserved, no turn batons; boards exempt from the offer-law", () => {
 		assert.match(p, /THE SEEKER'S VOICE IS THEIRS ALONE/);
 		assert.match(p, /only the seeker answers for the seeker/);
@@ -1429,6 +1440,10 @@ ok("asGameEvent: non-custom entries → null", () => {
 			assert.ok(world.intro.length > 0, `${world.id} ships an intro`);
 			assert.ok(!/you should/i.test(world.intro), "the intro never instructs");
 		}
+		// The spent-names pool (WC-33, ruled 2026-08-17): dragon-realm seeds
+		// its Martas; a world without the file simply has no pool.
+		assert.deepEqual(dragon.world.spentNames, ["Marta", "Elara", "Torvin"]);
+		assert.deepEqual(frontier.world.spentNames, []);
 	});
 
 	ok("player: the submit gate refuses the workshop, lets the game and the unknown flow", () => {
