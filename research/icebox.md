@@ -37,6 +37,12 @@ Prompted by: the house-lane round's item-1 spike weighed both candidates against
 Why not now: its virtual keys mandate a Postgres service; its cost tables and admin API would sit between the org key and the ledger's own metering; two more services on a 4 GB box buy nothing the ~200-line own proxy didn't just prove — passthrough, caching, streaming, budgets, all green. The spike's LiteLLM harness (compose + config) stays aboard, so a revival is a run, not a build.
 **Revive when:** a second PROVIDER (not model) enters the house lane (multi-provider routing is LiteLLM's real value — the aggregator question, 06 §2026-08-08) · virtual-key administration outgrows the own proxy (key rotation/team features becoming real work) · the own proxy fails a receipt the spike can't explain.
 
+### GM repair path for record divergences (quest closure) · engine · iced 2026-08-17 · recurrence 0
+A maintainer-side repair lane that appends legitimate closing events to a sitting's session record (clock fill, done/rewarded status, giver relocation) so a record–story divergence can be healed after the fact — mirrors alone can't be edited, since derived state folds from the session branch.
+Prompted by: the first-friends audit (report 2026-08-17) — jakob's escort stands `[open] 2/6` behind a fictionally completed, paid quest, and he asked the GM table for exactly this repair (u125) and was refused on confabulated grounds.
+Why not now: the maintainer ruled jakob's world stays as played (2026-08-17); the round's WC-10/WC-17/WC-26 fixes aim at preventing the divergence, and repair machinery for a single known case is surface without demonstrated recurrence.
+**Revive when:** a friend asks for a record repair again · a future audit finds another stuck divergence that play can't reach — the mechanics' `twist_dropped` "GM repair" lane is the natural home to extend.
+
 ## Closed
 
 *(nothing yet — won't-dos land here with their one-line reasons)*

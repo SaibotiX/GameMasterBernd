@@ -394,6 +394,67 @@ check (`aitester/ai-playtester.md` §9) re-scoped it — verdicts inline:
       read-only).
 - [ ] Tests + smoke
 
+## Phase 3.1 — the first-friends round (2026-08-17: first human batch rulings, planned)
+
+The maintainer's rulings on `research/analysis/reports/2026-08-17-first-friends.md`
+(the first human batch; its chronic rows carry batch-3's still-open findings —
+no keeper-protocol fix landed between 08-05 and the batch rev 99dc64f).
+Rulings dated 2026-08-17: WC-15 escalates to an engine nudge + law line ·
+jakob's live world stays as played, no repair (the GM-repair-path idea iced
+with its revival condition, `research/icebox.md`) · WC-24 scoped — diegetic
+boards exempt, the offer-law covers keeper-voiced courses only · the
+tester-notes gap becomes an in-play periodic prompt (every X turns,
+skippable), not a seal-time ask. Per-class fix shapes live in the report's
+findings; one commit per item below (R9); the standing recipe gates each
+(unit · headless RPC smoke · tty-probe where player-visible).
+
+- [ ] **The work is scenes** (WC-10 — the round's biggest buy): protocol law
+      "every scene of effort toward an open quest calls attempt_quest — the
+      travel legs of an escort are its work"; the update/redeem refusal
+      texts gain the narrative redirect ("play the remaining beats now, one
+      attempt each; no payment or closing scene until the clock fills").
+      Unit asserts the new refusal texts.
+- [ ] **The record moves with the story** (WC-17): protocol movement-hygiene
+      law — when the story moves the party, the record moves in the same
+      reply (set_place the road stretch or arrival; move_persona named
+      companions traveling along) — plus add_item/redeem_quest description
+      guards against reward double-grants (kilian's longsword landmine).
+- [ ] **The table rules from the record** (WC-26 REGRESSION): gmchat table
+      contract — the record outranks the telling; quote the ledger line
+      before any quest-state claim; "the work advances (K/N)" never means
+      closed; name divergences plainly and point at what play can do; no
+      invented engine behavior. Headless smoke replays a u124-shaped
+      question against a seeded divergence.
+- [ ] **Named means paged, with teeth** (WC-15 chronic, ruled 2026-08-17):
+      conservative reply-end sweep — a repeated capitalized name with no
+      page draws the course-correction nudge on the second consecutive
+      miss — plus the law line; false positives accepted at the
+      conservative threshold; unit fixtures from this batch's misses
+      (Kess, Herta, Aldous).
+- [ ] **The recurring pair joins the law** (NEW-2/NEW-3 promotion, 2nd
+      report each): seeker's-hand-seized and turn-batons enter
+      failure-taxonomy.md; protocol lines "the seeker's voice is theirs
+      alone" and "end on the world's state, never an interrogative baton".
+      WC-24's boards-exempt scoping note (ruling 2026-08-17) rides here.
+- [ ] **Names the realm has spent** (WC-33, 3rd report): per-world name
+      pool in config/worlds/dragon-realm (seeded Marta/Elara/Torvin) +
+      prompt line drawing fresh names outside the model's defaults.
+- [ ] **The notes prompt, in play** (maintainer's design 2026-08-17): every
+      X player turns (default proposed 10 — settle at the seen-gate) the
+      player-mode console asks, skippably, whether there's anything to
+      note; free-form lines land in the chronicle's notes file and ship
+      with the R13 batch. Player-visible: seen before done (R9); tty-probe
+      the prompt; if shipper/deploy files move, /guide-sync at the wrap
+      (R31).
+- [ ] **Rider — the map speaks the world's name**: session-map.mjs reads
+      `data.world` for the world event (prints a blank name today).
+- [ ] **Wrap**: round record in the decisions log; the next batch's RITE
+      re-test carries the escort scenario ("take an escort task, travel
+      three legs, then get paid") plus zero-count checks on WC-10/WC-15/
+      NEW-3; standing escalation trigger — if the re-test still shows
+      WC-10/NEW-3 at volume on claude-haiku-4-5, the keeper model tier
+      goes to the roadmap as a stage-1 decision.
+
 ## Decisions log
 
 - 2026-08-03 · Percent-chance-per-task replaced by scheduled tension
