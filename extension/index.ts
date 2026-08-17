@@ -74,7 +74,7 @@ import {
 	type QuestShape,
 } from "./ledger.ts";
 import { searchPicture, searchVideo } from "./mediasearch.ts";
-import { assembleSystemPrompt } from "./prompt.ts";
+import { assembleSystemPrompt, unfinishedWorkRefusal } from "./prompt.ts";
 import { searchText } from "./textsearch.ts";
 import { gridBox, wrapText, type GridCell } from "./ui.ts";
 import {
@@ -3589,14 +3589,10 @@ export default function (pi: ExtensionAPI) {
 				const size = u && u.size > 0 ? u.size : quest.clock?.size ?? 0;
 				const filled = u && u.size > 0 ? u.filled : quest.clock?.filled ?? 0;
 				if (size === 0) {
-					throw new Error(
-						`No work on "${quest.title}" is recorded at all — honest effort first (attempt_quest); words alone do not finish a task.`,
-					);
+					throw new Error(unfinishedWorkRefusal(quest.title, 0, 0));
 				}
 				if (filled < size) {
-					throw new Error(
-						`The deed is not done — the work stands at ${filled}/${size}. Honest effort advances it (attempt_quest); words alone do not.`,
-					);
+					throw new Error(unfinishedWorkRefusal(quest.title, filled, size));
 				}
 			}
 			setQuestStatus(files, slug, advance ? "done" : null, params.note);
@@ -3758,6 +3754,13 @@ export default function (pi: ExtensionAPI) {
 			if (!quest) throw new Error(`No quest "${params.title}" in the chronicle.`);
 			if (quest.status === "rewarded") throw new Error(`"${quest.title}" was already rewarded.`);
 			if (quest.status !== "done") {
+				// The u76 lesson (first-friends): "update_quest first" alone sent the
+				// keeper straight into the next false mark. With the clock unfull the
+				// refusal must redirect the STORY back into the work instead.
+				const u = st.undertakings[slug];
+				const size = u && u.size > 0 ? u.size : quest.clock?.size ?? 0;
+				const filled = u && u.size > 0 ? u.filled : quest.clock?.filled ?? 0;
+				if (size === 0 || filled < size) throw new Error(unfinishedWorkRefusal(quest.title, filled, size));
 				throw new Error(`The deed of "${quest.title}" is not yet recorded done — update_quest first.`);
 			}
 			// A self-set task has nobody to collect from — it closes wherever

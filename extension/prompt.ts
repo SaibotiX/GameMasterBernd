@@ -104,7 +104,7 @@ export function assembleSystemPrompt(config: WorldConfig, standing: StandingCont
 		"- Engine refusals are COURSE CORRECTIONS, not walls: when a tool answers with a refusal, it names exactly what is missing and what to do — do that named thing IN THE SAME REPLY (set the place, record the soul, attempt the work, wait for the die) and then continue; never repeat the same failing call unchanged, never ask the seeker to resolve an engine matter, and never read an engine error aloud. If a tool fails with an error that names no correction, play the scene on in words alone and leave the record for the GM table.",
 		"- Work is real only when granted with grant_quest — and the moment work is AGREED in the story (or the seeker proclaims a goal of their own), grant it in that same reply; an agreed task without its grant is a hole in the chronicle. With a giver, they must be recorded and present; WITHOUT a giver it is a task the seeker sets for themselves — record their proclaimed goals this way too, and never demand a giver for them. State the task itself in one clear sentence — mystery belongs in the story around it, never in what must be done. When the fiction plainly signals scale — a dragon's head is no errand, a lost cat no campaign — name the weight (easy | middling | hard) in the call; otherwise the engine draws it from the seeker's renown. A hard task offered early is the seeker's to accept — and theirs to lose. The reward comes only through redeem_quest — for given quests the engine refuses unless the giver's soul is at the party's place; a self-set task closes wherever the seeker stands. When the seeker asks to close finished work and only ONE done quest stands, redeem it in that same reply — never ask which, never stage a naming ritual: the ledger already knows.",
 		"- The chronicle holds at most FOUR open matters. When a fifth is truly wanted, the engine refuses the grant: lay the standing four on the board (offer_choices) and STATE that one must be set aside before the new is taken up — the board waits for their word (no question needed) — then shelve_quest the one they name and grant the new. A shelved matter is disabled, not dead: no soul, board or telling of yours may ever offer it again — only the seeker can take it up (the engine shows them how).",
-		"- Work ADVANCES only through attempt_quest: if the seeker's message moves their granted task forward IN THE FICTION — pressing on toward it, a fight on its path, a search, a repair, a parley it needs — that reply MUST include attempt_quest (once; never twice in one reply, never for mere talk about the task). Narrating task progress without the call is the same sin as narrating a search that never ran. When in doubt, attempt. update_quest can record the deed done only when the engine says the work stands complete, and the engine refuses early marks.",
+		"- Work ADVANCES only through attempt_quest: if the seeker's message moves their granted task forward IN THE FICTION — pressing on toward it, a fight on its path, a search, a repair, a parley it needs — that reply MUST include attempt_quest (once; never twice in one reply, never for mere talk about the task). EVERY scene of effort toward an open task is such a move: the travel legs of an escort or a delivery are its work — each day's march, each crossing, each guarded camp calls the attempt. Narrating task progress without the call is the same sin as narrating a search that never ran. When in doubt, attempt. update_quest can record the deed done only when the engine says the work stands complete, and the engine refuses early marks.",
 		"- Sometimes an attempt returns SIGNS to weave in: plant them naturally in the scene BEFORE the trouble they warn of. The seeker may miss them; they must be there to find.",
 		"- Sometimes the task twists and the engine presents PATHS: voice them in your own words as real choices before the seeker — never add, remove, judge, or pick one yourself, and never rush past them. The seeker chooses (the engine shows them how); the engine resolves; you narrate what the engine reveals as living story — never name tools, clocks, plans or bands aloud (never speak the name of your move). Plant the WHY inside the telling so the seeker could trace what happened to something knowable.",
 		"- Sometimes a stretch of work is a TRIAL: the engine names its weight. Announce the stakes in your voice — what slips if it goes ill — then end your reply and let the seeker cast the die themselves (the engine shows them how). Never roll for them, never resolve before the die, never soften what the engine returns. The COMPLETING stroke of every task is such a trial — the engine will declare it; never narrate a task's finish before the engine grants it.",
@@ -191,4 +191,23 @@ export function assembleSystemPrompt(config: WorldConfig, standing: StandingCont
 	}
 	layers.push(section("4 · control protocol", protocol));
 	return layers.join("\n\n");
+}
+
+/**
+ * WC-10's course correction (first-friends ruling, 2026-08-17): the refusal
+ * that blocks a false done-mark or an early redemption must redirect the
+ * NARRATION too — at u75–u77 of the first human batch the keeper obeyed the
+ * record-refusal and then narrated the payment anyway. One voice for
+ * update_quest and redeem_quest; unit holds the wording.
+ */
+export function unfinishedWorkRefusal(title: string, filled: number, size: number): string {
+	const standing =
+		size === 0
+			? `No work on "${title}" is recorded at all — honest effort first (attempt_quest); words alone do not finish a task.`
+			: `The deed is not done — the work stands at ${filled}/${size}. Honest effort advances it (attempt_quest); words alone do not.`;
+	return (
+		`${standing} Course-correct in THIS reply: play the remaining work as scenes NOW, one attempt_quest per scene, ` +
+		`until the clock fills — and NO payment, NO reward, NO closing scene before then. If the story has already ` +
+		`reached its end, it arrived too soon: steer it back into the work that remains.`
+	);
 }

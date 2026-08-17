@@ -22,7 +22,7 @@ const {
 } = await import(join(EXT, "ledger.ts"));
 const { listWorldIds, loadConfig, moodIdsBySeverity } = await import(join(EXT, "config.ts"));
 const { readWorldChoice, writeWorldChoice } = await import(join(EXT, "world.ts"));
-const { assembleSystemPrompt } = await import(join(EXT, "prompt.ts"));
+const { assembleSystemPrompt, unfinishedWorkRefusal } = await import(join(EXT, "prompt.ts"));
 const { searchText } = await import(join(EXT, "textsearch.ts"));
 const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
 const {
@@ -718,6 +718,19 @@ ok("config: angriest mood is last in severity order", () => {
 		assert.match(p, /the moment work is AGREED/);
 		assert.match(p, /Engine refusals are COURSE CORRECTIONS/);
 		assert.match(p, /never repeat the same failing call unchanged/);
+	});
+
+	ok("prompt: WC-10 — the work is scenes, and the refusals redirect the narration", () => {
+		assert.match(p, /EVERY scene of effort toward an open task/);
+		assert.match(p, /travel legs of an escort or a delivery are its work/);
+		const partial = unfinishedWorkRefusal("Escort to Port Ashvin", 2, 6);
+		assert.match(partial, /The deed is not done — the work stands at 2\/6/);
+		assert.match(partial, /one attempt_quest per scene/);
+		assert.match(partial, /NO payment, NO reward, NO closing scene before then/);
+		assert.match(partial, /steer it back into the work that remains/);
+		const unstarted = unfinishedWorkRefusal("Archive Work", 0, 0);
+		assert.match(unstarted, /No work on "Archive Work" is recorded at all/);
+		assert.match(unstarted, /NO payment, NO reward, NO closing scene before then/);
 	});
 
 	ok("prompt: wounds, a standing gate and death each surface to the keeper", () => {
