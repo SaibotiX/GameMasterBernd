@@ -75,7 +75,7 @@ for (const file of process.argv.slice(2)) {
 							? `${entry.data.slug ?? ""} ${entry.data.band ?? ""} ${entry.data.add ?? ""} → ${entry.data.filled ?? ""}`
 							: ev === "check" || ev === "roll" || ev === "pick" || ev === "complication"
 								? clip(JSON.stringify(entry.data))
-								: clip(entry.data.text ?? entry.data.reason ?? entry.data.title ?? entry.data.kind ?? "");
+								: clip(entry.data.text ?? entry.data.reason ?? entry.data.title ?? entry.data.world ?? entry.data.kind ?? "");
 				console.log(`${off}u${u} · ${ev} ${clip(detail)}`);
 			} else {
 				console.log(`${off}u${u} · custom:${entry.customType ?? "?"}`);
