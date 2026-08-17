@@ -455,6 +455,57 @@ findings; one commit per item below (R9); the standing recipe gates each
       WC-10/NEW-3 at volume on claude-haiku-4-5, the keeper model tier
       goes to the roadmap as a stage-1 decision.
 
+## Phase 3.2 — the maintainer-preview audit (2026-08-17: the solo sitting's findings filed as open tasks — proposals; rulings pending)
+
+The maintainer's own live sitting hours after 3.1 landed (23 turns on
+claude-haiku-4-5), audited on their request:
+`research/analysis/reports/2026-08-17-maintainer-preview.md` is the owning
+doc — evidence and fix shapes live in its findings; every task below points
+there. The sitting's headline: the engine held everywhere (gate, self-heal
+/roll, nudge, pool, table), the keeper broke four of the same-day laws —
+tier evidence, not new prompt work.
+
+- [ ] **The tier evidence run** (the coverage register's standing trigger,
+      now primed at n=1): the RITE re-test batch on BOTH keeper tiers
+      (haiku + one tier up), caravaner card plus this sitting's shapes (a
+      bare-number pick turn, an ignored-trial turn); zero-counts decide the
+      stage-1 keeper-model ruling. (WC-29 ×3, WC-18 ×3, WC-17, WC-10,
+      WC-15 — all post-law recurrences on haiku.)
+- [ ] **A number is a pick** (NEW-2, engine): a bare integer 1..N typed
+      while a choice stands resolves as /pick n (before the offer-lapse
+      check) — kills the "passes unchosen" mislabel (u19) and the
+      twelve-entry twist limbo (u50→u62). Unit + integration leg.
+- [ ] **The notes ask rebuilt provable** (NEW-4, engine + probe): a
+      monotonic threshold replaces the drifting-modulo gate (the turn-21
+      skip is verified: u97's append bumped the counter past it);
+      resume-seeded; a record trace so firing is auditable; a scripted
+      11-turn player-lane leg — THEN the 3.1 seen-gate re-runs and X=10
+      settles. For the record meanwhile: the ask is player-console-only by
+      R30 (the maintainer's unflagged console never asks, by design) and
+      the cadence is every 10th turn, never every turn.
+- [ ] **Standing-trial holds — design rulings** (WC-17 knock-on): (a)
+      re-stamp a pending check's displayed place at resolution, or let the
+      banner read stale ("a sudden sickness — at Millbrook" over a
+      Thornwick standoff, u105→u115); (b) bar set_place while a peril
+      check stands, or keep movement free (u109 moved mid-check). Plus the
+      cheap mitigation from NEW-1-05's denial case (u71): a dim
+      player-facing "a die stands — /roll casts it" line when a message
+      arrives past a pending roll.
+- [ ] **Sealed names yield to pages** (NEW-1 + WC-33): a pick hand-off
+      line — keep the sealed substance, use the page's name (blesses what
+      the keeper did with Kess/Press, u63–u65); Kess into dragon-realm's
+      spent pool; whether side-calls see spentNames — one ruling.
+- [ ] **Peril advantage never performs quest work** (WC-10 edge): rule
+      whether a great-band's "earned advantage" may only color the next
+      attempt (favored edge, named reason) and never advance substance
+      wordlessly (u119's oath-written vs the 3/6 clock).
+- [ ] **Mirrors, twice-asked** (NEW-5 lineage, 2nd report): quests.md
+      progress lines on ticks/outcomes; the Witnessed cadence widened.
+- [ ] **Small rows:** the table meta-routing line (NEW-3, u77) · the WC-15
+      institution filter ruling ("House Thornwick") and the recurring
+      nameless soul question (the scarred man, twice) · the WC-18 design
+      edge (may a peril author seeker backstory unconfirmed?).
+
 ## Decisions log
 
 - 2026-08-17 · The first-friends round built (rulings of the same day on
