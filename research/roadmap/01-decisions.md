@@ -371,7 +371,7 @@ compaction path stands. Covenant context: R26.)*
 
 **Rejected (for now):** renting a virtual-office/business address pre-stage-1 (the section's lead proposal) — real money for a privacy shield the friends stage doesn't need; the kleine-Website-floor-only fallback — the full block costs one HTML block more and removes the grey zone entirely.
 
-**Revisit when:** stage-3 planning (the standing gate above) — or earlier if the page's audience widens for any reason.
+**Revisit when:** stage-3 planning (the standing gate above) — or earlier if the page's audience widens for any reason. *(2026-08-18: the hub (R34) is exactly that widening, and the maintainer asked for the market — evidence landed in [06](06-research-log.md) §2026-08-18 "the rented address": the legal fit sharpened (the tatsächliche-Niederlassung prong; the § 25 Wohnort nuance; RSa/RSb mechanics) and the Austrian market priced (~€12/mo Impressum-only tier now, €45–75 netto Gewerbe-capable tier at founding). The pick — and with it this entry's revision — stays the maintainer's.)*
 
 ---
 
