@@ -26,6 +26,7 @@ A project is hub-ready when all of this is true (the template ships most of it a
 7. **systemd units prefixed `<app>-`,** paths matching the box clone at `/home/deploy/<app>`.
 8. **Legal links:** the landing links the apex Impressum (one operator, one page) and carries the app's own privacy words where it processes anything.
 9. **A hub card block** ready to paste: name, one honest line, state tag, links (kept in the tenant README or offered at onboarding — the apex `index.html` is where it lands).
+10. **Visibility declared, per origin (the maintainer's ruling, 2026-08-18 — R34):** every hostname in `box-site.caddy` is *public* or *private*. Private = the fragment's ready-to-toggle `basic_auth` block (bcrypt hash; credentials via the tenant's box env, never committed) or the app's own login/token door. The flip is that block toggled + the §B step-4 copy + one reload; the hub card's state tag says which it is.
 
 ## B. Onboarding — wiring tenant `<app>` onto the box (runbook-§Tenants procedure, ~1 h)
 
@@ -35,7 +36,7 @@ A project is hub-ready when all of this is true (the template ships most of it a
 3. **Build the image from committed state:** the tenant's `deploy/image/build.sh` on the box (whitelist archive — untracked files structurally can't enter).
 4. **Land the fragment:** `cp /home/deploy/<app>/deploy/host/caddy/box-site.caddy /home/deploy/world-console/deploy/host/caddy/sites/<app>.caddy` — the derived copy, gitignored on the hub side (the `friends/` pattern one level up). Re-run this cp whenever the tenant's fragment changes (it rides the tenant's update recipe).
 5. **Up and reload:** `docker compose up -d app` in the tenant dir (creates its containers on the external ingress network), then reload the hub Caddy (`docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile` in the world-console dir). TLS for the new names issues automatically on first hit.
-6. **Prove the doors from outside** (dev machine, not the box): landing `curl -sI` → 200 + the four hardening headers; private door → 401 bare, 401 wrong pair, 200 with the pair; unmatched → the app's uniform 404. Nothing counts until this passes from outside.
+6. **Prove the doors from outside** (dev machine, not the box): landing `curl -sI` → 200 + the four hardening headers; private door → 401 bare, 401 wrong pair, 200 with the pair; unmatched → the app's uniform 404. Every origin must answer per its §A.10 declaration — and a later visibility flip re-runs exactly this step. Nothing counts until this passes from outside.
 7. **Backup lane live:** `borg init` the tenant repo on the Storage Box, run the tenant's `backup.sh` once by hand, **run the restore drill**, install its timer + pager units (`cp` + `daemon-reload`), pick a nightly minute that leaves the box's existing 04:11–05:14 ladder alone, run `pull-backup.sh` once from the dev machine.
 8. **Records:** a row in the runbook's §Tenants table (app · hostnames · alias:port · clone path · borg path · pager topic · caps · date) + a dated state note; the card lands on the apex `index.html`; the tenant's own runbook notes its box residency and points here for the shared seams.
 9. **Regression sweep:** the existing tenants still answer from outside (apex 200, `play.` by-invitation 404, one friend door 200, other tenants' landings 200).
@@ -50,7 +51,7 @@ The template stays **solo-first** (its blueprint shape keeps working unchanged);
 
 - A "joining an existing box" fork in the phase list: skip renting (Phase 2 shrinks to "get a clone path + ingress network name from the box owner"), DNS rows point at the *existing* box, and the Caddy work becomes "fill `box-site.caddy`" instead of "own the front door."
 - The compose gains the commented hub-mode stanza (§A.1) and the note that `caddy` is `local`-profile-only in hub mode.
-- `box-site.caddy` joins the tree beside the solo `caddy/Caddyfile`, EDITME-marked, with the fragment rules (§A.3).
+- `box-site.caddy` joins the tree beside the solo `caddy/Caddyfile`, EDITME-marked, with the fragment rules (§A.3) and the commented `basic_auth` visibility toggle; "Making it yours" gains the visibility line (§A.10).
 - "Making it yours" gains the tenant-contract checklist and the no-firewall-unit rule for hub mode.
 - The mother-side blueprint (`deploy/guide/30`) gains the same fork as one short section pointing at the runbook §Tenants — via `/guide-sync`, since that is a `deploy/` teaching-layer change.
 

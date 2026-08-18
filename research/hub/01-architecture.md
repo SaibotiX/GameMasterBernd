@@ -1,6 +1,6 @@
 # The hub's architecture — decided shape
 
-Decided 2026-08-18 by the session (design), pending the maintainer's H0 rulings (direction, domain, branding — [README.md](README.md)). Ground truth behind every claim: the 2026-08-18 sweeps in [04-research-log.md](04-research-log.md); live-ops facts stay owned by `deploy/README.md` and are only *pointed at* here.
+Decided 2026-08-18 by the session (design); the maintainer's H0 rulings landed the same day (**R34** — the five answers plus the visibility ruling, [README.md](README.md)). Ground truth behind every claim: the 2026-08-18 sweeps in [04-research-log.md](04-research-log.md); live-ops facts stay owned by `deploy/README.md` and are only *pointed at* here.
 
 ## The shape in one breath
 
@@ -21,7 +21,7 @@ Rules that make this safe and cheap:
 
 - **One subdomain family per project; deeper labels belong to the project.** This preserves the template's own law ("one subdomain per trust level — the public landing and the private app never share an origin") without inventing sibling names like `adsum-app.`.
 - **TLS is per-name Let's Encrypt exactly as today** — Caddy issues one certificate per hostname over HTTP-01 the moment DNS points at the box. Works at any label depth, needs zero new machinery. A wildcard (`*.worldconsole.eu`) was rejected: it requires a custom-built Caddy with the netcup DNS plugin, API credentials in the box env, and the plugin's documented ≥900 s propagation waits — machinery for a convenience the explicit-names list doesn't need at this scale. ⚠ Note the DNS is at INWX (not netcup) — a wildcard would use INWX's plugin, same verdict.
-- **DNS per tenant is two rows at INWX** (A + AAAA per name, plain and unproxied per R17's standing posture). A tenant rename (e.g. if "adsum" fails its pending clearance) is a DNS row + Caddyfile edit — subdomains cost nothing to abandon, which is itself an argument for this shape over buying per-project domains while names are young.
+- **DNS per tenant is two rows at INWX** (A + AAAA per name, plain and unproxied per R17's standing posture). A tenant rename (if a name ever fails clearance — "adsum" is register-clean since 2026-08-18 in its own records) is a DNS row + Caddyfile edit — subdomains cost nothing to abandon, which is itself an argument for this shape over buying per-project domains while names are young.
 - **HSTS stays per-origin** (the apex header deliberately lacks `includeSubDomains` — standing choice, now load-bearing: every tenant rules its own origin's headers).
 
 ## The ingress (one Caddy owns 80/443)
@@ -38,10 +38,20 @@ Rules that make this safe and cheap:
 
 Static, hand-maintained, served exactly like today's landing (same hardening header block, same `caddy/site/` home):
 
-- **One card per project:** name, one honest line, a state tag (`live` / `by invitation` / `coming`), and the links — the app itself, and where one exists, its own landing. World Console's card carries today's load-bearing sentences verbatim (the by-invitation line, the R13 disclosure, the AI-Act 50(1) sentence) so `localcheck.sh`'s words-probe keeps passing with at most a selector touch.
+- **One card per project:** name, one honest line, a state tag (`live` / `by invitation` / `private` / `coming`), and the links — the app itself, and where one exists, its own landing. World Console's card carries today's load-bearing sentences verbatim (the by-invitation line, the R13 disclosure, the AI-Act 50(1) sentence) so `localcheck.sh`'s words-probe keeps passing with at most a selector touch.
 - **No build step, no generator, no manifest file.** The registry of tenants is the runbook's new §Tenants table (live-ops truth, where it belongs); the card is an HTML block cribbed from the wiring workflow. A generator is machinery without a demonstrated miss — revisit if the card count ever makes hand-editing silly.
 - **No status/uptime machinery, no analytics, no cookies.** The page stays in the compliance one-liner's world: static files, strict CSP, nothing to consent to.
-- **Branding** is the maintainer's H0 ruling: the Hausregel framing (R16) is recommended — a hub is the studio presenting its works, and the page going live would be the dated first public use R16 wants archived (§ 9 UWG / § 80 UrhG start free at first use). The card grid works either way.
+- **Branding, ruled 2026-08-18: Hausregel** (R16 — the studio presenting its works). The page going live at H1 is the dated first public use R16 wants archived (§ 9 UWG / § 80 UrhG start free at first use); the H1 step carries the archive task.
+
+## Public and private tenants (the maintainer's ruling, 2026-08-18)
+
+The hub serves both kinds, and a tenant flips between them cheaply:
+
+- **Every tenant origin declares its visibility:** *public* (anyone) or *private* (a login stands in the way). Both flavors already live on the box — WC's `play.` doors (secret links, everything unmatched 404s) and Adsum's `app.` doors (basic auth + capability tokens) are private; the apex and the tenant landings are public.
+- **The gate sits in the tenant's own Caddy fragment:** `box-site.caddy` ships a ready-to-toggle `basic_auth` block per site block (bcrypt hash; credentials via the tenant's box env, never committed). Private ↔ public is that block toggled + the onboarding cp + one Caddy reload — no compose change, no DNS change, no new machinery. An app with its own door (Adsum's tokens) counts as private without the Caddy gate; the fragment gate is the zero-app-work default for apps that never built one.
+- **The hub card tells the truth:** a private tenant's card carries the `private` tag (WC's "by invitation" is the same family) and links nothing a stranger can open.
+
+The binding contract line is [02-wiring-workflow.md](02-wiring-workflow.md) §A.10; the outside probe in §B step 6 proves each origin matches its declaration; H2 exercises the flip once on the first live tenant.
 
 ## Legal ground (kept boring, kept true)
 
@@ -60,7 +70,7 @@ Static, hand-maintained, served exactly like today's landing (same hardening hea
 
 ## Cost
 
-**€0/month additional.** The hub reuses the paid basket — box €7.92 (hourly; €5.96 on the 12-month term, the standing conversion question), Storage Box €3.84, domain €6/yr — where each solo project would have re-bought it at ~€11/month (the blueprint's own table). Per-tenant marginal cost: bytes on the Storage Box (BX11 is ~100× over need) and RAM under caps. The one optional spend is the H0 branding ruling's second domain (~€6–9/yr, only if chosen against the recommendation).
+**€0/month additional.** The hub reuses the paid basket — box €7.92 (hourly; €5.96 on the 12-month term, the standing conversion question), Storage Box €3.84, domain €6/yr — where each solo project would have re-bought it at ~€11/month (the blueprint's own table). Per-tenant marginal cost: bytes on the Storage Box (BX11 is ~100× over need) and RAM under caps. The second-domain option was declined at H0 (2026-08-18) — no optional spend remains.
 
 ## Is this allowed?
 

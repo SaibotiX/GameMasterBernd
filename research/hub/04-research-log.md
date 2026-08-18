@@ -27,3 +27,11 @@ Coolify and Dokploy are the self-hosted "hub in a box" products (git-push deploy
 - **Adsum** (`~/Downloads/ISA`): complete and locally verified (35-leg localcheck, phases 0–6 closed), never deployed; stdlib-Node app behind the template's exact two-origin Caddy shape, hardened caps 128 MB/0.5 CPU; placeholders throughout (example.com, borg target, `/home/deploy/adsum` unit paths — ten EDITMEs); **no git remote, working name's EU/AT clearance open, Impressum deliberately absent**; its own cost plan assumed a second ~€11/mo box.
 - **The template** (`~/Desktop/CurrPC/Programming/Example_Web_Server_Project`): single-project by construction (own Caddy on 80/443, per-project firewall unit that rebuilds DOCKER-USER wholesale — the co-tenancy conflict the contract's no-firewall rule exists for); backup lane discovers volumes by compose-project prefix (coexists cleanly); blueprint and template both assume rent-a-box-per-project; remote exists but its `records/coverage.md` git-remote row still says none (stale — flagged for its next session).
 - **Standing law swept:** no record anywhere covered a second app on the box ("hub"/"portfolio": zero hits repo-wide); the constraints that do exist (vault exclusivity, play's no-directory, HSTS-per-origin, R17/R18) are all honored or surfaced in the architecture.
+
+## 2026-08-18 — H0 addendum (later sitting): the prep facts moved
+
+Ground-truth deltas since the morning sweeps, verified from this machine where possible:
+
+- **Adsum left ~/Downloads:** the repo now lives at `~/Desktop/CurrPC/Programming/adsum` with remote `git@github.com:SaibotiX/adsum.git` — refs verified locally (`master` pushed), and an anonymous GitHub probe 404s → the repo is private, as the plan asked.
+- **The "adsum" clearance closed at register-index level** in its own records (its coverage brand row ●; its R3 revised 2026-08-18): TMview EU/AT clean in classes 9/42 — the name stands for the friends circle; the professional search remains a filing-time step there. The H2 name-gate question is answered.
+- **The five H0 rulings + the visibility ruling landed the same sitting** — R34 in the roadmap registry; the answers live in [README.md](README.md).

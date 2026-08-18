@@ -1,12 +1,12 @@
 # The hub — one box, many doors
 
-Designed 2026-08-18 on the maintainer's instruction ("a website which is a hub for all my projects"). Status: **architecture decided on paper, nothing implemented** — the build waits on the rulings below and runs as its own fresh sessions ([03-build-plan.md](03-build-plan.md)). This folder owns the hub's *design*; the moment a phase lands, live-ops truth is `deploy/README.md` (the runbook wins, as everywhere), and this folder stays behind as the design record and receipts.
+Designed 2026-08-18 on the maintainer's instruction ("a website which is a hub for all my projects"). Status: **adopted — the five H0 rulings taken 2026-08-18 (R34), nothing implemented yet**; the build runs as its own fresh sessions starting at H1 ([03-build-plan.md](03-build-plan.md)). This folder owns the hub's *design*; the moment a phase lands, live-ops truth is `deploy/README.md` (the runbook wins, as everywhere), and this folder stays behind as the design record and receipts.
 
 ## What this is
 
 The box (netcup Vienna, R18) and the domain (worldconsole.eu, R17) currently serve one project. The hub turns the **same box, same domain, same Caddy** into the shared home of several small projects: the apex becomes a landing hub with one card per project, each project lives on its own subdomain behind the one ingress Caddy, and a new project copied from the Example template joins with a short fixed procedure instead of renting its own ~€11/month box (which is what `deploy/guide/30-next-project-blueprint.md` assumes today).
 
-Tenant #1 is World Console — unchanged in play, `play.` and `vault.` untouched. Tenant #2 is **Adsum**, the private-event invite service at `~/Downloads/ISA`: functionally complete, locally verified, never deployed — its own cost plan budgeted a second box; the hub absorbs it for €0 additional.
+Tenant #1 is World Console — unchanged in play, `play.` and `vault.` untouched. Tenant #2 is **Adsum**, the private-event invite service at `~/Desktop/CurrPC/Programming/adsum` (moved out of ~/Downloads and remoted 2026-08-18): functionally complete, locally verified, never deployed — its own cost plan budgeted a second box; the hub absorbs it for €0 additional.
 
 ## The map
 
@@ -17,20 +17,22 @@ Tenant #1 is World Console — unchanged in play, `play.` and `vault.` untouched
 | [03-build-plan.md](03-build-plan.md) | the phased implementation plan for fresh sessions (H0–H3): gates, verification recipes, commit boundaries |
 | [04-research-log.md](04-research-log.md) | dated receipts — online best practices, the "is this allowed" answer, alternatives priced, ground-truth sweep results |
 
-## Open rulings (the maintainer's — they gate phase H0, nothing else moves first)
+## The H0 rulings (taken 2026-08-18 — the gate is open; the registry entry is R34)
 
-1. **The direction itself:** the box becomes the shared home of several projects. This amends the exits picture (06 §2026-08-17: cancelling the basket would now evict *every* tenant, not just stage 1) and strengthens the case for the standing hourly→12-month conversion (€7.92 → €5.96/mo) at the price of exit-any-hour. Ruling: adopt the hub direction — yes/no.
-2. **Domain and branding:** hub at the worldconsole.eu apex (recommended — €0, R17 untouched, subdomains free) **vs** a second neutral domain (~€6–9/yr, ⚠ deviates from R17 "one domain, alone" and needs that entry revised). Independent of that: brand the hub page as **Hausregel** (the studio, R16 — a hub is the studio presenting its works, and dated public use starts the €0 name protections R16 wants archived) or keep it unbranded.
-3. **The apex page changes:** today's by-invitation World Console landing becomes a hub page carrying the WC card (disclosure sentences preserved verbatim). Player-visible — the seen-gate (R9) applies at H1; the ruling here is just "yes, re-cut the apex."
-4. **Adsum as tenant #2:** adopt it aboard (its repo stays canonical), on `adsum.worldconsole.eu` + `app.adsum.worldconsole.eu`. Caveats surfaced: the "adsum" brand clearance is half-done in its own records (EU/AT TMview unreachable from the dev box at the time), and the repo has **no git remote and lives in ~/Downloads** — H0 fixes both before anything deploys.
-5. **Ingress ownership:** the hub rides World Console's existing Caddy (recommended: minimal disruption to live friends; extraction into its own compose project is a named trigger — third tenant, or box ops chafing) **vs** extracting a dedicated ingress project now.
+1. **The direction: adopted.** The box becomes the shared home of several projects. The exits picture amends accordingly (06 §2026-08-17's dated note lands at H1, per the plan), and the case for the standing hourly→12-month conversion (€7.92 → €5.96/mo, at the price of exit-any-hour) strengthens — that conversion call itself stays open with the maintainer.
+2. **Domain and branding: the worldconsole.eu apex, branded Hausregel.** No second domain — R17 ("one domain, alone") stands untouched. The hub page carries the **Hausregel** brand (R16 — the studio presenting its works); going live at H1 is the dated first public use whose evidence R16's €0 step archives.
+3. **The apex re-cut: yes.** Today's by-invitation World Console landing becomes the hub page at H1, disclosure sentences preserved verbatim; the seen-gate (R9) applies there.
+4. **Adsum is tenant #2**, on `adsum.worldconsole.eu` + `app.adsum.worldconsole.eu`, its repo canonical. Both surfaced caveats were resolved maintainer-side before the sitting: the repo lives at `~/Desktop/CurrPC/Programming/adsum` with remote `git@github.com:SaibotiX/adsum.git` (refs verified 2026-08-18; anonymous GitHub probe 404s — private, as the plan asked), and the "adsum" clearance is **complete at register-index level** in its own records (TMview EU/AT clean in classes 9/42; its R3: the name stands for the friends circle; the professional search stays a filing-time step there). The H2 name-gate is answered.
+5. **Ingress ownership: the recommendation.** The hub rides World Console's existing Caddy, promoted in place — minimal disruption to the live friends; extraction into its own compose project keeps its named trigger (third tenant, or box ops chafing).
 
-When ruled, the adoption lands in `research/roadmap/01-decisions.md` as the next free R id (R34 as of 2026-08-18) — draft wording in [03-build-plan.md](03-build-plan.md) §H0.
+**Ruled the same sitting, additional:** every tenant origin declares itself **public or private, and the flip stays cheap** — the shape lives in [01-architecture.md](01-architecture.md) §Public and private tenants; the binding contract line is [02-wiring-workflow.md](02-wiring-workflow.md) §A.10.
+
+The adoption landed as **R34** in `research/roadmap/01-decisions.md` (2026-08-18); the coverage row is ●.
 
 ## Standing law this touches (checked 2026-08-18, none silently deviated)
 
-- **R17** (one domain, alone): intact under the recommended shape; the second-domain option is the one ⚠ deviation candidate, surfaced above.
-- **R18** (the box, single-purpose rationale): the letter is untouched, the rationale widens; the R34 draft names it.
+- **R17** (one domain, alone): intact — the second-domain option was declined at H0 (2026-08-18); no deviation.
+- **R18** (the box, single-purpose rationale): the letter is untouched, the rationale widens; R34 names it.
 - **`vault.worldconsole.eu`:** reserved, "nothing else may ever share this origin" — the hub never touches it.
 - **`play.`:** no directory of doors, everything unmatched 404s — the hub links `play.` only as the by-invitation card; friend doors are never listed.
 - **R4:** `research/` and `aitester/` stay off every public surface — the hub page ships from `caddy/site/` like today's landing, nothing more.
