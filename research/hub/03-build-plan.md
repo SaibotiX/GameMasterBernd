@@ -1,6 +1,6 @@
 # The hub build plan — phases for fresh sessions
 
-Written 2026-08-18. Four phases, each a session-sized round with its own gate, verification and commit boundaries; H1–H3 start only after H0's rulings. The cold-start rule applies: a fresh session needs only CLAUDE.md → `research/hub/` → the owning docs named per phase.
+Written 2026-08-18. Four phases, each a session-sized round with its own gate, verification and commit boundaries; H1–H3 start only after H0's rulings. The cold-start rule applies: a fresh session needs only CLAUDE.md → `research/hub/` → the owning docs named per phase. *(2026-08-19, R35/R36: the hub becomes its own project, named World Console — **§M0 below runs first**; this folder then migrates and H1–H3 are re-cut in the WorldConsole repo. The phase texts below stand as ruled 2026-08-18; where they say "promoted in place" or "Hausregel", R35/R36 override.)*
 
 ## H0 — rulings and prep (no code; maintainer + one short session) — DONE 2026-08-18
 
@@ -10,6 +10,18 @@ Written 2026-08-18. Four phases, each a session-sized round with its own gate, v
 - [x] **Adsum's repo has a real home** (done maintainer-side before the sitting; verified 2026-08-18): `~/Desktop/CurrPC/Programming/adsum`, remote `git@github.com:SaibotiX/adsum.git`, pushed, private (anonymous probe 404s). Beyond the H0 ask, its brand clearance closed at register-index level in its own records — the H2 name-gate is pre-answered (gate line updated below).
 - [ ] Flag for the next template session (its repo, not ours): its `records/coverage.md` git-remote row is stale — the remote exists now, the trigger fired. *(Standing until that template session runs.)*
 - [x] Coverage row: ○ → ◐ at the design round's wrap; ◐ → ● with R34 (2026-08-18).
+
+## M0 — the split and the renames (ruled 2026-08-19, R35/R36 — runs before everything else; fresh session)
+
+The ruling sitting recorded only (the maintainer's instruction); this section owns the execution. The follow-up answers live in R36: folder `GameMasterBernd` (no space) · the page brands World Console, Hausregel iced · the rename reaches the product, seen-gated. Work, commit-sized:
+
+1. **The game repo re-homed:** create `SaibotiX/GameMasterBernd` (private), push the **full history**; rename the local folder `IA` → `GameMasterBernd`; re-point `origin`; leave the old remote untouched as the silent archive — and strip every mention of it from the records (R36; the registry entry itself is the one legitimate trace).
+2. **Session memory travels:** copy `~/.claude/projects/-home-zuckram-Desktop-CurrPC-Programming-IA/memory/` to the renamed path's project key — the assistant memory index is path-keyed; without the copy a fresh session in the renamed folder starts amnesiac. Local tooling with absolute paths (aitester scripts, `.claude` config) joins the sweep.
+3. **The hub repo born:** `~/Desktop/CurrPC/Programming/WorldConsole` from the Example template (R32/R33 lanes), repo `git@github.com:SaibotiX/WorldConsole.git` (private); `research/hub/` migrates there wholesale (this file included — H1–H3 are re-cut there on arrival); the game repo keeps pointers only, no restated content; the new repo's records open citing R34–R36.
+4. **The rename sweep, product included (R36):** README, CLAUDE.md, guide, runbook, localcheck words, prompts, `config/` — repo/records commits land as they go green; the live surfaces (landing page, in-game text) land as ONE **seen-gated** step; in-fiction "world console" wording case-by-case, proposals to the maintainer. `deploy/` splits landlord (→ hub repo) / tenant (stays); `/guide-sync` (R31) runs before the wrap.
+5. **Records close:** coverage rows re-cut · CLAUDE.md truth table follows the split · wrap commits both repos, pushed.
+
+Standing at M0's gate: the **GameMaster Bernd register-index sweep** (R36 — due before the game's card goes public on the hub page; run at M0 or the vision round, session's pick, out loud). Rollback: every step reverts (R9); the seen-gated live step is the only player-visible change.
 
 ## H1 — the hub stands, World Console sole tenant (one session, on the live box)
 

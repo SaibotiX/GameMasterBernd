@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-World Console: a terminal story game built as extensions on the pi coding agent. The main `README.md` explains how the engine works; this file is about how to work ON the project without breaking its records.
+World Console: a terminal story game built as extensions on the pi coding agent. The main `README.md` explains how the engine works; this file is about how to work ON the project without breaking its records. **Renames ruled 2026-08-19 (R35/R36, execution at M0):** the game becomes **GameMaster Bernd**; "World Console" passes to the hub project. Until M0 lands, in-repo names stay as-is; new records cite the ruling.
 
 ## Where truth lives
 
@@ -11,7 +11,7 @@ World Console: a terminal story game built as extensions on the pi coding agent.
 | `research/design/` | game-design law: `undertakings-goals.md` (the G/F/P/A registry), mechanics spec, research receipts, build log (with its decisions log), design↔code audit (owns ids D1–D12), the pi upgrade rite + coupling register (`pi-upgrades.md`) |
 | `research/analysis/` | the playtest method kit; `research/analysis/reports/` is the immutable quality history |
 | `research/roadmap/` | product & distribution: decision registry (R1…, open-ended), stage specs (friends web → paid beta → public → Steam), platform/business research log, coverage register (what's answered / what's open) |
-| `research/hub/` | the many-projects hub (one box, many doors): decided architecture, tenant wiring workflow, phased build plan — H0 ruled 2026-08-18 (R34), build phases H1–H3 pending; once built, live-ops truth is `deploy/README.md` |
+| `research/hub/` | the many-projects hub (one box, many doors): decided architecture, tenant wiring workflow, phased build plan — H0 ruled 2026-08-18 (R34); the split + names recut ruled 2026-08-19 (R35/R36): the hub becomes its own project **World Console** (`~/Desktop/CurrPC/Programming/WorldConsole`), the game becomes **GameMaster Bernd** — §M0 in the build plan migrates; until it lands this folder stays the design home, then live-ops truth re-homes with the hub |
 | `research/icebox.md` | declined ideas, kept cold (R25): On ice (revival conditions, recurrence counts) and Closed (won't-dos with reasons) — the judge checks it on every new idea |
 | `deploy/` | the stage-1 hosting machinery. `deploy/README.md` is the runbook — live ops truth, procedures, dated state notes; `deploy/guide/` is the teaching layer — from-zero explanations, how-tos, reference and the next-project blueprint, each page stamped with the deploy/ commit it was synced against. Where they disagree, the runbook wins. A round that lands changes under `deploy/` outside the guide runs `/guide-sync` (R31) before its wrap |
 | `aitester/` | the AI playtesting harness, its batches and reports |

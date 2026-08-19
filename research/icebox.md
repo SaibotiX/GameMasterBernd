@@ -43,6 +43,12 @@ Prompted by: the first-friends audit (report 2026-08-17) — jakob's escort stan
 Why not now: the maintainer ruled jakob's world stays as played (2026-08-17); the round's WC-10/WC-17/WC-26 fixes aim at preventing the divergence, and repair machinery for a single known case is surface without demonstrated recurrence.
 **Revive when:** a friend asks for a record repair again · a future audit finds another stuck divergence that play can't reach — the mechanics' `twist_dropped` "GM repair" lane is the natural home to extend.
 
+### Hausregel as the studio brand (R16) · naming · iced 2026-08-19 · recurrence 0
+The studio name "Hausregel" fronting the hub page and standing as the Einzelunternehmer's brand — R16's studio half, R34's page-branding line.
+Prompted by: the R35/R36 split-and-renames sitting — the hub took the name World Console, and the maintainer chose one name over two (the page brands World Console; Hausregel retires).
+Why not now: two brands where one now does the work — the hub page IS the studio surface and its name is ruled World Console; Hausregel's clearance (0 register hits worldwide, 2026-08-06 sweeps) stays on file in R16, so retirement costs nothing and revival is a decision, not a re-research.
+**Revive when:** a distinct studio/Einzelunternehmer name is needed apart from the product names — founding (R21) wanting a business designation of its own, or the product names multiplying until an umbrella brand earns its keep.
+
 ## Closed
 
 *(nothing yet — won't-dos land here with their one-line reasons)*
