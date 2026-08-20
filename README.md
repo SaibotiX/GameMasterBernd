@@ -1,4 +1,4 @@
-# IA — World Console
+# GameMaster Bernd
 
 The game running inside the stock [pi coding agent](https://github.com/earendil-works/pi): pi contributes the terminal UI, model switching (`/model`), sessions (`/new`, `/resume`, `/fork`, `/tree`, `/compact`, `/export`), and auth (`/login`); this repo turns it into the game — and it is standalone: copy the folder anywhere and run pi inside it.
 

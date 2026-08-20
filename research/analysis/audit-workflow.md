@@ -129,7 +129,7 @@ paragraph. Reports stay immutable — the tally only reads them.
 ## 6. The one-prompt template (paste into Claude Code, run from the repo root)
 
 ```
-Audit these playtest sessions of the World Console pi extension:
+Audit these playtest sessions of the GameMaster Bernd pi extension:
 <paths or research/analysis/sessions-in/<batch>/>
 
 Follow research/analysis/audit-workflow.md exactly: mechanical map first

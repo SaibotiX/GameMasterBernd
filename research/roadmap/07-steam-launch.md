@@ -21,7 +21,7 @@ Web-first → Steam-later is the dev-community consensus for a reason: the web c
 
 ## AI-content compliance (this governs us directly)
 
-World Console is squarely **live-generated AI content**. Steam's regime since Jan 2024 (scope narrowed Jan 2026 to content players consume):
+GameMaster Bernd is squarely **live-generated AI content**. Steam's regime since Jan 2024 (scope narrowed Jan 2026 to content players consume):
 
 1. **Disclosure in the content survey, published on the store page.** Written in plain words, same as the credit model.
 2. **Guarantee no illegal/infringing output + describe the guardrails.** Our guardrail description largely already exists in-house: the constitution layer, the code-owned invariants (bar enforcement, clock refusal, fairness caps), the guardian truth-checks, and the append-only ledger that makes every AI action auditable. Stage 4 paperwork = distilling that into the survey answers — without publishing the R&D itself (decision R4).

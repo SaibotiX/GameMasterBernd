@@ -1,6 +1,6 @@
 # aitester/ — the AI playtesting service
 
-Everything that lets an AI play World Console sittings to find bugs and
+Everything that lets an AI play GameMaster Bernd sittings to find bugs and
 exploits lives HERE, cleanly apart from the game (`extension/` at the repo
 root) and from the shared analysis method (`research/analysis/`, which serves human
 batches too). It lives in the game's own repo on purpose: the wrapper and

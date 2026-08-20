@@ -1,6 +1,6 @@
 # Playtester guide — how to play, what to note, what to hand in
 
-Thank you for testing the World Console. You will play a terminal story
+Thank you for testing GameMaster Bernd. You will play a terminal story
 game; the machine keeps the record. **You cannot do it wrong.** Confusion,
 boredom and "wait, what?" moments are not your mistakes — they are exactly
 the data we need.

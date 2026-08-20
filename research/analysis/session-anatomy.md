@@ -1,4 +1,4 @@
-# Session anatomy — how to read a World Console sitting
+# Session anatomy — how to read a GameMaster Bernd sitting
 
 Everything a sitting was is recorded in three places. Learn these once and
 every audit becomes archaeology instead of guesswork.

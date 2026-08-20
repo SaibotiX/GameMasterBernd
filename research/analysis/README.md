@@ -1,7 +1,7 @@
 # research/analysis/ — the playtest telemetry kit
 
 Turn recorded sittings into a ranked, evidence-cited list of what to fix.
-Every World Console session is a complete trace (every word, tool call,
+Every GameMaster Bernd session is a complete trace (every word, tool call,
 refusal and game event, uN-numbered) — this kit is the discipline for
 mining batches of them.
 

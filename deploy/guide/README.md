@@ -1,4 +1,4 @@
-# The deploy guide — how the web half of World Console works, from zero
+# The deploy guide — how the web half of GameMaster Bernd works, from zero
 
 *Teaching layer. Live ops truth stays in [`deploy/README.md`](../README.md) (the runbook) — if this guide and the runbook ever disagree, **the runbook wins** and the guide has drifted (see "Staying fresh" below). Synced: `276ff32` (2026-08-20).*
 
@@ -26,7 +26,7 @@ The pages follow the [Diátaxis](https://diataxis.fr/) idea — the standard spl
 | [01-web-fundamentals.md](01-web-fundamentals.md) | IPs, DNS, ports, HTTP(S), TLS, WebSockets, reverse proxies — the vocabulary of the web |
 | [02-linux-server.md](02-linux-server.md) | The rented computer: SSH, users, permissions, systemd, logs, firewalls, hardening |
 | [03-docker.md](03-docker.md) | Images, containers, volumes, compose — with this project's files as the textbook |
-| [04-architecture-of-this-deployment.md](04-architecture-of-this-deployment.md) | How 01–03 combine into World Console's actual production system |
+| [04-architecture-of-this-deployment.md](04-architecture-of-this-deployment.md) | How 01–03 combine into GameMaster Bernd's actual production system |
 | [10-operate-the-box.md](10-operate-the-box.md) | Connect, look around, read logs, deploy changes, manage friends, troubleshoot |
 | [11-data-in-and-out.md](11-data-in-and-out.md) | Where every byte lives; retrieving, adding, removing data; borg backups and restores |
 | [12-ntfy-push-notifications.md](12-ntfy-push-notifications.md) | The pager: how ntfy works, how this project uses it, how to wire alerts anywhere |

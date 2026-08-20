@@ -1,6 +1,6 @@
 # AI playtester — harness design (BUILT 2026-08-03; v2 same day after batch 1; v3 same day — merged into the game repo)
 
-Can an AI play World Console sittings to find bugs and exploits? **Yes — and
+Can an AI play GameMaster Bernd sittings to find bugs and exploits? **Yes — and
 our stack already contains every load-bearing piece.** pi's RPC mode drives
 full live-LLM sittings today (the integration tests do exactly this); the
 session file is a complete trace; the analysis kit already consumes tester

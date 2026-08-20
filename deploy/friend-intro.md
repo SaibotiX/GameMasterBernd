@@ -19,7 +19,7 @@ rounds note and the grant sentence below are its house-lane replacement.
 
 Hey — I've built a game and I'd like you to be one of its first players.
 
-**World Console** is a story game played in a terminal: one world, one
+**GameMaster Bernd** is a story game played in a terminal: one world, one
 seeker (you), and a keeper — an AI game master who tells the world and
 answers what you try. Thrown dice and written laws keep it honest: the
 keeper can no more fudge an outcome than you can. Everything that

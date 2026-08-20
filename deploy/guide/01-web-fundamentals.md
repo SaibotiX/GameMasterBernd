@@ -2,7 +2,7 @@
 
 *Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `276ff32` (2026-08-20).*
 
-Everything the web does reduces to a handful of ideas. This page explains each from zero and immediately shows where World Console uses it — that pairing is the whole method of this guide.
+Everything the web does reduces to a handful of ideas. This page explains each from zero and immediately shows where GameMaster Bernd uses it — that pairing is the whole method of this guide.
 
 ## Clients and servers
 

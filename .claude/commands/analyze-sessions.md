@@ -1,8 +1,8 @@
 ---
-description: Audit World Console playtest sessions — map, classify, count, and write the ranked findings report
+description: Audit GameMaster Bernd playtest sessions — map, classify, count, and write the ranked findings report
 ---
 
-Audit the World Console playtest sessions given as: $ARGUMENTS
+Audit the GameMaster Bernd playtest sessions given as: $ARGUMENTS
 
 (If no paths were given, ask which batch under `research/analysis/sessions-in/`
 (human play) or `aitester/sessions-in/` (AI play) to audit, or take every

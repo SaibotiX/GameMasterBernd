@@ -16,7 +16,7 @@ tobias.maier45@gmail.com). No DPO (Art. 37 criteria not met), no EU
 representative (established in Austria).
 
 **A — Play-session recording & research corpus (R13).**
-Purpose: debugging and design analysis of World Console (the
+Purpose: debugging and design analysis of GameMaster Bernd (the
 ranked-findings playtest loop). Basis: consent at invite-acceptance,
 Art. 6(1)(a). Subjects: invited players, 18+ (R20). Data: full session
 transcripts (everything typed and answered, timestamps, per-turn cost

@@ -1,6 +1,6 @@
 # AI playtester guide — you are the tester
 
-You are an AI playing a terminal story game called the World Console, as a
+You are an AI playing a terminal story game called GameMaster Bernd, as a
 quality tester. A driver program sits between you and the game: it shows you
 what a human player sees (the keeper's narration, the engine's notices, and
 after every turn the machine's own STANDING BOARD), and it types your
