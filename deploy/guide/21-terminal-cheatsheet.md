@@ -1,6 +1,6 @@
 # 21 — Terminal cheatsheet
 
-*Reference. Every command used across this guide, grouped for lookup. Column "on" says where it runs; ⚠ marks commands that change state. Paste from the fenced blocks in [10](10-operate-the-box.md)/[11](11-data-in-and-out.md) when you need the full form with context.*
+*Reference. Every command used across this guide, grouped for lookup. Column "on" says where it runs; ⚠ marks commands that change state. Paste from the fenced blocks in [10](10-operate-the-box.md)/[11](11-data-in-and-out.md) when you need the full form with context. Synced: `d700c6e` (2026-08-20).*
 
 ## SSH & files across machines
 

@@ -1,6 +1,6 @@
 # 03 — Docker: images, containers, volumes, compose
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `4ba34eb` (2026-08-17).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `d700c6e` (2026-08-20).*
 
 Docker is how this project turns "a program and everything it needs" into a sealed, repeatable, disposable unit. This page teaches Docker's four nouns and two workflows using the project's real files — `deploy/image/Dockerfile` and `deploy/host/compose.yaml` are the textbook.
 

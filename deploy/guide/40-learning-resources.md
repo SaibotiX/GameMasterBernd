@@ -1,6 +1,6 @@
 # 40 — Learning resources and the house best practices
 
-*Resources. Curated, not exhaustive — each entry says what it's *for*, so you reach for the right one. URLs are stable projects/organizations; if one moves, search its name. Synced: `4ba34eb` (2026-08-17).*
+*Resources. Curated, not exhaustive — each entry says what it's *for*, so you reach for the right one. URLs are stable projects/organizations; if one moves, search its name. Synced: `d700c6e` (2026-08-20).*
 
 ## Foundations (the 0x pages' deeper versions)
 

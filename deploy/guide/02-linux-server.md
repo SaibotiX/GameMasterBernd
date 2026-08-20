@@ -1,6 +1,6 @@
 # 02 — A Linux server: the rented computer and how you hold it
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `4ba34eb` (2026-08-17).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `d700c6e` (2026-08-20).*
 
 The box is a plain Debian Linux machine you rent by the month and administer entirely over SSH. This page is the operating knowledge: how to get in, who you are once inside, where things live, how work is scheduled, where the truth is written down (logs), and what "hardening" concretely means.
 
