@@ -70,7 +70,7 @@ The binding contract line is [02-wiring-workflow.md](02-wiring-workflow.md) §A.
 
 ## Cost
 
-**€0/month additional.** The hub reuses the paid basket — box €7.92 (hourly; €5.96 on the 12-month term, the standing conversion question), Storage Box €3.84, domain €6/yr — where each solo project would have re-bought it at ~€11/month (the blueprint's own table). Per-tenant marginal cost: bytes on the Storage Box (BX11 is ~100× over need) and RAM under caps. The second-domain option was declined at H0 (2026-08-18) — no optional spend remains.
+**€0/month additional.** The hub reuses the paid basket — box €7.92 (hourly; €5.96 on the 12-month term — the conversion ruled deferred 2026-08-20 until the box size settles, R18), Storage Box €3.84, domain €6/yr — where each solo project would have re-bought it at ~€11/month (the blueprint's own table). Per-tenant marginal cost: bytes on the Storage Box (BX11 is ~100× over need) and RAM under caps. The second-domain option was declined at H0 (2026-08-18) — no optional spend remains.
 
 ## Is this allowed?
 
