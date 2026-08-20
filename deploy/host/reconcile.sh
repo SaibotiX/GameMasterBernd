@@ -9,7 +9,7 @@
 # Defaults: yesterday (UTC, the last complete day) against
 # gateway-state/usage.jsonl. Per player: sum the ledger's costMicro vs the
 # sum of usage.cost.total over assistant messages in their sessions volume
-# (world-console_sessions-<player>), tolerance max(5%, $0.001) — pi prices
+# (gamemaster-bernd_sessions-<player>), tolerance max(5%, $0.001) — pi prices
 # with floats and charges the 1-hour cache-write bucket at its own rate,
 # the gateway meters integers at the 5-minute rate; small drift is honest,
 # structural drift is a bug. Any mismatch: exit 1 (a red systemd unit) and
@@ -95,7 +95,7 @@ LIVE_PLAYERS=""
 MISMATCH=0
 REPORT=""
 while read -r PLAYER GW_MICRO SIDE_MICRO; do
-	VOL="world-console_sessions-$PLAYER"
+	VOL="gamemaster-bernd_sessions-$PLAYER"
 	if ! docker volume inspect "$VOL" >/dev/null 2>&1; then
 		if grep -qx "$PLAYER" <<<"$LIVE_PLAYERS"; then
 			REPORT+="$DAY $PLAYER: MISMATCH — ledger says $((GW_MICRO + SIDE_MICRO)) micro but no sessions volume $VOL exists"$'\n'
@@ -143,7 +143,7 @@ done <<<"$GW_SUMS"
 printf '%s' "$REPORT"
 if [ "$MISMATCH" = 1 ]; then
 	if [ -n "${NTFY_TOPIC:-}" ]; then
-		curl -fsS -X POST -H "title: world console — reconciliation" \
+		curl -fsS -X POST -H "title: GameMaster Bernd — reconciliation" \
 			-d "$(printf 'The two meters disagree:\n%s' "$REPORT")" \
 			"https://ntfy.sh/$NTFY_TOPIC" >/dev/null || echo "reconcile: ping failed to send"
 	fi

@@ -6,10 +6,12 @@
 // name over the docker socket. The next refresh finds the real page.
 //
 // The blast radius, deliberately: it can START containers named
-// world-console-wc-<name>-1 — nothing else, no other API call ever leaves
-// here, and the name must fit new-friend.sh's own alphabet. It lives on
-// the `wake` network shared with caddy alone; friends sit on `web`, and
-// docker's cross-network isolation keeps this socket out of their reach.
+// gamemaster-bernd-wc-<name>-1 — nothing else, no other API call ever
+// leaves here, and the name must fit new-friend.sh's own alphabet. It
+// lives on `wake` (the dev rig's caddy-local dials it there) and, since
+// hub mode, on the hub's `ingress` — the live proxy path, where friends
+// now sit too (the compose file names that accepted residue): all any
+// knock can ever do is start, by validated name.
 const http = require("node:http");
 
 const log = (ev, extra = {}) =>
@@ -22,7 +24,7 @@ function startContainer(name, cb) {
 		{
 			socketPath: "/var/run/docker.sock",
 			method: "POST",
-			path: `/v1.43/containers/world-console-wc-${name}-1/start`,
+			path: `/v1.43/containers/gamemaster-bernd-wc-${name}-1/start`,
 		},
 		(res) => {
 			res.resume();

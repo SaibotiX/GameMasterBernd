@@ -43,7 +43,7 @@ export ANTHROPIC_ORG_KEY="sk-local-stand-in"
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
-	docker volume rm world-console_restore-check >/dev/null 2>&1 || true
+	docker volume rm gamemaster-bernd_restore-check >/dev/null 2>&1 || true
 	[ "${INGRESS_MADE:-0}" != 1 ] || docker network rm "$INGRESS_NET" >/dev/null 2>&1 || true
 	rm -rf "$WC_TEST_STORE" "$GATEWAY_STATE"
 	[ -z "${FRAG_TMP:-}" ] || rm -rf "$FRAG_TMP"
@@ -486,7 +486,7 @@ if command -v borg >/dev/null 2>&1; then
 	borg create --timestamp 2026-06-01T00:00:00 "$BK_TMP/repo::nightly-stale" "$BK_TMP/hostdir/consents.md"
 	"$HERE/backup.sh" --repo "$BK_TMP/repo" --staging "$BK_TMP/staging" \
 		--hostdir "$BK_TMP/hostdir" --store "$WC_TEST_STORE" \
-		--volumes "world-console_data-test world-console_sessions-test"
+		--volumes "gamemaster-bernd_data-test gamemaster-bernd_sessions-test"
 	if borg list --short "$BK_TMP/repo" | grep -q '^nightly-stale$'; then
 		echo "FAIL: the stale archive outlived the 28-day prune (§deletion's promise)"; exit 1
 	fi
@@ -500,17 +500,17 @@ if command -v borg >/dev/null 2>&1; then
 	# out of the archive, into a scratch volume, and the chronicle reads
 	# through a scratch container.
 	mkdir "$BK_TMP/x"
-	(cd "$BK_TMP/x" && borg extract "$BK_TMP/repo::$ARCHIVE" "${BK_TMP#/}/staging/world-console_data-test.tar")
-	docker volume create world-console_restore-check >/dev/null
-	docker run --rm --user 0 --network none -v world-console_restore-check:/v \
+	(cd "$BK_TMP/x" && borg extract "$BK_TMP/repo::$ARCHIVE" "${BK_TMP#/}/staging/gamemaster-bernd_data-test.tar")
+	docker volume create gamemaster-bernd_restore-check >/dev/null
+	docker run --rm --user 0 --network none -v gamemaster-bernd_restore-check:/v \
 		-v "$BK_TMP/x/${BK_TMP#/}/staging:/in:ro" \
-		--entrypoint tar world-console:latest xf /in/world-console_data-test.tar -C /v
-	RESTORED="$(docker run --rm --user 0 --network none -v world-console_restore-check:/v:ro \
+		--entrypoint tar world-console:latest xf /in/gamemaster-bernd_data-test.tar -C /v
+	RESTORED="$(docker run --rm --user 0 --network none -v gamemaster-bernd_restore-check:/v:ro \
 		--entrypoint cat world-console:latest \
 		/v/world/localcheck-world/0198bbbb-cccc-7ddd-8eee-ffff00001111/quests.md)"
 	[ "$RESTORED" = "# quests" ] \
 		|| { echo "FAIL: the restored chronicle does not read"; echo "$RESTORED"; exit 1; }
-	docker volume rm world-console_restore-check >/dev/null
+	docker volume rm gamemaster-bernd_restore-check >/dev/null
 	unset BORG_PASSCOMMAND
 else
 	echo "SKIPPED, LOUDLY: no borg on this machine — the cycle stands unproven here;"

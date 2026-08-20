@@ -2,13 +2,13 @@
 # 02 item 13 (R18): the nightly borg lane — every named volume staged
 # read-only as a plain tar, plus the session store and the box-local
 # gitignored state, into ONE encrypted archive on the Hetzner Storage Box
-# (cross-provider by ruling). Run by worldconsole-backup.timer as root,
+# (cross-provider by ruling). Run by gamemaster-bernd-backup.timer as root,
 # after the store sweep has compacted the night's sessions.
 #
 # What rides along, and why:
-#   volumes        every world-console_* named volume (data-*, sessions-*,
-#                  caddy-*) — tar'd from a :ro mount, never the live paths
-#   the store      /srv/worldconsole/store — the research record (R13)
+#   volumes        every gamemaster-bernd_* named volume (data-*,
+#                  sessions-*) — tar'd from a :ro mount, never live paths
+#   the store      /srv/gamemaster-bernd/store — the research record (R13)
 #   box-local state under deploy/host/, in no repo by design:
 #                  consents.md (Art. 7(1) proof) · .env (org key, address —
 #                  disaster recovery needs it) · gateway-state/ (R12 billing
@@ -30,17 +30,23 @@
 #   backup.sh [--repo URL] [--staging DIR] [--hostdir DIR] [--store DIR]
 #             [--volumes "v1 v2"]
 #     --repo URL      borg repo (default: the Storage Box lane)
-#     --staging DIR   where volume tars land (default /srv/worldconsole/backup-staging)
+#     --staging DIR   where volume tars land (default /srv/gamemaster-bernd/backup-staging)
 #     --hostdir DIR   the deploy/host dir carrying the box-local state
 #     --store DIR     the session store root
-#     --volumes LIST  space-separated volume names (default: every world-console_*)
+#     --volumes LIST  space-separated volume names (default: every gamemaster-bernd_*)
 set -euo pipefail
 umask 077
 
+# The borg repo KEEPS its historical name (…/borg/worldconsole): renaming a
+# live archive set buys nothing, and the hub's own lane was deliberately
+# named `hub` to read unambiguously beside it (WC runbook §Backups). The
+# image tag stays world-console:latest too — it is engine/test surface,
+# held with the WC_/wc- prefixes and the on-disk session types (R36's
+# named leftovers; the runbook's H1a step-2 state note carries the list).
 REPO="ssh://u648152@u648152.your-storagebox.de:23/./borg/worldconsole"
-STAGING=/srv/worldconsole/backup-staging
-HOSTDIR=/home/deploy/world-console/deploy/host
-STORE=/srv/worldconsole/store
+STAGING=/srv/gamemaster-bernd/backup-staging
+HOSTDIR=/home/deploy/gamemaster-bernd/deploy/host
+STORE=/srv/gamemaster-bernd/store
 VOLUMES=""
 IMAGE=world-console:latest
 while [ $# -gt 0 ]; do
@@ -74,7 +80,7 @@ done
 # --- stage every volume as a plain tar (borg compresses; plain tars let
 # --- unchanged blocks dedup across nights) --------------------------------
 if [ -z "$VOLUMES" ]; then
-	VOLUMES="$(docker volume ls --format '{{.Name}}' | grep '^world-console_' | sort | tr '\n' ' ')"
+	VOLUMES="$(docker volume ls --format '{{.Name}}' | grep '^gamemaster-bernd_' | sort | tr '\n' ' ')"
 fi
 [ -n "${VOLUMES// /}" ] || { echo "ERROR: no volumes to back up" >&2; exit 1; }
 rm -rf "$STAGING"

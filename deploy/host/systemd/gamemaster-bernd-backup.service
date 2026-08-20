@@ -1,14 +1,14 @@
 # 02 item 13's nightly borg lane — runbook §Backups.
 # Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
 [Unit]
-Description=World Console nightly backup (volumes + store + box-local state to the Storage Box)
+Description=GameMaster Bernd nightly backup (volumes + store + box-local state to the Storage Box)
 Requires=docker.service
 After=docker.service
 # The pager (runbook §the pager): red rings the maintainer, green — this
 # being the night's last unit — is the daily heartbeat.
-OnFailure=worldconsole-alert@%n.service
-OnSuccess=worldconsole-heartbeat@%n.service
+OnFailure=gamemaster-bernd-alert@%n.service
+OnSuccess=gamemaster-bernd-heartbeat@%n.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/deploy/world-console/deploy/host/backup.sh
+ExecStart=/home/deploy/gamemaster-bernd/deploy/host/backup.sh

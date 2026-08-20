@@ -1,7 +1,7 @@
 # Nightly, after the store sweep has done its 04:17 rounds; Persistent so a
 # rebooted box catches up.
 [Unit]
-Description=Nightly World Console ledger reconciliation (R12/R6)
+Description=Nightly GameMaster Bernd ledger reconciliation (R12/R6)
 
 [Timer]
 OnCalendar=*-*-* 04:47:00

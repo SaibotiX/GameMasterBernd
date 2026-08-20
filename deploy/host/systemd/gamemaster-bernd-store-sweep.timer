@@ -1,6 +1,6 @@
 # Daily, small-hours; Persistent so a rebooted box catches up its sweep.
 [Unit]
-Description=Daily World Console store sweep (R13)
+Description=Daily GameMaster Bernd store sweep (R13)
 
 [Timer]
 OnCalendar=*-*-* 04:17:00

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The store side of R13's shipper (02 item 10) — the daily half of trigger 3
-# plus the compact step, run by worldconsole-store-sweep.timer as root:
+# plus the compact step, run by gamemaster-bernd-store-sweep.timer as root:
 #
 #   1. every STOPPED friend gets the one-shot sweep: the image's own shipper
 #      over read-only game volumes, no network — whatever a crash or a stop
@@ -20,14 +20,14 @@
 # journal is the alarm.
 #
 #   store-sweep.sh [--store DIR] [--compact-only] [--friend NAME]
-#     --store DIR      the store root (default /srv/worldconsole/store)
+#     --store DIR      the store root (default /srv/gamemaster-bernd/store)
 #     --compact-only   skip phase 1 (localcheck's mode: no box friends)
 #     --friend NAME    phase 1 for this one friend only — the reaper's
 #                      post-stop call, so a stop is a seal within the minute
 set -euo pipefail
 umask 077
 
-STORE=/srv/worldconsole/store
+STORE=/srv/gamemaster-bernd/store
 COMPACT_ONLY=0
 FRIEND=""
 while [ $# -gt 0 ]; do
@@ -54,12 +54,12 @@ if [ "$COMPACT_ONLY" != 1 ]; then
 	for SVC in $ALL; do
 		NAME="${SVC#wc-}"
 		if grep -qx "$SVC" <<<"$RUNNING"; then continue; fi
-		docker volume inspect "world-console_sessions-$NAME" >/dev/null 2>&1 || continue
+		docker volume inspect "gamemaster-bernd_sessions-$NAME" >/dev/null 2>&1 || continue
 		echo "sweep: $NAME (stopped)"
 		if ! docker run --rm --user 1001 --network none --read-only \
 			--tmpfs /tmp:rw,uid=1001,gid=1001 \
-			-v "world-console_data-$NAME:/home/player/game/data:ro" \
-			-v "world-console_sessions-$NAME:/home/player/.pi/agent/sessions:ro" \
+			-v "gamemaster-bernd_data-$NAME:/home/player/game/data:ro" \
+			-v "gamemaster-bernd_sessions-$NAME:/home/player/.pi/agent/sessions:ro" \
 			-v "$STORE/staging/$NAME:/ship" \
 			-e "WC_PLAYER=$NAME" \
 			--entrypoint node world-console:latest /opt/appserver/shipper.js sweep; then

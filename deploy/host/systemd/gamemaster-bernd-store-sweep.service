@@ -1,12 +1,12 @@
 # R13 trigger 3's daily half + the compact step — runbook §the store.
 # Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
 [Unit]
-Description=World Console store sweep (seal stopped friends, verify + compact the session store)
+Description=GameMaster Bernd store sweep (seal stopped friends, verify + compact the session store)
 Requires=docker.service
 After=docker.service
 # The pager (runbook §the pager): a red sweep rings the maintainer.
-OnFailure=worldconsole-alert@%n.service
+OnFailure=gamemaster-bernd-alert@%n.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/deploy/world-console/deploy/host/store-sweep.sh
+ExecStart=/home/deploy/gamemaster-bernd/deploy/host/store-sweep.sh

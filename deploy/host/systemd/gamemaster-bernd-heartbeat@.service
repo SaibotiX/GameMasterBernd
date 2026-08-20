@@ -1,0 +1,10 @@
+# The pager's green half — runbook §the pager: OnSuccess= on the backup
+# alone, the night's LAST unit, so one ping at ~05:14 vouches for the whole
+# chain (sweep → reconcile → backup) and a silent breakfast means look.
+# Installed by: cp to /etc/systemd/system/, daemon-reload.
+[Unit]
+Description=GameMaster Bernd heartbeat (%i) — the nightly green ping
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'set -a; . /home/deploy/gamemaster-bernd/deploy/host/.env; set +a; [ -n "$$NTFY_TOPIC" ] || exit 0; curl -fsS -m 10 -X POST -H "title: GameMaster Bernd — the night ran green" -d "%i landed; sweep and reconcile ran before it; the box lives" "https://ntfy.sh/$$NTFY_TOPIC"'

@@ -1,7 +1,7 @@
 # Nightly, after the 04:17 store sweep has compacted the day's sessions;
 # Persistent so a rebooted box catches up its missed night.
 [Unit]
-Description=Nightly World Console backup (02 item 13)
+Description=Nightly GameMaster Bernd backup (02 item 13)
 
 [Timer]
 OnCalendar=*-*-* 05:11:00

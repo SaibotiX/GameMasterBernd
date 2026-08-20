@@ -97,7 +97,7 @@ function ping(latch, text) {
 	if (NTFY_TOPIC)
 		fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
 			method: "POST",
-			headers: { title: "world console — the house lane" },
+			headers: { title: "GameMaster Bernd — the house lane" },
 			body: text,
 		}).catch((e) => console.error(`ping failed to send: ${e.message}`));
 }

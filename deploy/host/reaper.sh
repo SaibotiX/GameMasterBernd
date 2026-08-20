@@ -4,20 +4,20 @@
 # server's grace) and R13's seal (store-sweep --friend right after); the
 # per-volume disk watch — ALARM-ONLY this round, enforcement awaits the
 # maintainer's ruling; and the docker stats line 02 asks to keep an eye on.
-# worldconsole-reaper.timer runs it every 5 minutes. A friend with a live
-# WebSocket client is never touched; start-on-connect is the waker's half.
+# gamemaster-bernd-reaper.timer runs it every 5 minutes. A friend with a
+# live WebSocket client is never touched; start-on-connect is the waker's.
 #
 #   reaper.sh [service...]   # default: every wc-* service except template/test
 # Env: IDLE_LIMIT (s, default 1800 — 02's ~30 min without a WebSocket)
 #      WARN_GB / ALARM_GB (per volume, defaults 2 / 5)
-#      STORE (default /srv/worldconsole/store)
+#      STORE (default /srv/gamemaster-bernd/store)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 IDLE_LIMIT="${IDLE_LIMIT:-1800}"
 WARN_GB="${WARN_GB:-2}"
 ALARM_GB="${ALARM_GB:-5}"
-STORE="${STORE:-/srv/worldconsole/store}"
+STORE="${STORE:-/srv/gamemaster-bernd/store}"
 
 compose() { docker compose --project-directory "$HERE" "$@"; }
 
@@ -55,7 +55,7 @@ done
 for SVC in $SERVICES; do
 	NAME="${SVC#wc-}"
 	for V in "data-$NAME" "sessions-$NAME"; do
-		MP="$(docker volume inspect --format '{{.Mountpoint}}' "world-console_$V" 2>/dev/null || true)"
+		MP="$(docker volume inspect --format '{{.Mountpoint}}' "gamemaster-bernd_$V" 2>/dev/null || true)"
 		# Docker Desktop keeps mountpoints inside its VM — the watch is a
 		# box thing; elsewhere it skips quietly.
 		{ [ -n "$MP" ] && [ -d "$MP" ]; } || continue

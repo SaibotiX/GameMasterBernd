@@ -9,7 +9,13 @@
 # by service name. Local end-to-end check: the `local` profile
 # (localcheck.sh drives it) — same friend shape behind caddy-local's own
 # self-signed front door; the dev rig stays fully self-contained (§A.1).
-name: world-console
+#
+# The project name is the game's own since H1a step 2 (R36: `world-console`
+# belongs to the hub; the box re-clones this repo at
+# /home/deploy/gamemaster-bernd at the cutover sitting). Volumes and
+# containers carry this prefix — the sitting copies friend data from the
+# world-console_* volumes into the new names before its first `up`.
+name: gamemaster-bernd
 
 # The security boundary is the container (02): pi has no permission system,
 # so the box a friend's model can reach IS the box we give it. Read-only
@@ -122,7 +128,7 @@ services:
   #     volumes:
   #       - data-alice:/home/player/game/data
   #       - sessions-alice:/home/player/.pi/agent/sessions
-  #       - /srv/worldconsole/store/staging/alice:/ship
+  #       - /srv/gamemaster-bernd/store/staging/alice:/ship
   wc-template:
     <<: *friend
     scale: 0

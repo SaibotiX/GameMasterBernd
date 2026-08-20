@@ -96,7 +96,7 @@ EOF
 # player uid BEFORE the bind mounts it — docker would otherwise auto-create
 # it root-owned and the shipper inside could never write. The image's own
 # node runs the errand; --user 0 because chown is root's.
-STORE_STAGING="/srv/worldconsole/store/staging"
+STORE_STAGING="/srv/gamemaster-bernd/store/staging"
 docker run --rm --user 0 -v "$STORE_STAGING:/s" world-console:latest \
 	sh -c "mkdir -p /s/$NAME && chown 1001:1001 /s/$NAME && chmod 700 /s/$NAME"
 

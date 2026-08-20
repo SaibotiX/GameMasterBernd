@@ -2,13 +2,13 @@
 # pi's own per-turn cost stamps; a mismatch is a red unit and a ntfy ping.
 # Installed by: cp to /etc/systemd/system/, daemon-reload, enable --now the timer.
 [Unit]
-Description=World Console ledger reconciliation (gateway meter vs pi cost stamps)
+Description=GameMaster Bernd ledger reconciliation (gateway meter vs pi cost stamps)
 Requires=docker.service
 After=docker.service
 # The pager (runbook §the pager): reconcile's own mismatch ping tells the
 # details; OnFailure catches the script CRASHING before it can speak.
-OnFailure=worldconsole-alert@%n.service
+OnFailure=gamemaster-bernd-alert@%n.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/deploy/world-console/deploy/host/reconcile.sh
+ExecStart=/home/deploy/gamemaster-bernd/deploy/host/reconcile.sh
