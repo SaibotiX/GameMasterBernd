@@ -12,7 +12,7 @@ Grounding facts from the 2026-08-05 codebase sweep (receipts in the sweep summar
 
 ```
 ┌─ status strip ─────────────────────────────────────────────────────────────┐
-│  World Console · <world title> · <rounds/limits note> · ● connected        │
+│  GameMaster Bernd · <world title> · <rounds/limits note> · ● connected        │
 ├──────────────────────────────────────────────┬─────────────────────────────┤
 │                                              │  tabs: ledger.md · fords.md │
 │   THE TERMINAL  (xterm.js — the game)        │ ┌─────────────────────────┐ │

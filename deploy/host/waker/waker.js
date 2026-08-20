@@ -49,7 +49,7 @@ http
 		if (!NAME_RE.test(name)) {
 			log("refused", { name });
 			res.writeHead(404, { "content-type": "text/html; charset=utf-8" });
-			res.end(page("World Console", "No such door.", false));
+			res.end(page("GameMaster Bernd", "No such door.", false));
 			return;
 		}
 		startContainer(name, (code) => {
@@ -58,7 +58,7 @@ http
 				res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
 				res.end(
 					page(
-						"World Console — closed",
+						"GameMaster Bernd — closed",
 						"This console has been taken out of service. Ping the maintainer if that surprises you.",
 						false,
 					),
@@ -70,7 +70,7 @@ http
 			res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
 			res.end(
 				page(
-					"World Console — waking",
+					"GameMaster Bernd — waking",
 					"The console was asleep and is waking now. This page knocks again in a moment; your world is exactly where you left it.",
 					true,
 				),

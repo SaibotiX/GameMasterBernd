@@ -74,7 +74,8 @@ CODE="$(curl -ks -o /dev/null -w '%{http_code}' "https://localhost:8443/")"
 
 echo "=== the landing ground: the words are served (02 items 9+11, R13/R19/R16) ==="
 # The production root block on its local hostname: the loud disclosure, the
-# AI sentence (Art. 50(1)), both names (R16), R29's retention sentence, the
+# AI sentence (Art. 50(1)), the game's name (R16/R36 — GameMaster Bernd;
+# Hausregel retired to the icebox at M0), R29's retention sentence, the
 # SCC transfer ground, and the Impressum's templates-rendered address.
 SITE_RESOLVE="--resolve site.localhost:8443:127.0.0.1"
 BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/")"
@@ -82,8 +83,10 @@ grep -q "AI game master" <<<"$BODY" \
 	|| { echo "FAIL: the landing is missing the AI sentence"; exit 1; }
 grep -q "personally reads" <<<"$BODY" \
 	|| { echo "FAIL: the landing softened the human-reads fact"; exit 1; }
-grep -q "Hausregel" <<<"$BODY" && grep -q "WORLD CONSOLE" <<<"$BODY" \
-	|| { echo "FAIL: the landing is missing a name (R16)"; exit 1; }
+grep -q "GAMEMASTER BERND" <<<"$BODY" \
+	|| { echo "FAIL: the landing is missing the game's name (R16/R36)"; exit 1; }
+! grep -q "Hausregel" <<<"$BODY" \
+	|| { echo "FAIL: Hausregel is retired (R36) yet still on the landing"; exit 1; }
 BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/datenschutz.html")"
 grep -q "deleted within 30 days at most" <<<"$BODY" \
 	|| { echo "FAIL: the note is missing R29's retention sentence"; exit 1; }

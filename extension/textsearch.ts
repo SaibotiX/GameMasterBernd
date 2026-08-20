@@ -14,7 +14,7 @@ import type { SiteEntry } from "./config.ts";
 /** Contact-bearing per Wikimedia's User-Agent policy — the compliant client
  * tier of the 2026 experimental rate limits (200 req/min with a contact,
  * 10 without); shared by every MediaWiki lens. */
-export const USER_AGENT = "world-console/1.0 (terminal story game; contact: tobias.maier45@gmail.com)";
+export const USER_AGENT = "gamemasterbernd/1.0 (terminal story game; contact: tobias.maier45@gmail.com)";
 const TIMEOUT_MS = 12_000;
 
 /**

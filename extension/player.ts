@@ -4,16 +4,16 @@
  * caller styles and truncates — so unit.ts exercises it without a TUI.
  */
 
-/** The house mark (R16: the game is World Console) — the banner when a
- * world brings no art of its own (config/worlds/<id>.banner.txt). */
-export const WORLD_CONSOLE_MARK = [
-	"██╗    ██╗ ██████╗ ██████╗ ██╗     ██████╗ ",
-	"██║    ██║██╔═══██╗██╔══██╗██║     ██╔══██╗",
-	"██║ █╗ ██║██║   ██║██████╔╝██║     ██║  ██║",
-	"██║███╗██║██║   ██║██╔══██╗██║     ██║  ██║",
-	"╚███╔███╔╝╚██████╔╝██║  ██║███████╗██████╔╝",
-	" ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝ ",
-	"            C  O  N  S  O  L  E",
+/** The house mark (R36: the game is GameMaster Bernd) — the banner when
+ * a world brings no art of its own (config/worlds/<id>.banner.txt). */
+export const HOUSE_MARK = [
+	"      G  A  M  E  M  A  S  T  E  R",
+	"██████╗ ███████╗██████╗ ███╗   ██╗██████╗ ",
+	"██╔══██╗██╔════╝██╔══██╗████╗  ██║██╔══██╗",
+	"██████╔╝█████╗  ██████╔╝██╔██╗ ██║██║  ██║",
+	"██╔══██╗██╔══╝  ██╔══██╗██║╚██╗██║██║  ██║",
+	"██████╔╝███████╗██║  ██║██║ ╚████║██████╔╝",
+	"╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ",
 ];
 
 /** Art fits only whole: a letterform cut mid-glyph reads as breakage, not

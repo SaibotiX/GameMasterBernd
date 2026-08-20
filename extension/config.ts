@@ -1,5 +1,5 @@
 /**
- * Read-only loader for the World Console config tree (config):
+ * Read-only loader for the GameMaster Bernd config tree (config):
  * constitution.md, worlds/<id>.md, moods/*.md, sites.json.
  *
  * Markdown-with-frontmatter, inherited from the retired app's format. This
@@ -21,7 +21,7 @@ export interface World {
 	laws: string;
 	/** The world's banner art (worlds/<id>.banner.txt, raw lines — no
 	 * frontmatter; leading spaces are the drawing). [] when the file is
-	 * absent: player mode then shows the World Console mark (R30). */
+	 * absent: player mode then shows the GameMaster Bernd mark (R30). */
 	banner: string[];
 	/** The world introducing itself (worlds/<id>.intro.md): a short
 	 * descriptive face — its nature and laws, never instructions — shown
@@ -150,7 +150,7 @@ function loadMoods(dir: string): Map<string, Mood> {
 export function loadConfig(appDir: string, worldId: string): WorldConfig {
 	const configDir = join(appDir, "config");
 	if (!existsSync(configDir)) {
-		throw new Error(`World Console config directory not found: ${configDir}`);
+		throw new Error(`GameMaster Bernd config directory not found: ${configDir}`);
 	}
 
 	let textSites: SiteEntry[] = [{ host: "en.wikipedia.org" }];

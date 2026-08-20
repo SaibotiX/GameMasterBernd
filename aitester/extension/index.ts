@@ -1,5 +1,5 @@
 /**
- * AI-tester extension: the REAL World Console engine plus a headless parity
+ * AI-tester extension: the REAL GameMaster Bernd engine plus a headless parity
  * layer. The game is imported UNTOUCHED from the repo's extension/ — nothing
  * about rules, prompts or tools changes, so findings stay valid for human play.
  *

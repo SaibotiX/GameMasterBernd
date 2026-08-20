@@ -1,5 +1,5 @@
 /**
- * World Console as a pi extension — full game port.
+ * GameMaster Bernd as a pi extension — full game port.
  *
  *  - pi's coding system prompt is replaced every turn with the layered
  *    game-master prompt (constitution → world → mood → standing → protocol)
@@ -39,7 +39,7 @@ import {
 	fitArt,
 	PLAYER_BLOCKED_ACTIONS,
 	playerGate,
-	WORLD_CONSOLE_MARK,
+	HOUSE_MARK,
 } from "./player.ts";
 import {
 	gmAsk,
@@ -194,7 +194,7 @@ export default function (pi: ExtensionAPI) {
 	const ENGINE_NONCE = randomUUID().slice(0, 8);
 
 	pi.registerFlag("world", {
-		description: `World Console: world id from config/worlds (default: ${DEFAULT_WORLD})`,
+		description: `GameMaster Bernd: world id from config/worlds (default: ${DEFAULT_WORLD})`,
 		type: "string",
 	});
 
@@ -544,7 +544,7 @@ export default function (pi: ExtensionAPI) {
 	// ---- the player banner (R30) ------------------------------------------
 	// Player mode replaces pi's startup header (already quiet in the friend
 	// image) with the world's own face: per-world art when config brings it,
-	// the World Console mark otherwise, then the title and the quiet opener.
+	// the GameMaster Bernd mark otherwise, then the title and the quiet opener.
 	// Values read live from closures, so a /new re-renders the current world.
 	function installPlayerBanner(ctx: ExtensionContext): void {
 		if (!PLAYER_UI || ctx.mode !== "tui" || typeof ctx.ui.setHeader !== "function") return;
@@ -553,7 +553,7 @@ export default function (pi: ExtensionAPI) {
 			render(width: number): string[] {
 				// A broken banner must never break a boot — fall to the title.
 				try {
-					const art = fitArt(config.world.banner.length > 0 ? config.world.banner : WORLD_CONSOLE_MARK, width);
+					const art = fitArt(config.world.banner.length > 0 ? config.world.banner : HOUSE_MARK, width);
 					const lines: string[] = [""];
 					for (const line of art) lines.push(theme.fg("accent", line));
 					if (art.length > 0) lines.push("");
@@ -1264,12 +1264,12 @@ export default function (pi: ExtensionAPI) {
 		if (PLAYER_UI && typeof ctx.ui.setWorkingMessage === "function") {
 			ctx.ui.setWorkingMessage(`${chroniclerName()} ponders …`);
 		}
-		if (!pi.getSessionName()) pi.setSessionName(`World Console — ${config.world.title}`);
+		if (!pi.getSessionName()) pi.setSessionName(`GameMaster Bernd — ${config.world.title}`);
 		installPlayerBanner(ctx);
 		installPlayerCommandChrome(ctx);
 		if (ctx.hasUI && (event.reason === "startup" || event.reason === "new")) {
 			if (!PLAYER_UI) {
-				ctx.ui.notify(`World Console: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
+				ctx.ui.notify(`GameMaster Bernd: ${config.world.title} (world: ${worldId}, mood: ${st.mood})`, "info");
 			} else if (event.reason === "new") {
 				// The banner opens a startup; a fresh tale mid-sitting gets its
 				// own quiet line (the death footer points here: "/new").
@@ -1380,7 +1380,7 @@ export default function (pi: ExtensionAPI) {
 	// else is handed to the game master, who judges the request in character
 	// and performs it through the matching find_* tool.
 	pi.registerCommand("web", {
-		description: "World Console: scry the web — /web <text|picture|video> <query>",
+		description: "GameMaster Bernd: scry the web — /web <text|picture|video> <query>",
 		getArgumentCompletions: (prefix: string) => {
 			if (prefix.includes(" ")) return null; // kind chosen — the query is free-form
 			const bare = prefix.replace(/^-/, "");
@@ -1441,7 +1441,7 @@ export default function (pi: ExtensionAPI) {
 	// twist. Code resolves it against the sealed plan (the keeper never held
 	// the answer sheet) and hands the outcome over for narration.
 	pi.registerCommand("pick", {
-		description: "World Console: choose a path when the task twists — /pick <n> [your own words]",
+		description: "GameMaster Bernd: choose a path when the task twists — /pick <n> [your own words]",
 		getArgumentCompletions: (prefix: string) => {
 			const pending = st.pendingChoice;
 			if (!pending || prefix.includes(" ")) return null;
@@ -1685,7 +1685,7 @@ export default function (pi: ExtensionAPI) {
 	// (crypto), records, resolves the band, and hands the keeper the result to
 	// narrate — a roll that never happened can never be narrated.
 	pi.registerCommand("roll", {
-		description: "World Console: cast the die when a trial bars the work — /roll",
+		description: "GameMaster Bernd: cast the die when a trial bars the work — /roll",
 		handler: async (_args, ctx) => {
 			const trial = st.pendingRoll;
 			if (!trial) {
@@ -1924,7 +1924,7 @@ export default function (pi: ExtensionAPI) {
 	);
 
 	pi.registerCommand("ledger", {
-		description: "World Console: show this sitting's ledger (optional: number of events)",
+		description: "GameMaster Bernd: show this sitting's ledger (optional: number of events)",
 		handler: async (args, ctx) => {
 			const n = Math.min(Math.max(Number.parseInt(args ?? "", 10) || 12, 1), 200);
 			const uidByEntryId = new Map<string, number>();
@@ -2038,7 +2038,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("quest", {
-		description: "World Console: the quest board — /quest, or /quest accept <id> (shelved slug or n.m untaken course)",
+		description: "GameMaster Bernd: the quest board — /quest, or /quest accept <id> (shelved slug or n.m untaken course)",
 		getArgumentCompletions: (prefix: string) => {
 			if (prefix.includes(" ")) {
 				const files = worldFiles();
@@ -2209,11 +2209,11 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("place", {
-		description: "World Console: places of the chronicle — /place lists them, /place <name> shows the page",
+		description: "GameMaster Bernd: places of the chronicle — /place lists them, /place <name> shows the page",
 		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "places"),
 	});
 	pi.registerCommand("persons", {
-		description: "World Console: souls of the chronicle — /persons lists them, /persons <name> shows the page",
+		description: "GameMaster Bernd: souls of the chronicle — /persons lists them, /persons <name> shows the page",
 		handler: async (args, ctx) => pagesCommand(ctx, args ?? "", "personas"),
 	});
 
@@ -2222,7 +2222,7 @@ export default function (pi: ExtensionAPI) {
 	// untouched — session_start lets an existing stamp win — so a standing
 	// tale never changes world underfoot.
 	pi.registerCommand("worlds", {
-		description: "World Console: the worlds this console can open — /worlds lists them, /worlds <id> binds the next /new",
+		description: "GameMaster Bernd: the worlds this console can open — /worlds lists them, /worlds <id> binds the next /new",
 		handler: async (args, ctx) => {
 			const ids = listWorldIds(BASE_DIR);
 			const asked = (args ?? "").trim().toLowerCase();
@@ -2275,7 +2275,7 @@ export default function (pi: ExtensionAPI) {
 	// notes, ruled 2026-08-17). Free-form lines land in the story folder's
 	// notes.md and ship with the R13 batch; the game never reads them back.
 	pi.registerCommand("note", {
-		description: "World Console: a word to the makers, outside the tale — /note <what you noticed>",
+		description: "GameMaster Bernd: a word to the makers, outside the tale — /note <what you noticed>",
 		handler: async (args, ctx) => {
 			const text = (args ?? "").trim();
 			if (!text) {
@@ -2311,7 +2311,7 @@ export default function (pi: ExtensionAPI) {
 	// game event. Regenerated on each call (ledger.md stays the append-only
 	// mirror; this is the reading view).
 	pi.registerCommand("record", {
-		description: "World Console: compile the complete record of this story — /record (writes record.md beside the ledger)",
+		description: "GameMaster Bernd: compile the complete record of this story — /record (writes record.md beside the ledger)",
 		handler: async (_args, ctx) => {
 			replay(ctx);
 			const files = worldFiles();
@@ -2421,7 +2421,7 @@ export default function (pi: ExtensionAPI) {
 	// exchanges to one line each — except the trailing uninterrupted run,
 	// which always stays open. Both toggle back with the same call.
 	pi.registerCommand("thoughts", {
-		description: "World Console: collapse/show quiet thoughts — /thoughts bernd (keeper thinking) · /thoughts gm (table talk)",
+		description: "GameMaster Bernd: collapse/show quiet thoughts — /thoughts bernd (keeper thinking) · /thoughts gm (table talk)",
 		getArgumentCompletions: (prefix: string) => {
 			const bare = prefix.trim().toLowerCase();
 			const options = [
@@ -2509,7 +2509,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("history", {
-		description: "World Console: the tale so far — /history (timeline + achievements), /history long (the chronicler's saga)",
+		description: "GameMaster Bernd: the tale so far — /history (timeline + achievements), /history long (the chronicler's saga)",
 		getArgumentCompletions: (prefix: string) =>
 			"long".startsWith(prefix.toLowerCase()) ? [{ value: "long", label: "long — a written saga of the sitting (one side call)" }] : null,
 		handler: async (args, ctx) => {
@@ -2858,12 +2858,12 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("gm", {
-		description: "World Console: the GM table — /gm <question|argument>, /gm truth <fact>",
+		description: "GameMaster Bernd: the GM table — /gm <question|argument>, /gm truth <fact>",
 		getArgumentCompletions: gmCompletions,
 		handler: gmHandler,
 	});
 	pi.registerCommand("dm", {
-		description: "World Console: alias of /gm — /dm truth <fact> binds a fact as canon",
+		description: "GameMaster Bernd: alias of /gm — /dm truth <fact> binds a fact as canon",
 		getArgumentCompletions: gmCompletions,
 		handler: gmHandler,
 	});

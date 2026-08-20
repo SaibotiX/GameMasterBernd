@@ -19,7 +19,7 @@ play.worldconsole.eu {
 
 	# Unmatched paths, including / — there is no directory of doors.
 	handle {
-		respond "World Console — by invitation." 404
+		respond "GameMaster Bernd — by invitation." 404
 	}
 }
 

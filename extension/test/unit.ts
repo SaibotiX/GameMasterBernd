@@ -26,7 +26,7 @@ const { assembleSystemPrompt, unfinishedWorkRefusal } = await import(join(EXT, "
 const { searchText } = await import(join(EXT, "textsearch.ts"));
 const { wrapText, gridBox } = await import(join(EXT, "ui.ts"));
 const {
-	WORLD_CONSOLE_MARK, fitArt, bannerHint,
+	HOUSE_MARK, fitArt, bannerHint,
 	PI_BUILTIN_COMMANDS, HIDDEN_EXTRA_COMMANDS, PLAYER_COMMANDS,
 	playerGate, filterPlayerSuggestions,
 } = await import(join(EXT, "player.ts"));
@@ -1432,10 +1432,10 @@ ok("asGameEvent: non-custom entries → null", () => {
 // ---- player mode (R30): banner pieces and the per-world art loader --------
 {
 	ok("player: art fits whole or not at all; the mark itself fits 80 columns", () => {
-		const artWidth = Math.max(...WORLD_CONSOLE_MARK.map((line: string) => line.length));
+		const artWidth = Math.max(...HOUSE_MARK.map((line: string) => line.length));
 		assert.ok(artWidth <= 58, `the mark must fit modest terminals (widest line ${artWidth})`);
-		assert.deepEqual(fitArt(WORLD_CONSOLE_MARK, 80), WORLD_CONSOLE_MARK);
-		assert.deepEqual(fitArt(WORLD_CONSOLE_MARK, artWidth - 1), [], "a cut letterform is breakage, not style");
+		assert.deepEqual(fitArt(HOUSE_MARK, 80), HOUSE_MARK);
+		assert.deepEqual(fitArt(HOUSE_MARK, artWidth - 1), [], "a cut letterform is breakage, not style");
 		assert.deepEqual(fitArt([], 80), []);
 	});
 

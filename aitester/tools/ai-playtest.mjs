@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AI playtester driver — plays bounded World Console sittings with a tester
+ * AI playtester driver — plays bounded GameMaster Bernd sittings with a tester
  * LLM and drops human-contract folders into aitester/sessions-in/<batch>/.
  * Design doc: aitester/ai-playtester.md. Zero dependencies beyond node and
  * the globally installed pi (whose own pi-ai package provides the tester
@@ -642,7 +642,7 @@ async function runSitting({ batchDir, persona, ordinal, flags, guide, cards, cat
 	let infrastructure = null;
 
 	try {
-		const boot = await rpc.waitFor((l) => l.includes("World Console:"), 30_000, "world boot notice");
+		const boot = await rpc.waitFor((l) => l.includes("GameMaster Bernd:"), 30_000, "world boot notice");
 		const bootBoard = await pullBoard();
 		let visible =
 			`${JSON.parse(boot).message}\n\n${bootBoard}\n\n(the sitting begins — the world awaits your first word)`;

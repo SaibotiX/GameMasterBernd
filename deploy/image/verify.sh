@@ -84,7 +84,7 @@ CID=""
 echo "=== 4/5 ttyd fallback probe (the bare-page rung still carries) ==="
 CID="$(docker run -d --rm "${HARDEN[@]}" -p 127.0.0.1:0:7681 "$IMG" \
 	ttyd --writable --max-clients 1 --port 7681 \
-	-t titleFixed="World Console" -t disableLeaveAlert=true pi)"
+	-t titleFixed="GameMaster Bernd" -t disableLeaveAlert=true pi)"
 ADDR="$(docker port "$CID" 7681/tcp | head -1)"
 wait_http "http://$ADDR/"
 "${NODEBIN[@]}" "$PROBE_DIR/ws-probe.mjs" "http://$ADDR"

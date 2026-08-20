@@ -108,7 +108,7 @@ const ok = (name, cond, detail = "") => {
 		},
 	]);
 	const out = await aiState(file);
-	ok("A: base game boots through the wrapper", out.includes("World Console: The Dragon Realm"));
+	ok("A: base game boots through the wrapper", out.includes("GameMaster Bernd: The Dragon Realm"));
 	ok("A: clock shown", out.includes("test-quest 2/6"), out);
 	ok("A: trial voiced with DC and kind", out.includes("A TRIAL STANDS") && out.includes("DC 15") && out.includes("checkpoint"));
 	ok("A: edge shown, /roll pointed at", out.includes("hindered") && out.includes("/roll"));

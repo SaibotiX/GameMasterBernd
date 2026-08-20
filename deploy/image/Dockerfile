@@ -104,5 +104,5 @@ ENTRYPOINT ["wc-entrypoint"]
 # the server, never a second pi over the same session store. Fallback rung
 # (bare ttyd page, no panes), as a compose `command:` override:
 #   ["ttyd", "--writable", "--max-clients", "1", "--port", "7681",
-#    "-t", "titleFixed=World Console", "-t", "disableLeaveAlert=true", "pi"]
+#    "-t", "titleFixed=GameMaster Bernd", "-t", "disableLeaveAlert=true", "pi"]
 CMD ["node", "/opt/appserver/server.js"]

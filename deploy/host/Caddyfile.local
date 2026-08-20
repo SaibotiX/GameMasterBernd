@@ -37,7 +37,7 @@ localhost, 127.0.0.1 {
 	}
 
 	handle {
-		respond "World Console — by invitation." 404
+		respond "GameMaster Bernd — by invitation." 404
 	}
 }
 

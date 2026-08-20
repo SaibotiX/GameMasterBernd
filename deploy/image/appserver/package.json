@@ -2,7 +2,7 @@
   "name": "wc-appserver",
   "private": true,
   "version": "0.1.0",
-  "description": "World Console per-friend app server (02 item 5, R14): node-pty ↔ pi over a WebSocket, the pane roots served read-only, a watcher channel — one page, three regions, no framework.",
+  "description": "GameMaster Bernd per-friend app server (02 item 5, R14): node-pty ↔ pi over a WebSocket, the pane roots served read-only, a watcher channel — one page, three regions, no framework.",
   "type": "module",
   "dependencies": {
     "@xterm/addon-fit": "0.10.0",
