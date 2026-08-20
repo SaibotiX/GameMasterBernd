@@ -1,6 +1,6 @@
 # 00 — The big picture: the journey of one visit
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `d700c6e` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `276ff32` (2026-08-20).*
 
 Before any detail, hold the whole thing once. This page walks a single real event — a friend opening their door and playing one turn — and names every machine and program that touches it. Each step points at the page that explains it properly.
 

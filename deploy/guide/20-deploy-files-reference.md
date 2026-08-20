@@ -1,6 +1,6 @@
 # 20 — The deploy/ folder, file by file
 
-*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `d700c6e` (2026-08-20).*
+*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `276ff32` (2026-08-20).*
 
 ## deploy/ (root)
 

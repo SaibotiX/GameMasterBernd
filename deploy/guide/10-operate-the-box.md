@@ -1,6 +1,6 @@
 # 10 — Operating the box: connect, look, change, fix
 
-*How-to. Step recipes for onboarding/deletion/backups stay owned by [`deploy/README.md`](../README.md) — this page teaches the surrounding craft and points there. Synced: `d700c6e` (2026-08-20).*
+*How-to. Step recipes for onboarding/deletion/backups stay owned by [`deploy/README.md`](../README.md) — this page teaches the surrounding craft and points there. Synced: `276ff32` (2026-08-20).*
 
 ## Connect
 
