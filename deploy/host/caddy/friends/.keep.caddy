@@ -1,12 +1,15 @@
 # Friends' doors land here as <name>.caddy, written by new-friend.sh on the
 # box and gitignored (secret path + auth hash — never tracked). This file
-# keeps the directory in git and the import glob non-empty. The shape each
-# snippet carries, for the record:
+# keeps the directory in git and the import glob non-empty. Since hub mode
+# (H1a step 2) this lane is the AUTHORING home: each door's live copy is
+# cp'd to the hub's caddy/sites/friends/ (new-friend.sh prints the steps),
+# where box-site.caddy's own import picks it up. The shape each snippet
+# carries — timings and headers live in new-friend.sh, the one home:
 #
 #   redir /f/<token> /f/<token>/ 308
 #   handle_path /f/<token>/* {
 #   	basic_auth {
 #   		<name> <bcrypt-hash>
 #   	}
-#   	reverse_proxy wc-<name>:7681
+#   	reverse_proxy wc-<name>:7681 waker:9000 { … }
 #   }

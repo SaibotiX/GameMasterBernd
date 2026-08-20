@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # The host stack's end-to-end check, run on the dev machine: the production
 # shapes (TLS, secret path, basic auth, WebSocket proxy, hardened friend
-# container) against the local image, self-signed. Proves 02 item 1's
-# config actually carries the game before any of it touches the VPS.
+# container) against the local image, self-signed — plus, since hub mode
+# (H1a step 2), the tenant fragment validated in the hub's own layout.
+# Proves 02 item 1's config actually carries the game before any of it
+# touches the VPS. The apex/landing legs left with the apex itself: the
+# hub's localcheck probes those pages now.
 #
 #   deploy/host/localcheck.sh          # expects world-console:latest built
 set -euo pipefail
@@ -37,18 +40,70 @@ export GATEWAY_STATE
 export GATEWAY_UPSTREAM="http://stub:9990"
 export ANTHROPIC_ORG_KEY="sk-local-stand-in"
 
-# The landing ground's address fixture (R19): the real value lives only in
-# the box .env — here a deliberately fake street proves templates render it.
-export WC_IMPRESSUM_ADDRESS="Teststraße 1, 0000 Localdorf"
-
 compose() { docker compose -f "$HERE/compose.yaml" --profile local "$@"; }
 cleanup() {
 	compose down -v --remove-orphans >/dev/null 2>&1 || true
 	docker volume rm world-console_restore-check >/dev/null 2>&1 || true
+	[ "${INGRESS_MADE:-0}" != 1 ] || docker network rm "$INGRESS_NET" >/dev/null 2>&1 || true
 	rm -rf "$WC_TEST_STORE" "$GATEWAY_STATE"
+	[ -z "${FRAG_TMP:-}" ] || rm -rf "$FRAG_TMP"
 	[ -z "${BK_TMP:-}" ] || rm -rf "$BK_TMP"
 }
 trap cleanup EXIT
+
+# Hub mode (contract §A.1): waker and the friend shape sit on the hub's
+# shared ingress network — external, owned by the WorldConsole repo's
+# compose on a real box. A solo dev machine gets a throwaway so this rig
+# stays self-contained; ours is removed on exit BECAUSE the hub's own
+# local rig must be able to create the network itself (pinned subnet,
+# compose labels — a hand-made leftover would refuse its `up`). If the
+# hub's rig already made it here, we just attach.
+INGRESS_NET=world-console_ingress
+INGRESS_MADE=0
+if ! docker network inspect "$INGRESS_NET" >/dev/null 2>&1; then
+	docker network create "$INGRESS_NET" >/dev/null
+	INGRESS_MADE=1
+fi
+
+echo "=== the tenant fragment: box-site.caddy validates in the hub's layout ==="
+# The derived-copy twin (contract §A.3, the before-every-reload gate's dev
+# half): the hub lands this file as sites/gamemaster-bernd.caddy under its
+# Caddyfile's `import sites/*.caddy`, and the fragment's own
+# `import friends/*.caddy` resolves relative to that landing spot —
+# sites/friends/. Rebuild that layout in a scratch dir, drop in one door
+# of the minted shape (the public test fixture), validate in-container.
+FRAG_TMP="$(mktemp -d "$HERE/.localcheck-fragment.XXXXXX")"
+mkdir -p "$FRAG_TMP/sites/friends"
+cp "$HERE/caddy/box-site.caddy" "$FRAG_TMP/sites/gamemaster-bernd.caddy"
+printf '# keep — the friends glob is never empty\n' >"$FRAG_TMP/sites/friends/.keep.caddy"
+cat >"$FRAG_TMP/sites/friends/localtest.caddy" <<'FIXTUREDOOR'
+redir /f/localtest00000000000000000000 /f/localtest00000000000000000000/ 308
+handle_path /f/localtest00000000000000000000/* {
+	basic_auth {
+		test $2a$14$Z/1Vc95yNgexVZApQgZHbOkDfgPwBKiwYF2fFp9w8LHQS3supWk8u
+	}
+	reverse_proxy wc-test:7681 waker:9000
+}
+FIXTUREDOOR
+printf '{\n\tlocal_certs\n}\nimport sites/*.caddy\n' >"$FRAG_TMP/Caddyfile"
+CADDY_IMG="$(grep -oE 'image: caddy:[0-9.]+' "$HERE/compose.yaml" | head -1 | cut -d' ' -f2)"
+if ! docker run --rm -v "$FRAG_TMP:/etc/caddy:ro" "$CADDY_IMG" \
+	caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+	echo "FAIL: box-site.caddy does not validate in the hub layout:"
+	docker run --rm -v "$FRAG_TMP:/etc/caddy:ro" "$CADDY_IMG" \
+		caddy validate --config /etc/caddy/Caddyfile || true
+	exit 1
+fi
+grep -q 'GameMaster Bernd — by invitation.' "$HERE/caddy/box-site.caddy" \
+	|| { echo "FAIL: the fragment lost the by-invitation words (R36)"; exit 1; }
+grep -q '^vault\.worldconsole\.eu' "$HERE/caddy/box-site.caddy" \
+	|| { echo "FAIL: vault.'s reserved origin left the fragment (R11)"; exit 1; }
+grep -A1 '^vault\.worldconsole\.eu' "$HERE/caddy/box-site.caddy" | grep -q '"not yet" 404' \
+	|| { echo "FAIL: vault.'s reserved posture changed — it answers \"not yet\" 404 until the vault round"; exit 1; }
+FIRST="$(grep -vE '^[[:space:]]*(#|$)' "$HERE/caddy/box-site.caddy" | head -1)"
+grep -q '^play\.worldconsole\.eu' <<<"$FIRST" \
+	|| { echo "FAIL: the fragment must open with its own site block — a global options block collides with the hub Caddyfile (contract §A.3); first content line: $FIRST"; exit 1; }
+rm -rf "$FRAG_TMP"; FRAG_TMP=""
 
 echo "=== up (caddy-local + wc-test + waker + gateway + stub) ==="
 compose config -q
@@ -71,33 +126,6 @@ CODE="$(curl -ks -o /dev/null -w '%{http_code}' -u test:local-test-password "$DO
 echo "=== no directory of doors: unmatched paths say nothing ==="
 CODE="$(curl -ks -o /dev/null -w '%{http_code}' "https://localhost:8443/")"
 [ "$CODE" = "404" ] || { echo "FAIL: expected 404 at /, got $CODE"; exit 1; }
-
-echo "=== the landing ground: the words are served (02 items 9+11, R13/R19/R16) ==="
-# The production root block on its local hostname: the loud disclosure, the
-# AI sentence (Art. 50(1)), the game's name (R16/R36 — GameMaster Bernd;
-# Hausregel retired to the icebox at M0), R29's retention sentence, the
-# SCC transfer ground, and the Impressum's templates-rendered address.
-SITE_RESOLVE="--resolve site.localhost:8443:127.0.0.1"
-BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/")"
-grep -q "AI game master" <<<"$BODY" \
-	|| { echo "FAIL: the landing is missing the AI sentence"; exit 1; }
-grep -q "personally reads" <<<"$BODY" \
-	|| { echo "FAIL: the landing softened the human-reads fact"; exit 1; }
-grep -q "GAMEMASTER BERND" <<<"$BODY" \
-	|| { echo "FAIL: the landing is missing the game's name (R16/R36)"; exit 1; }
-! grep -q "Hausregel" <<<"$BODY" \
-	|| { echo "FAIL: Hausregel is retired (R36) yet still on the landing"; exit 1; }
-BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/datenschutz.html")"
-grep -q "deleted within 30 days at most" <<<"$BODY" \
-	|| { echo "FAIL: the note is missing R29's retention sentence"; exit 1; }
-grep -q "standard contractual clauses" <<<"$BODY" \
-	|| { echo "FAIL: the note is missing the transfer ground"; exit 1; }
-BODY="$(curl -ks $SITE_RESOLVE "https://site.localhost:8443/impressum.html")"
-grep -q "Teststraße 1, 0000 Localdorf" <<<"$BODY" \
-	|| { echo "FAIL: the Impressum address did not render from the env"; exit 1; }
-HDRS="$(curl -ksI $SITE_RESOLVE "https://site.localhost:8443/")"
-grep -qi "strict-transport-security" <<<"$HDRS" \
-	|| { echo "FAIL: the hardening headers are missing"; exit 1; }
 
 echo "=== the whole page carries through the door (prefix strip, auth, TLS) ==="
 # appserver-probe walks page + health + pane APIs + the PTY stream — every
@@ -285,7 +313,11 @@ echo "=== store side: verify hashes, compact to tar.zst, prune to markers ==="
 "$HERE/store-sweep.sh" --store "$WC_TEST_STORE" --compact-only
 TAR="$(find "$WC_TEST_STORE/sessions" -name '*.tar.zst' | head -1)"
 [ -n "$TAR" ] || { echo "FAIL: no compacted tarball"; ls -laR "$WC_TEST_STORE"; exit 1; }
-tar --zstd -tf "$TAR" | grep -q '^session.jsonl$' \
+# Plain grep, not -q: -q exits at its first match — session.jsonl is the
+# FIRST entry — and can SIGPIPE tar mid-listing, which pipefail reads as
+# failure on a green tarball (new-friend.sh's urandom lesson, same trap;
+# this one fired 2026-08-21). Plain grep reads to EOF.
+tar --zstd -tf "$TAR" | grep '^session.jsonl$' >/dev/null \
 	|| { echo "FAIL: tarball misses session.jsonl"; exit 1; }
 find "$WC_TEST_STORE/staging" -name session.jsonl | grep -q . \
 	&& { echo "FAIL: staged data files were not pruned"; exit 1; }

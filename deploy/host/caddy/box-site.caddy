@@ -1,0 +1,39 @@
+# The game's site blocks — the tenant fragment (hub contract §A.3; the
+# WorldConsole repo's hub/02-wiring-workflow.md, landed at H1a step 2).
+# This file is the OWNING HOME of GameMaster Bernd's doors; the hub box
+# carries a derived copy at
+# /home/deploy/world-console/deploy/host/caddy/sites/gamemaster-bernd.caddy
+# (landed by cp — contract §B step 4 — and re-landed whenever this file
+# changes; then in-container `caddy validate`, then reload, NEVER the
+# other order). No global options block here: the ingress Caddyfile owns
+# email/ACME, and a second one would collide (§A.3). The apex
+# (worldconsole.eu) is the hub's own block, not ours — the game's landing
+# is play.'s by-invitation 404 by design, and the game's public
+# disclosures (privacy note, Impressum) are the apex pages: the game's
+# own words, moved home with the split.
+#
+# `import friends/*.caddy` resolves RELATIVE TO THIS FILE'S LOCATION. On
+# the hub box that is sites/friends/<name>.caddy — the box-local doors,
+# cp'd there from this repo's deploy/host/caddy/friends/ authoring lane
+# (new-friend.sh prints the exact steps at mint). The hub tracks
+# sites/friends/.keep.caddy so the glob is never empty.
+
+play.worldconsole.eu {
+	encode zstd gzip
+
+	# Friends' doors: one box-local snippet each, minted by new-friend.sh
+	# — secret path, basic auth, the friend's container + the waker as
+	# second upstream. Never tracked, in this repo or the hub's.
+	import friends/*.caddy
+
+	# Unmatched paths, including / — there is no directory of doors.
+	handle {
+		respond "GameMaster Bernd — by invitation." 404
+	}
+}
+
+# R11's isolated credential origin: reserved from day one, served only when
+# the vault round builds it. Nothing else may ever share this origin.
+vault.worldconsole.eu {
+	respond "not yet" 404
+}

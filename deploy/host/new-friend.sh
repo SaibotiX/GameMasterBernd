@@ -3,10 +3,13 @@
 # in caddy/friends/<name>.caddy and a service+volumes entry in
 # compose.override.yaml — both box-local and gitignored, so the tracked
 # tree never carries a friend and `git pull` never trips over one
-# (runbook §per-friend onboarding). Prints the door and the pair once —
-# the password is never stored anywhere on our side (02 item 1: the
-# doorway is a secret path + basic auth; credentials for MODELS are the
-# player's own and never touch this script).
+# (runbook §per-friend onboarding). Since hub mode (H1a step 2) the
+# snippet's LIVE copy serves from the hub's caddy — this lane stays the
+# authoring home, and the printed steps below carry the cp + validate +
+# reload. Prints the door and the pair once — the password is never
+# stored anywhere on our side (02 item 1: the doorway is a secret path +
+# basic auth; credentials for MODELS are the player's own and never touch
+# this script).
 #
 #   deploy/host/new-friend.sh <name>          # e.g. new-friend.sh alice
 set -euo pipefail
@@ -152,9 +155,12 @@ docker compose -f "$HERE/compose.yaml" -f "$OVERRIDE" config -q
 cat <<EOF
 minted: caddy/friends/$NAME.caddy + wc-$NAME in compose.override.yaml
         + a house-lane grant in gateway-state/keys.json (\$10, R12 placeholder)
-── then ────────────────────────────────────────────────────────────────────
+── then (the door serves from the HUB's caddy — hub contract §B step 4): ───
   docker compose up -d gateway wc-$NAME
-  docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+  cp "$SNIPPET" /home/deploy/world-console/deploy/host/caddy/sites/friends/
+  cd /home/deploy/world-console/deploy/host
+  docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile   # NEVER skip
+  docker compose exec caddy caddy reload   --config /etc/caddy/Caddyfile
 
 ── send to $NAME out of band, once (never in the repo, never in a log): ────
   https://play.worldconsole.eu/f/$TOKEN/

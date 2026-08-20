@@ -41,20 +41,8 @@ localhost, 127.0.0.1 {
 	}
 }
 
-# The landing ground's local mirror (02 items 9+11): the exact production
-# block from caddy/Caddyfile on its own local hostname — localcheck curls
-# it via --resolve and proves the words, the templates-rendered address
-# (a test fixture here) and the headers before any of it faces the box.
-site.localhost {
-	encode zstd gzip
-	root * /srv/site
-	templates
-	header {
-		Strict-Transport-Security "max-age=31536000"
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
-		Referrer-Policy "no-referrer"
-		Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'"
-	}
-	file_server
-}
+# No landing mirror since H1a step 2: the apex and its pages (landing,
+# privacy note, Impressum) are the HUB's — the WorldConsole repo serves
+# and probes them (its localcheck's apex-mirror leg). This rig proves the
+# game's own surfaces: the door shape above and, via localcheck's
+# fragment leg, box-site.caddy in the hub's layout.

@@ -1,10 +1,14 @@
-# Stage-1 host stack (02 item 1 + the hardening bullets): Caddy in front,
-# one hardened container per friend behind it. Friend services and their
-# volumes are minted by new-friend.sh into the box-local, gitignored
-# compose.override.yaml (compose auto-merges it; each friend `extends`
-# wc-template below) — the tracked tree never carries a friend. Local
-# end-to-end check: the `local` profile (localcheck.sh drives it) — same
-# friend shape, self-signed TLS, throwaway volumes.
+# Stage-1 host stack in HUB MODE (H1a step 2 — the WorldConsole repo's
+# plan §H1a item 2, wiring contract §A.1): since the ingress cutover the
+# box's front door is the HUB's caddy — this compose brings no box caddy
+# of its own. What remains is the app side: one hardened container per
+# friend (minted by new-friend.sh into the box-local, gitignored
+# compose.override.yaml; each friend `extends` wc-template below — the
+# tracked tree never carries a friend) and the waker, both joining the
+# hub's attachable `ingress` network, where the hub caddy dials the doors
+# by service name. Local end-to-end check: the `local` profile
+# (localcheck.sh drives it) — same friend shape behind caddy-local's own
+# self-signed front door; the dev rig stays fully self-contained (§A.1).
 name: world-console
 
 # The security boundary is the container (02): pi has no permission system,
@@ -12,8 +16,11 @@ name: world-console
 # root; ~/.pi/agent on tmpfs so auth.json lives and dies with the container
 # (R11) while sessions/ and data/ persist as named volumes; no capabilities;
 # bounded memory, cpu and pids. Outbound internet stays open (model APIs,
-# MediaWiki hosts) — the LOCAL network is what must be unreachable, and that
-# is firewall.sh's DOCKER-USER job on the host, not a compose concern.
+# MediaWiki hosts) — the LOCAL network is what must be unreachable, and
+# that is the box firewall's DOCKER-USER job: the HUB's singleton since
+# H1a (WC deploy/host/firewall.sh, its egress drops covering the pinned
+# ingress subnet by construction; contract §A.5 — tenants ship no
+# firewall unit; this repo's firewall.sh stays for solo deployments only).
 x-friend: &friend
   image: world-console:latest
   init: true
@@ -35,39 +42,13 @@ x-friend: &friend
   stop_grace_period: 30s
 
 services:
-  # BOX-ONLY: needs ./.env (ACME_EMAIL) — an empty email is a Caddyfile
-  # parse error, and restart:unless-stopped turns it into a quiet crash
-  # loop (a dev machine learned this on eyeball night). The dev-machine
-  # door is localcheck.sh (profile: local); this service never runs off
-  # the box.
-  caddy:
-    image: caddy:2.10.2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      # ACME account mailbox — set in .env on the box (gitignored), never here.
-      ACME_EMAIL: ${ACME_EMAIL:-}
-      # R19's street address for the Impressum page — box .env only, never
-      # the repo; caddy's templates directive renders it into impressum.html.
-      WC_IMPRESSUM_ADDRESS: ${WC_IMPRESSUM_ADDRESS:-}
-    volumes:
-      # Directory mount on purpose: a single-FILE bind mount pins the inode,
-      # and any editor or sed that writes-and-renames leaves the container
-      # reading the OLD file after every reload (the first onboarding found
-      # it: valid config on the host, phantom 404 behind the door).
-      - ./caddy:/etc/caddy:ro
-      - ./caddy/site:/srv/site:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    networks: [web, wake]
-
   # Start-on-connect (02 item 12): each door's second upstream. Holds the
-  # docker socket, so it lives on `wake` — a network caddy alone shares;
-  # friends on `web` cannot route to it. All it can ever do with the socket
-  # is start wc-* containers by validated name (waker.js).
+  # docker socket. Since hub mode it sits on `ingress` — the hub's caddy,
+  # the doors' proxy, must dial it — and on `wake`, where the dev rig's
+  # caddy-local twin does. Deliberate, NAMED residue (H1a step 2): friends
+  # share `ingress` too now, so a friend's model CAN knock here — but all
+  # a knock can ever do is START a wc-* container by validated name
+  # (waker.js); stop, inspect, anything else never leaves this process.
   waker:
     image: node:24-trixie-slim
     restart: unless-stopped
@@ -75,7 +56,7 @@ services:
       - ./waker/waker.js:/waker.js:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: ["node", "/waker.js"]
-    networks: [wake]
+    networks: [wake, ingress]
 
   # The house lane's gateway (02 §house lane, R12/R29; shape from the item-1
   # spike): ONE process holding the org key, friends speak to it with
@@ -145,19 +126,21 @@ services:
   wc-template:
     <<: *friend
     scale: 0
+    # Hub mode: every friend inherits `ingress` through extends — the hub
+    # caddy dials each door's container directly (wc-<name>:7681). wc-test
+    # stays off it (the anchor's [web] alone): the dev rig needs no hub.
+    networks: [web, ingress]
 
   # -- local end-to-end check only (never on the VPS): -----------------------
+  # The dev rig's own front door — the box door is the hub's caddy since
+  # H1a (the apex and its landing pages moved home with it).
   caddy-local:
     profiles: [local]
     image: caddy:2.10.2
     ports:
       - "127.0.0.1:8443:443"
-    environment:
-      # The landing-ground mirror's address fixture (localcheck exports it).
-      WC_IMPRESSUM_ADDRESS: ${WC_IMPRESSUM_ADDRESS:-}
     volumes:
       - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
-      - ./caddy/site:/srv/site:ro
     networks: [web, wake]
 
   # localcheck's pretend Anthropic: the gateway's upstream when the check
@@ -193,10 +176,15 @@ services:
 networks:
   web:
   wake:
+  # The hub's shared tenant network (contract §A.1): attachable, owned by
+  # the WorldConsole repo's compose, its subnet pinned inside the box
+  # firewall's egress drops. External — joining never creates it; on solo
+  # dev machines localcheck makes (and removes) a throwaway.
+  ingress:
+    external: true
+    name: world-console_ingress
 
 volumes:
-  caddy-data:
-  caddy-config:
   data-test:
   sessions-test:
   # per-friend volumes (data-<name>, sessions-<name>) live with their
