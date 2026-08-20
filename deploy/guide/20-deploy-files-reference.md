@@ -1,6 +1,6 @@
 # 20 — The deploy/ folder, file by file
 
-*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `276ff32` (2026-08-20).*
+*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `9c66a35` (2026-08-20).*
 
 ## deploy/ (root)
 
@@ -38,7 +38,7 @@
 
 **`Caddyfile.local`** — localcheck's mirror of the production shape: self-signed certs, one fixed test door (deliberately public fixtures), the same waker two-upstream proxy block with the `dial_timeout` scar, and the landing site on `site.localhost`. Never serves anywhere real.
 
-**`caddy/site/`** — the landing ground (words round, R13/R16/R19): `index.html` (the loud disclosure + Art. 50(1) sentence + both names), `datenschutz.html` (the Art. 13 privacy note against R29's re-verified facts), `impressum.html` (address rendered from env — built so the private address never entered the repo; since the 2026-08-20 swap the env holds the rented c/o block (R19 revised) and the value is public anyway — the mechanism stays for any future value), `site.css`. Work with them: words are law-adjacent — localcheck greps the load-bearing sentences; keep them true.
+**`caddy/site/`** — the landing ground (words round, R13/R16/R19): `index.html` (the loud disclosure + Art. 50(1) sentence + the game's name — GameMaster Bernd since M0, R36; Hausregel retired to the icebox and localcheck now refuses it on the page), `datenschutz.html` (the Art. 13 privacy note against R29's re-verified facts), `impressum.html` (address rendered from env — built so the private address never entered the repo; since the 2026-08-20 swap the env holds the rented c/o block (R19 revised) and the value is public anyway — the mechanism stays for any future value), `site.css`. Work with them: words are law-adjacent — localcheck greps the load-bearing sentences; keep them true.
 
 **`caddy/friends/.keep.caddy`** — tracked placeholder so the `import friends/*.caddy` glob never matches nothing (an empty glob is a Caddy parse error). The real snippets beside it are box-local.
 

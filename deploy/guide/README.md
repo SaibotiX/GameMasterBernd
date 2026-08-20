@@ -1,6 +1,6 @@
 # The deploy guide — how the web half of GameMaster Bernd works, from zero
 
-*Teaching layer. Live ops truth stays in [`deploy/README.md`](../README.md) (the runbook) — if this guide and the runbook ever disagree, **the runbook wins** and the guide has drifted (see "Staying fresh" below). Synced: `276ff32` (2026-08-20).*
+*Teaching layer. Live ops truth stays in [`deploy/README.md`](../README.md) (the runbook) — if this guide and the runbook ever disagree, **the runbook wins** and the guide has drifted (see "Staying fresh" below). Synced: `9c66a35` (2026-08-20).*
 
 This folder teaches everything around the game: what a server actually is, how a browser reaches the box, what Docker does, how the friends' consoles run, where data lives, how backups and alerts work — and how to build the *next* project with the same bones. It assumes you can use a terminal and git, and **nothing else**. Every concept is explained from zero, using this project's real files as the worked example.
 

@@ -1,6 +1,6 @@
 # 04 — The architecture of this deployment, piece by piece
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md) (the runbook). Synced: `276ff32` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md) (the runbook). Synced: `9c66a35` (2026-08-20).*
 
 [00](00-big-picture.md) walked the journey; [01](01-web-fundamentals.md)–[03](03-docker.md) taught the materials. This page assembles them: every running piece, what it does, how it talks to the others, and which ruling shaped it. After this page, `deploy/` should read like prose.
 

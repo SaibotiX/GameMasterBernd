@@ -1,6 +1,6 @@
 # 11 — Data in and out: volumes, the store, borg backups
 
-*How-to. The data map lives in [04 §the data model](04-architecture-of-this-deployment.md); erasure is owned by the runbook §deletion; backup law by the runbook §Backups. This page is the working knowledge around them. Synced: `276ff32` (2026-08-20).*
+*How-to. The data map lives in [04 §the data model](04-architecture-of-this-deployment.md); erasure is owned by the runbook §deletion; backup law by the runbook §Backups. This page is the working knowledge around them. Synced: `9c66a35` (2026-08-20).*
 
 ## Reading and copying data out
 

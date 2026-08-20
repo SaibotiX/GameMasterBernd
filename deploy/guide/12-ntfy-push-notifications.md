@@ -1,6 +1,6 @@
 # 12 — Push notifications with ntfy: the pager
 
-*How-to + explanation. The pager's law lives in the runbook §the pager; this page teaches the mechanism and how to wire it anywhere. Synced: `276ff32` (2026-08-20).*
+*How-to + explanation. The pager's law lives in the runbook §the pager; this page teaches the mechanism and how to wire it anywhere. Synced: `9c66a35` (2026-08-20).*
 
 ## What ntfy is
 
