@@ -1,6 +1,6 @@
 # 03 — Docker: images, containers, volumes, compose
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `9c66a35` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `0cbaf72` (2026-08-21).*
 
 Docker is how this project turns "a program and everything it needs" into a sealed, repeatable, disposable unit. This page teaches Docker's four nouns and two workflows using the project's real files — `deploy/image/Dockerfile` and `deploy/host/compose.yaml` are the textbook.
 
@@ -20,8 +20,8 @@ A container is *not* a virtual machine: it is ordinary processes on the host ker
 |---|---|---|
 | **Image** | a read-only filesystem snapshot + metadata (what to run, as whom) | `world-console:latest` / `world-console:<gitrev>` |
 | **Container** | one running (or stopped) instance of an image + a thin writable layer | `wc-tobias`, `caddy`, `gateway`… |
-| **Volume** | named storage managed by Docker, mounted into containers, **survives recreation** | `data-<friend>`, `sessions-<friend>`, `caddy-data` |
-| **Network** | a private virtual switch; containers on it reach each other **by service name** | `web` (caddy ↔ seats ↔ gateway), `wake` (caddy ↔ waker only) |
+| **Volume** | named storage managed by Docker, mounted into containers, **survives recreation** | `gamemaster-bernd_data-<friend>`, `…_sessions-<friend>` (the TLS volumes are the hub's) |
+| **Network** | a private virtual switch; containers on it reach each other **by service name** | `web` (seats ↔ gateway) · `wake` (the dev rig's caddy-local ↔ waker) · the hub's **external** `ingress` (hub caddy ↔ seats + waker) |
 
 The name-resolution point deserves emphasis: on a shared network, `http://gateway:4100` just works — Docker's internal DNS resolves service names. That is why compose files read like architecture diagrams.
 
@@ -143,7 +143,8 @@ Ideas from `deploy/host/compose.yaml` worth owning:
 - **The override file is the friend registry.** Compose auto-merges `compose.override.yaml` over `compose.yaml`. All per-friend services/volumes live in the override — written by `new-friend.sh`, gitignored, box-local. The tracked file never carries a friend, so `git pull` never conflicts with production state. Each friend `extends` the tracked `wc-template` (anchors can't cross files; `extends` can).
 - **`scale: 0` as parking.** `wc-template` is a real service that `up` never instantiates — the pattern that lets the override merely say `scale: 1` per friend.
 - **Profiles gate the test rig.** `profiles: [local]` marks services (self-signed caddy, the pretend-Anthropic stub, `wc-test`) that exist only when a profile is requested — the production `up -d` never touches them; `localcheck.sh` runs `--profile local`. Test scaffolding lives *in* the production file without ever running in production.
-- **Networks as boundaries.** The waker holds the docker socket (root-equivalent power), so it lives on `wake`, shared with caddy alone — a friend container on `web` cannot even route to it. Segmentation by network membership, free at design time.
+- **Networks as boundaries.** Segmentation by network membership is free at design time: the gateway (the org key) lives on `web` only — nothing on the hub's shared network can route to it. The waker holds the docker socket (root-equivalent power); since hub mode it must sit on `ingress` (the hub caddy dials it), which the friends share too — an *accepted, named* residue, because the waker's whole vocabulary is "START a `wc-*` container by validated name" (the compose and `waker.js` comments carry the reasoning). When a boundary must widen, shrink what the exposed thing can *do*.
+- **An external network is joined, never created.** `ingress` is declared `external: true` with the hub's name (`world-console_ingress`): the hub's own compose births and owns it (labels, pinned subnet); this project only attaches. On a solo dev machine `localcheck.sh` makes and removes a throwaway of the same name.
 - **Env plumbing.** `${VAR:-default}` in compose reads the shell env and `.env` beside the file. Secrets reach containers this way (org key, ntfy topic) — never written into the YAML. One sharp edge recorded in `gateway.js`: compose forwards *unset* as **empty string**, and `Number("")` is `0` — guard with `||`, not `??`.
 
 ## What survives what — the lifecycle table
@@ -154,7 +155,7 @@ The most important table in this page. "Recreate" = `up -d` after an image/confi
 |---|---|---|---|---|
 | container filesystem writes (non-volume) | survives | **lost** | **lost** | lost |
 | tmpfs contents (`auth.json`!) | **lost** (by design, R11) | lost | lost | lost |
-| named volumes (`data-*`, `sessions-*`, `caddy-data`) | survive | **survive** | **survive** | **LOST — deliberate step only** |
+| named volumes (`data-*`, `sessions-*`) | survive | **survive** | **survive** | **LOST — deliberate step only** |
 | bind mounts (`./gateway-state`, `/srv/…/staging/<f>`) | survive | survive | survive | survive (they're host dirs) |
 | the image | untouched | is the new basis | untouched | untouched |
 
@@ -168,8 +169,8 @@ One more scar worth its line: a **single-file bind mount pins the inode**. Edito
 # on: box (as deploy)
 docker ps --format 'table {{.Names}}\t{{.Status}}'   # what's running, health at a glance
 docker images                                         # local images and tags
-docker volume ls | grep world-console                 # every named volume
-docker volume inspect world-console_data-tobias       # …including its real path on disk
+docker volume ls | grep gamemaster-bernd              # every named volume
+docker volume inspect gamemaster-bernd_data-tobias    # …including its real path on disk
 docker stats --no-stream                              # live cpu/mem per container
 docker system df                                      # disk used by images/volumes/build cache
 docker image prune -f                                 # drop dangling (untagged old) images

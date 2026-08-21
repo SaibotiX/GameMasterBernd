@@ -1,6 +1,6 @@
 # 20 — The deploy/ folder, file by file
 
-*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `9c66a35` (2026-08-20).*
+*Reference. Each entry: what it is · why it exists · how you work with it. The files' own header comments are the deepest truth — most are written as documentation; read them. Synced: `0cbaf72` (2026-08-21).*
 
 ## deploy/ (root)
 
@@ -32,19 +32,17 @@
 
 ## deploy/host/ — running the box
 
-**`compose.yaml`** — the stack: the `x-friend` hardened anchor, caddy, waker, gateway, `wc-template` (scale 0), and the `local`-profile test rig; networks `web`/`wake`; the override-file pattern documented in comments (each friend `extends wc-template`). Annotated tour: [03](03-docker.md) §compose. Work with it: edits are architecture changes — verify with `docker compose config -q` + localcheck before the box sees them.
+**`compose.yaml`** — the stack in HUB MODE (H1a step 2): the `x-friend` hardened anchor, waker, gateway, `wc-template` (scale 0), and the `local`-profile test rig — **no box caddy**; networks `web`/`wake` plus the hub's external `ingress` (joined, never created); the override-file pattern documented in comments (each friend `extends wc-template`). Annotated tour: [03](03-docker.md) §compose. Work with it: edits are architecture changes — verify with `docker compose config -q` + localcheck before the box sees them.
 
-**`caddy/Caddyfile`** — production routing: global ACME email; `play.` importing `friends/*.caddy` with the by-invitation 404 fallback; `vault.` reserved (R11); the apex landing site with the hardening header block and `templates` rendering the Impressum address from env (R19). Work with it: config-only changes → `caddy reload` ([10](10-operate-the-box.md)); remember the directory-mount inode lesson.
+**`caddy/box-site.caddy`** — the tenant FRAGMENT (hub contract §A.3), the owning home of the game's site blocks: `play.` importing `friends/*.caddy` with the by-invitation 404 fallback, `vault.` reserved (R11); no global options block (the hub's ingress Caddyfile owns email/ACME). The hub box serves a derived copy at `sites/gamemaster-bernd.caddy`, its friends import resolving to the hub's `sites/friends/`. Work with it: after any change, re-land the copy + in-container `caddy validate` + reload AT THE HUB, in that order ([10](10-operate-the-box.md) §door change). The apex landing site and its pages left with the hub at its step 1 (byte-identical; its repo's `caddy/site/` — the words' law rides there now).
 
-**`Caddyfile.local`** — localcheck's mirror of the production shape: self-signed certs, one fixed test door (deliberately public fixtures), the same waker two-upstream proxy block with the `dial_timeout` scar, and the landing site on `site.localhost`. Never serves anywhere real.
-
-**`caddy/site/`** — the landing ground (words round, R13/R16/R19): `index.html` (the loud disclosure + Art. 50(1) sentence + the game's name — GameMaster Bernd since M0, R36; Hausregel retired to the icebox and localcheck now refuses it on the page), `datenschutz.html` (the Art. 13 privacy note against R29's re-verified facts), `impressum.html` (address rendered from env — built so the private address never entered the repo; since the 2026-08-20 swap the env holds the rented c/o block (R19 revised) and the value is public anyway — the mechanism stays for any future value), `site.css`. Work with them: words are law-adjacent — localcheck greps the load-bearing sentences; keep them true.
+**`Caddyfile.local`** — localcheck's mirror of the production shape: self-signed certs, one fixed test door (deliberately public fixtures), the same waker two-upstream proxy block with the `dial_timeout` scar. The landing mirror left with the apex (the hub's localcheck probes those pages). Never serves anywhere real.
 
 **`caddy/friends/.keep.caddy`** — tracked placeholder so the `import friends/*.caddy` glob never matches nothing (an empty glob is a Caddy parse error). The real snippets beside it are box-local.
 
-**`new-friend.sh`** — the mint ([04](04-architecture-of-this-deployment.md) §friend lifecycle): consent-gate (refuses without the row), token + pair + bcrypt hash, door snippet with the waker as second upstream, staging slice chowned before first mount, virtual key at the $10 grant, override entry extending `wc-template`, `compose config -q` gate, prints door + pair once. Work with it: runbook §per-friend onboarding is the surrounding order.
+**`new-friend.sh`** — the mint ([04](04-architecture-of-this-deployment.md) §friend lifecycle): consent-gate (refuses without the row), token + pair + bcrypt hash, door snippet with the waker as second upstream, staging slice chowned before first mount, virtual key at the $10 grant, override entry extending `wc-template`, `compose config -q` gate, prints door + pair once — plus the hub-side steps that make the door live (cp to the hub's `sites/friends/`, validate, reload). Work with it: runbook §per-friend onboarding is the surrounding order.
 
-**`firewall.sh`** — rebuilds the DOCKER-USER chain: allow replies + docker↔docker, drop container→private-ranges, return the rest. Idempotent; box-only; persisted by `worldconsole-firewall.service`. Teaching tour: [02](02-linux-server.md) §firewall.
+**`firewall.sh`** — rebuilds the DOCKER-USER chain: allow replies + docker↔docker, drop container→private-ranges, return the rest. Idempotent; box-only. On the live box the chain's owner is the HUB's identical singleton (`world-console-firewall.service`, contract §A.5 — tenants ship no firewall unit); this copy stays for solo deployments. Teaching tour: [02](02-linux-server.md) §firewall.
 
 **`reaper.sh`** — every 5 min: stop seats with no WebSocket client for ≥30 min (then `store-sweep.sh --friend` so the stop's seal is certain), du-based disk watch (alarm-only by ruling), one `docker stats` line. Journal-only by design.
 
@@ -56,15 +54,15 @@
 
 **`pull-backup.sh`** — dev-machine mirror of the encrypted repo over ProxyJump through the box (the dev DNS quirk), `--delete` load-bearing (the prune reaches the mirror — §deletion's hand-step). By day, monthly-ish, before anything sweeping.
 
-**`localcheck.sh`** — the crown jewel of the checks: the entire production door on the dev machine — TLS, secret path, auth, prefix strip, the page through the door, the lane's turns/caching/refusals/tripwires, stop-is-a-seal, sweep idempotency, reaper + waker + resume, the AI marking, reconcile's six verdicts on fixtures (match, both ghost rules, pre-epoch, abort-drift forgiven, over-bound red), tamper refusal, and (borg installed) the full backup/restore cycle against a throwaway repo. Keyless by construction (the stub plays Anthropic). Work with it: run before any push that touches `deploy/`; read a failing leg's echo — each names its law.
+**`localcheck.sh`** — the crown jewel of the checks: the entire production door on the dev machine — TLS, secret path, auth, prefix strip, the page through the door, the box fragment validated in-container in the hub's own layout (the validate-before-reload law's dev twin), the lane's turns/caching/refusals/tripwires, stop-is-a-seal, sweep idempotency, reaper + waker + resume (the renamed container path), the AI marking, reconcile's six verdicts on fixtures (match, both ghost rules, pre-epoch, abort-drift forgiven, over-bound red), tamper refusal, and (borg installed) the full backup/restore cycle against a throwaway repo. Keyless by construction (the stub plays Anthropic); a throwaway `ingress` network rides solo runs and is removed on exit. Work with it: run before any push that touches `deploy/`; read a failing leg's echo — each names its law.
 
 **`gateway/gateway.js`** — the house lane's proxy/ledger ([04](04-architecture-of-this-deployment.md) §the money lane). Header comment = spec. Single-file bind into its container: after edits, force-recreate, not reload.
 
 **`gateway/stub-upstream.mjs`** — the pretend Anthropic for keyless checks: answers both response shapes with plausible usage, plays the caching game honestly enough to prove passthrough, only asserts *an* org key arrived (custody proof).
 
-**`waker/waker.js`** — start-on-connect: validates `X-Friend` against the mint's own name alphabet, starts `world-console-wc-<name>-1` via the docker socket (its entire vocabulary), serves the auto-refreshing waking page or the "closed" page for removed friends. Lives on `wake` with caddy alone.
+**`waker/waker.js`** — start-on-connect: validates `X-Friend` against the mint's own name alphabet, starts `gamemaster-bernd-wc-<name>-1` via the docker socket (its entire vocabulary), serves the auto-refreshing waking page or the "closed" page for removed friends. On `wake` (the dev rig's caddy-local) and the hub's `ingress` (the hub caddy must dial it — friends share that network too, the accepted NAMED residue: a knock can only start).
 
-**`systemd/`** — the nine units: four timers + services (reaper 5-min · sweep 04:17 · reconcile 04:47 · backup 05:11, `Persistent` on the nightly three, `RandomizedDelaySec` spreading load) and the pager templates (`alert@`, `heartbeat@`). Masters here; installed by cp + daemon-reload ([10](10-operate-the-box.md) §timers). Each carries its install line as a comment.
+**`systemd/`** — the ten units, all `gamemaster-bernd-*`: four timer+service pairs (reaper 5-min · sweep 04:17 · reconcile 04:47 · backup 05:11, `Persistent` on the nightly three, `RandomizedDelaySec` spreading load) and the pager templates (`alert@`, `heartbeat@`). The firewall unit left with the hub at the cutover (its singleton). Masters here; installed by cp + daemon-reload ([10](10-operate-the-box.md) §timers). Each carries its install line as a comment.
 
 ## deploy/gateway-spike/ — the proving ground (historical, kept)
 

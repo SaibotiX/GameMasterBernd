@@ -1,6 +1,6 @@
 # 12 — Push notifications with ntfy: the pager
 
-*How-to + explanation. The pager's law lives in the runbook §the pager; this page teaches the mechanism and how to wire it anywhere. Synced: `9c66a35` (2026-08-20).*
+*How-to + explanation. The pager's law lives in the runbook §the pager; this page teaches the mechanism and how to wire it anywhere. Synced: `0cbaf72` (2026-08-21).*
 
 ## What ntfy is
 
@@ -15,14 +15,14 @@ The security model follows directly: **on the public ntfy.sh server, the topic n
 
 ```bash
 # on: box (as root) — read the topic (then subscribe to it in the ntfy app)
-grep NTFY_TOPIC /home/deploy/world-console/deploy/host/.env
+grep NTFY_TOPIC /home/deploy/gamemaster-bernd/deploy/host/.env
 ```
 
 Useful extras, all plain headers: `-H "title: …"`, `-H "priority: high"` (or `max`/`low`), `-H "tags: rotating_light"` (emoji). Full list: ntfy's docs ([40](40-learning-resources.md)).
 
 ## How this project wires it (three senders, one philosophy)
 
-**1. The systemd chain — red rings, green vouches** (runbook §the pager). Every nightly unit declares `OnFailure=worldconsole-alert@%n.service`; the template instance curls the topic with the failed unit's name at high priority. `OnSuccess=worldconsole-heartbeat@%n.service` rides **only the backup** — the night's *last* unit — so one ~05:14 green ping means *the whole chain ran*: sweep, reconcile, backup. Read your breakfast accordingly:
+**1. The systemd chain — red rings, green vouches** (runbook §the pager). Every nightly unit declares `OnFailure=gamemaster-bernd-alert@%n.service`; the template instance curls the topic with the failed unit's name at high priority. `OnSuccess=gamemaster-bernd-heartbeat@%n.service` rides **only the backup** — the night's *last* unit — so one ~05:12 green ping means *the whole chain ran*: sweep, reconcile, backup. (Since the cutover the box rings TWO topics: this repo's for the game's units, and the hub's own for its landlord lane — its ~03:52 heartbeat, its runbook §The pager.) Read your breakfast accordingly:
 
 | Morning signal | Means |
 |---|---|
@@ -44,17 +44,17 @@ And one deliberate **non**-sender: the reaper stays journal-only. A 5-minute cad
 
 ```bash
 # on: box (as root)
-. /home/deploy/world-console/deploy/host/.env
+. /home/deploy/gamemaster-bernd/deploy/host/.env
 curl -H "title: test" -d "ping from the box $(date -u +%FT%TZ)" "https://ntfy.sh/$NTFY_TOPIC"
 ```
 
 **Put any systemd unit on the pager** — add to its `[Unit]` section (then re-copy + `systemctl daemon-reload`):
 
 ```ini
-OnFailure=worldconsole-alert@%n.service
+OnFailure=gamemaster-bernd-alert@%n.service
 ```
 
-The template is generic on purpose: any unit name rides `%i` into the message. For a new *project*, copy `worldconsole-alert@.service` + `worldconsole-heartbeat@.service` wholesale and change the `.env` path.
+The template is generic on purpose: any unit name rides `%i` into the message. For a new *project*, copy `gamemaster-bernd-alert@.service` + `gamemaster-bernd-heartbeat@.service` wholesale and change the `.env` path.
 
 **Ping from any script** (the reconcile pattern — never let a failed ping fail the job):
 

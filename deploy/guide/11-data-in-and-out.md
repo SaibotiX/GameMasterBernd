@@ -1,6 +1,6 @@
 # 11 — Data in and out: volumes, the store, borg backups
 
-*How-to. The data map lives in [04 §the data model](04-architecture-of-this-deployment.md); erasure is owned by the runbook §deletion; backup law by the runbook §Backups. This page is the working knowledge around them. Synced: `9c66a35` (2026-08-20).*
+*How-to. The data map lives in [04 §the data model](04-architecture-of-this-deployment.md); erasure is owned by the runbook §deletion; backup law by the runbook §Backups. This page is the working knowledge around them. Synced: `0cbaf72` (2026-08-21).*
 
 ## Reading and copying data out
 
@@ -8,18 +8,18 @@
 
 ```bash
 # on: box (as deploy) — list a chronicle's files
-docker run --rm --network none -v world-console_data-tobias:/v:ro world-console:latest ls -R /v/world
+docker run --rm --network none -v gamemaster-bernd_data-tobias:/v:ro world-console:latest ls -R /v/world
 ```
 
 ```bash
 # on: box (as deploy) — read one file
-docker run --rm --network none -v world-console_data-tobias:/v:ro world-console:latest cat "/v/world/dragon-realm/<session-id>/ledger.md"
+docker run --rm --network none -v gamemaster-bernd_data-tobias:/v:ro world-console:latest cat "/v/world/dragon-realm/<session-id>/ledger.md"
 ```
 
 ```bash
 # on: dev machine — copy a whole volume down as a tarball
 ssh -i ~/.ssh/worldconsole deploy@152.53.51.13 \
-  "docker run --rm --network none -v world-console_data-tobias:/v:ro world-console:latest tar cz -C /v ." \
+  "docker run --rm --network none -v gamemaster-bernd_data-tobias:/v:ro world-console:latest tar cz -C /v ." \
   > tobias-data.tar.gz
 ```
 
@@ -45,7 +45,7 @@ Rarely needed (the game writes its own data), but the reverse of the patterns ab
 
 ```bash
 # on: box (as root) — drop a file into a friend's data volume
-docker run --rm --network none -v world-console_data-tobias:/v -v /tmp/fix:/in:ro \
+docker run --rm --network none -v gamemaster-bernd_data-tobias:/v -v /tmp/fix:/in:ro \
   --user 0 world-console:latest sh -c 'cp /in/quests.md "/v/world/dragon-realm/<sid>/quests.md" && chown 1001:1001 "/v/world/dragon-realm/<sid>/quests.md"'
 ```
 
@@ -61,23 +61,23 @@ Mind ownership: game files belong to uid 1001. Docker auto-creates missing volum
 
 ```bash
 # on: box (as root)
-ls -l /srv/worldconsole/store/sessions/            # per-player compacted sessions
-ls -l /srv/worldconsole/store/staging/tobias/      # live staging: manifests + sealed markers
-tar --zstd -tf "/srv/worldconsole/store/sessions/tobias/<sid>.tar.zst"   # look inside one
+ls -l /srv/gamemaster-bernd/store/sessions/            # per-player compacted sessions
+ls -l /srv/gamemaster-bernd/store/staging/tobias/      # live staging: manifests + sealed markers
+tar --zstd -tf "/srv/gamemaster-bernd/store/sessions/tobias/<sid>.tar.zst"   # look inside one
 ```
 
 Integrity is machine-checked, not assumed: `store-sweep.sh` recomputes every manifest hash before compacting and refuses tampered dirs loudly (left in place for eyes). Run it any time — it is idempotent:
 
 ```bash
 # on: box (as root)
-systemctl start worldconsole-store-sweep.service && journalctl -u worldconsole-store-sweep.service -n 20
+systemctl start gamemaster-bernd-store-sweep.service && journalctl -u gamemaster-bernd-store-sweep.service -n 20
 ```
 
 ## Borg, from zero
 
 **borg** is a deduplicating, encrypted archiver. Mental model: a **repository** (here: on the Storage Box) holds many **archives** (here: one per night, `nightly-<timestamp>`); identical data chunks are stored once across all archives (why nightly full-looking backups stay small — 3.84 MB encrypted for the first night); everything is encrypted with a key+passphrase (**repokey** mode: the key lives *in* the repo, locked by the passphrase — so Storage Box + passphrase = restorable anywhere; both passphrase and an exported key copy live in the password manager, per runbook §Backups).
 
-The nightly shape (`backup.sh`): every `world-console_*` volume staged as a plain tar (plain tars dedup well night-over-night) by `--network none` containers, then **one** archive of: staged tars + the store + the six box-local state paths. `auth.json` cannot be in it — it lives on tmpfs, no volume ever contains it. Then `borg prune --keep-within 28d` + `borg compact`: the moving 28-day window that *is* the deletion promise (and why Storage-Box snapshots stay OFF — no layer may outlive the prune).
+The nightly shape (`backup.sh`): every `gamemaster-bernd_*` volume staged as a plain tar (plain tars dedup well night-over-night) by `--network none` containers, then **one** archive of: staged tars + the store + the six box-local state paths. `auth.json` cannot be in it — it lives on tmpfs, no volume ever contains it. Then `borg prune --keep-within 28d` + `borg compact`: the moving 28-day window that *is* the deletion promise (and why Storage-Box snapshots stay OFF — no layer may outlive the prune).
 
 **Reading the repo** (all as root on the box; borg env comes from the script's own defaults):
 
@@ -101,15 +101,15 @@ export BORG_RSH='ssh -i /root/.ssh/storagebox_ed25519 -o BatchMode=yes -o Strict
 export BORG_PASSCOMMAND='cat /root/worldconsole-borg.pass'
 export BORG_REPO='ssh://u648152@u648152.your-storagebox.de:23/./borg/worldconsole'
 cd /tmp && mkdir -p restore && cd restore
-borg extract ::$(borg list --short | tail -1) srv/worldconsole/backup-staging/world-console_data-tobias.tar
+borg extract ::$(borg list --short | tail -1) srv/gamemaster-bernd/backup-staging/gamemaster-bernd_data-tobias.tar
 ```
 
 ```bash
 # on: box (as root) — 2. rebuild into a scratch volume and read through a container
 docker volume create restore-check
 docker run --rm --user 0 --network none -v restore-check:/v \
-  -v /tmp/restore/srv/worldconsole/backup-staging:/in:ro \
-  --entrypoint tar world-console:latest xf /in/world-console_data-tobias.tar -C /v
+  -v /tmp/restore/srv/gamemaster-bernd/backup-staging:/in:ro \
+  --entrypoint tar world-console:latest xf /in/gamemaster-bernd_data-tobias.tar -C /v
 docker run --rm --user 0 --network none -v restore-check:/v:ro \
   --entrypoint cat world-console:latest "/v/world/dragon-realm/<sid>/ledger.md" | head
 docker volume rm restore-check
@@ -117,7 +117,7 @@ docker volume rm restore-check
 
 (`--user 0` on both: the staging dir is root-700 and some staged files are root-owned — the player uid can't read them; a scar the first real drill left as its own commit.)
 
-**Full-disaster shape** (box gone entirely): new box → clone repo → restore the box-local state paths from the archive (they include `.env` and `gateway-state/` *on purpose* — recovery needs them) → recreate volumes from tars as above → `build.sh`, `up -d`, re-point DNS. The pieces are all above; the order is the same as first deploy (runbook §first deploy).
+**Full-disaster shape** (box gone entirely): new box → the HUB first (its repo's runbook: front door, firewall, its own lanes — certs re-issue on first hit there, deliberately not restored) → clone this repo per the hub contract §B → restore the box-local state paths from the archive (they include `.env` and `gateway-state/` *on purpose* — recovery needs them) → recreate volumes from tars as above → `build.sh`, `up -d`, fragment cp + validate + reload at the hub, re-point DNS. The pieces are all above; the runbook's historical first-deploy list still teaches the solo-box shape.
 
 **Keyless practice:** `localcheck.sh`'s backup leg runs the entire cycle — stage → create → prune eating a planted stale archive → restored chronicle reading — against a throwaway local repo wherever borg is installed. Free rehearsal; run it before touching the real repo for the first time.
 
@@ -125,8 +125,8 @@ docker volume rm restore-check
 
 | Question | Answer with |
 |---|---|
-| did last night's whole chain run? | the ~05:14 heartbeat ping arrived (its absence = look) |
-| are the two spend meters agreeing? | `journalctl -u worldconsole-reconcile.service -n 20` |
-| is every staged session intact? | `systemctl start worldconsole-store-sweep.service` (recomputes hashes) |
+| did last night's whole chain run? | the ~05:12 heartbeat ping arrived (its absence = look; the hub's own lane rings ~03:52 separately) |
+| are the two spend meters agreeing? | `journalctl -u gamemaster-bernd-reconcile.service -n 20` |
+| is every staged session intact? | `systemctl start gamemaster-bernd-store-sweep.service` (recomputes hashes) |
 | did the newest archive land, how big? | `borg list` / `borg info` (above) |
 | does the backup actually restore? | the drill above — per stage gates, and before anything sweeping |

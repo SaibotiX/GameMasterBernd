@@ -1,6 +1,6 @@
 # The deploy guide — how the web half of GameMaster Bernd works, from zero
 
-*Teaching layer. Live ops truth stays in [`deploy/README.md`](../README.md) (the runbook) — if this guide and the runbook ever disagree, **the runbook wins** and the guide has drifted (see "Staying fresh" below). Synced: `9c66a35` (2026-08-20).*
+*Teaching layer. Live ops truth stays in [`deploy/README.md`](../README.md) (the runbook) — if this guide and the runbook ever disagree, **the runbook wins** and the guide has drifted (see "Staying fresh" below). Synced: `0cbaf72` (2026-08-21).*
 
 This folder teaches everything around the game: what a server actually is, how a browser reaches the box, what Docker does, how the friends' consoles run, where data lives, how backups and alerts work — and how to build the *next* project with the same bones. It assumes you can use a terminal and git, and **nothing else**. Every concept is explained from zero, using this project's real files as the worked example.
 
@@ -44,6 +44,8 @@ The project's records use a small in-house vocabulary. It is worth learning — 
 | Term | Means |
 |---|---|
 | **the box** | the production server — the netcup VPS in Vienna that runs everything |
+| **the hub** | the World Console project, the box's LANDLORD since the 2026-08-21 cutover: its own repo owns the front-door Caddy, the apex pages, the firewall singleton and the box-level backup/pager lanes; this game runs aboard as tenant #1 |
+| **the fragment** (`box-site.caddy`) | this repo's owning copy of the game's site blocks; the hub box serves a derived copy under its `sites/` (cp + in-container validate + reload, always that order) |
 | **a seat / a friend container** | one friend's own game container, `wc-<name>` |
 | **a door** | one friend's private URL (secret path + username/password) through Caddy |
 | **minting** | creating a friend's door, container entry, and gateway key (`new-friend.sh`) |
@@ -52,7 +54,7 @@ The project's records use a small in-house vocabulary. It is worth learning — 
 | **the gateway** | the small proxy holding the org API key and the spend ledger |
 | **the ledger** (ops sense) | the gateway's append-only spend record, `gateway-state/usage.jsonl` |
 | **a grant** | a friend's monthly play budget on the lane ($10 placeholder) |
-| **the store** | the private session archive on the box, `/srv/worldconsole/store` |
+| **the store** | the private session archive on the box, `/srv/gamemaster-bernd/store` |
 | **shipping / sealing / sweeping** | copying play sessions into the store; marking them complete; catching leftovers |
 | **the reaper** | the 5-minute job that stops idle containers (and seals what they leave) |
 | **the waker** | the service that starts a sleeping container when its door is knocked |

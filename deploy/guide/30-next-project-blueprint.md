@@ -1,6 +1,6 @@
 # 30 — The blueprint: your next project, from blank to running
 
-*Transfer. The distilled, ordered recipe this deployment proved — provider-agnostic where possible, with the GameMaster Bernd file to crib at every step. A minimal living template built from this blueprint lives at `~/Desktop/CurrPC/Programming/Example_Web_Server_Project` — built and verified 2026-08-17 (its own repo, nothing of it in this one; localcheck green end to end: door auth, hardening headers, healthz through the stripped prefix, a note surviving a clean-SIGTERM stop, borg cycle with stale-prune and the restore drill reading the note back; since the same day it also carries the portable WORKING law — CLAUDE.md, the triage/salvage/audit commands, seeded records — adapted per R32, its own `/law-sync` pulling this repo's law changes on demand; and per R33 the evidence shelf + the remaining record patterns — distilled reusable research (launch surfaces, licensing & trademark, founding & tax, the privacy/AI papers, hosting & names, the AI-service laws) plus the design-registry/build-log/design-audit patterns, a stamped snapshot refreshed only as `/law-sync research`). Synced: `9c66a35` (2026-08-20).*
+*Transfer. The distilled, ordered recipe this deployment proved — provider-agnostic where possible, with the GameMaster Bernd file to crib at every step. A minimal living template built from this blueprint lives at `~/Desktop/CurrPC/Programming/Example_Web_Server_Project` — built and verified 2026-08-17 (its own repo, nothing of it in this one; localcheck green end to end: door auth, hardening headers, healthz through the stripped prefix, a note surviving a clean-SIGTERM stop, borg cycle with stale-prune and the restore drill reading the note back; since the same day it also carries the portable WORKING law — CLAUDE.md, the triage/salvage/audit commands, seeded records — adapted per R32, its own `/law-sync` pulling this repo's law changes on demand; and per R33 the evidence shelf + the remaining record patterns — distilled reusable research (launch surfaces, licensing & trademark, founding & tax, the privacy/AI papers, hosting & names, the AI-service laws) plus the design-registry/build-log/design-audit patterns, a stamped snapshot refreshed only as `/law-sync research`). Synced: `0cbaf72` (2026-08-21).*
 
 ## Phase 0 — decide the shape (an evening, on paper)
 
@@ -36,7 +36,7 @@ swapon --show                    # empty, or remove/encrypt swap
 # core dumps off if secrets will live in RAM (crib: runbook step 3)
 ```
 
-Then the firewall — if Docker is involved, remember `ufw` won't see container traffic; crib `deploy/host/firewall.sh` + its oneshot persistence unit wholesale, and keep the "verify from inside a container" habit.
+Then the firewall — if Docker is involved, remember `ufw` won't see container traffic; crib `deploy/host/firewall.sh` (kept here for solo boxes; the live box runs the hub's identical singleton — one DOCKER-USER owner per box) + a oneshot persistence unit (the hub repo's `world-console-firewall.service` is the wholesale crib), and keep the "verify from inside a container" habit.
 
 ## Phase 3 — the compose skeleton (an hour)
 
@@ -50,7 +50,7 @@ One `compose.yaml` from the start, even for two services — it is the architect
 
 ## Phase 4 — the front door: Caddy + TLS (an hour)
 
-Caddy, two lines of global config, one site block per hostname — automatic HTTPS is the entire reason ([01](01-web-fundamentals.md) §TLS). Crib `deploy/host/caddy/Caddyfile`: the header hardening block for static sites verbatim; the `handle_path` + `basic_auth` + `reverse_proxy` snippet for anything private; mount the config *directory* (the inode lesson). Prove the door **from outside** with `curl -sI` before building behind it — an in-container check cannot see an inbound break (first-deploy lesson).
+Caddy, two lines of global config, one site block per hostname — automatic HTTPS is the entire reason ([01](01-web-fundamentals.md) §TLS). Crib the ingress Caddyfile now living in the hub repo (`WC deploy/host/caddy/Caddyfile` — the box's front door since H1a; the Example template ships its own solo twin): the header hardening block for static sites verbatim; the `handle_path` + `basic_auth` + `reverse_proxy` snippet shape from this repo's `caddy/friends/` mint for anything private; mount the config *directory* (the inode lesson). Prove the door **from outside** with `curl -sI` before building behind it — an in-container check cannot see an inbound break (first-deploy lesson). (Joining an EXISTING box instead of renting one is the hub contract's lane — its `hub/02-wiring-workflow.md`; the blueprint fork lands here at H3, the hub's plan.)
 
 ## Phase 5 — the app itself (the actual project)
 

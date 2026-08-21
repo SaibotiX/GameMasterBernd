@@ -1,6 +1,6 @@
 # 00 — The big picture: the journey of one visit
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `9c66a35` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `0cbaf72` (2026-08-21).*
 
 Before any detail, hold the whole thing once. This page walks a single real event — a friend opening their door and playing one turn — and names every machine and program that touches it. Each step points at the page that explains it properly.
 
@@ -29,8 +29,8 @@ https://play.worldconsole.eu/f/<their-30-char-secret>/
 
 **2. Connection + encryption (TCP, then TLS).** The browser opens a connection to that IP on **port 443** — the agreed number for encrypted web traffic — and performs a TLS handshake. The box proves it really is `play.worldconsole.eu` with a **certificate** from Let's Encrypt, and everything after this line is encrypted. Nobody set this certificate up by hand: Caddy obtained and renews it automatically. *(→ [01](01-web-fundamentals.md) §TLS)*
 
-**3. The front door (Caddy, the reverse proxy).** The first program to see the request is **Caddy**, running as a Docker container and holding ports 80/443 for the whole box. It looks at the requested hostname and path:
-- `worldconsole.eu` → serve the static landing/legal pages from a folder.
+**3. The front door (Caddy, the reverse proxy).** The first program to see the request is **Caddy**, running as a Docker container and holding ports 80/443 for the whole box. Since the H1a cutover (2026-08-21) this Caddy belongs to the **hub** — the World Console repo's own compose project, the box's landlord; the game's site blocks reach it as a tenant *fragment* (`caddy/box-site.caddy` here → the hub's `sites/gamemaster-bernd.caddy`). It looks at the requested hostname and path:
+- `worldconsole.eu` → serve the static landing/legal pages from a folder (the hub's own block and files — the game's public words moved home with the split).
 - `play.worldconsole.eu/f/<secret>/…` → this friend's block (a per-friend snippet file): demand the **username/password pair** (HTTP basic auth), strip the secret prefix, and forward the request inward. A wrong path or no auth gets a bare 404/401 — there is no directory of doors to browse. *(→ [01](01-web-fundamentals.md) §Reverse proxies, [04](04-architecture-of-this-deployment.md))*
 
 **4. The seat (the friend's own container).** The request lands on port 7681 of `wc-<name>` — one hardened Docker container per friend, all built from the same image, each with its own private disk volumes. If the container is **asleep** (stopped for idleness), the dial fails and Caddy falls through to the **waker**, which serves a "the console is waking" page and starts the container by name; the next refresh finds it running. *(→ [03](03-docker.md), [04](04-architecture-of-this-deployment.md) §the seats)*
@@ -47,7 +47,7 @@ https://play.worldconsole.eu/f/<their-30-char-secret>/
 - **reconcile** (04:47): re-derives yesterday's spend from pi's own cost stamps and compares it to the gateway's ledger — disagreement turns the unit red;
 - **backup** (05:11): stages every volume plus the store plus the box-local state into one **encrypted borg archive** on the Hetzner Storage Box, then prunes archives older than 28 days (which is how "deleted within a month" is *structurally* true).
 
-Any of the nightly three failing **rings your phone** via ntfy; the backup succeeding sends the one green **heartbeat** (~05:14) that vouches for the whole chain. A silent morning means: look. *(→ [02](02-linux-server.md) §systemd, [11](11-data-in-and-out.md) §backups, [12](12-ntfy-push-notifications.md))*
+Any of the nightly three failing **rings your phone** via ntfy; the backup succeeding sends the one green **heartbeat** (~05:12) that vouches for the whole chain. (The hub runs its own earlier lane — backup 03:47, its heartbeat ~03:52 on its own topic.) A silent morning means: look. *(→ [02](02-linux-server.md) §systemd, [11](11-data-in-and-out.md) §backups, [12](12-ntfy-push-notifications.md))*
 
 ## The whole system in one diagram
 
@@ -61,10 +61,10 @@ Any of the nightly three failing **rings your phone** via ntfy; the backup succe
         ▼                                            │   │
    ┌──────────┐  :80/:443 (the only published ports) │   │
    │  caddy   │── worldconsole.eu → static site      │   │
-   │ (proxy,  │── vault.…  → reserved 404            │   │
-   │  TLS)    │── play.…/f/<secret>/ + basic auth ─┐ │   │
+   │ (the     │── vault.…  → reserved 404            │   │
+   │  HUB's)  │── play.…/f/<secret>/ + basic auth ─┐ │   │
    └───┬──────┘                                    │ │   │
-       │ docker network "wake"     docker network "web"  │
+       │ the hub's network "ingress" (external)    │ │   │
    ┌───▼──────┐                    ┌───────────────▼─────┴───┐
    │  waker   │ starts sleeping →  │  wc-<friend>  (one per   │
    │ (docker  │    containers      │  friend): app server ↔   │
@@ -72,12 +72,12 @@ Any of the nightly three failing **rings your phone** via ntfy; the backup succe
    └──────────┘                    │  data-<f>, sessions-<f>; │
                                    │  auth dir = tmpfs (R11)  │
    systemd timers (the night):     └───────────┬─────────────┘
-     reaper */5 ── stop idle, seal             │ virtual key
+     reaper */5 ── stop idle, seal             │ virtual key, network "web"
      sweep 04:17 ─ verify+compact ─┐   ┌───────▼────────┐
      reconcile 04:47 ─ two meters  │   │    gateway     │── org key ──▶ Anthropic
      backup 05:11 ── borg ──┐      │   │ (ledger, caps) │               API
                             │      ▼   └────────────────┘
-                            │   /srv/worldconsole/store  (root-only sessions)
+                            │   /srv/gamemaster-bernd/store  (root-only sessions)
 ════════════════════════════╪═══════════════════════════════════════════════
                             ▼
               Hetzner Storage Box (encrypted borg repo,
@@ -97,11 +97,11 @@ Every serious deployment separates into three planes; naming them makes troubles
 | Place | Holds | In git? |
 |---|---|---|
 | repo `deploy/image/` | how to build the game image (Dockerfile, app server, checks) | yes |
-| repo `deploy/host/` | how the box runs (compose, Caddyfile, scripts, systemd units) | yes |
-| box `/home/deploy/world-console` | the clone of this repo the box runs from | yes (a checkout) |
+| repo `deploy/host/` | how the box runs (compose, the fragment `box-site.caddy`, scripts, systemd units) | yes |
+| box `/home/deploy/gamemaster-bernd` | the clone of this repo the box runs from (the hub's own clone sits beside it at `/home/deploy/world-console`) | yes (a checkout) |
 | box `deploy/host/` **gitignored extras** | `.env` (secrets) · `consents.md` · `gateway-state/` · `caddy/friends/*.caddy` · `compose.override.yaml` · `first-use/` | **no — box-local, only in backups** |
-| box Docker volumes | `data-<friend>` (worlds/chronicles) · `sessions-<friend>` · caddy's certs | no — volumes, in backups |
-| box `/srv/worldconsole/store` | the compacted session archive (root-only) | no — in backups |
+| box Docker volumes | `gamemaster-bernd_data-<friend>` (worlds/chronicles) · `…_sessions-<friend>`; the TLS certs live in the HUB's own volumes | no — volumes, in backups |
+| box `/srv/gamemaster-bernd/store` | the compacted session archive (root-only) | no — in backups |
 | Storage Box `borg/worldconsole` | the encrypted nightly archive of all of the above | no |
 | dev machine `~/worldconsole-backups` | your pulled mirror of that archive | no |
 

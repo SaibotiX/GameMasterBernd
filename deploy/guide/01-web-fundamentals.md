@@ -1,6 +1,6 @@
 # 01 — Web fundamentals: the vocabulary under everything
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `9c66a35` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md). Synced: `0cbaf72` (2026-08-21).*
 
 Everything the web does reduces to a handful of ideas. This page explains each from zero and immediately shows where GameMaster Bernd uses it — that pairing is the whole method of this guide.
 
@@ -106,11 +106,11 @@ content-type: application/json           ← what the body is
 
 The machinery: the server holds a **certificate** — a signed statement "this key speaks for this hostname" — issued by a **certificate authority (CA)** browsers already trust. **Let's Encrypt** is the free, automated CA that made this a non-event: software on your server proves it controls the name (the **ACME** protocol — Let's Encrypt says "put this token at this URL / answer this TLS challenge", your server does, certificate issued), then renews every ~60 days forever.
 
-*Here:* Caddy does ACME **built-in, by default** — the reason Caddy over nginx for solo ops. The whole TLS configuration in `deploy/host/caddy/Caddyfile` is one line: the ACME account email (`email {$ACME_EMAIL}`, from the box's `.env`). Certificates and the ACME account live in the `caddy-data` volume — that is why that volume is backed up and why recreating the caddy container never re-issues certificates. Renewal is automatic; the standing check is just "expiry comfortably in the future" ([10](10-operate-the-box.md) §certs).
+*Here:* Caddy does ACME **built-in, by default** — the reason Caddy over nginx for solo ops. The whole TLS configuration is one line — the ACME account email (`email {$ACME_EMAIL}`) — and since the H1a cutover it lives in the **hub's** ingress Caddyfile (the WorldConsole repo; a tenant fragment like this repo's `box-site.caddy` carries no global options block, so email/ACME have exactly one owner). Certificates and the ACME account live in the hub's `caddy-data` volume — which is why recreating the caddy container never re-issues certificates, and how the cutover itself kept the live certs (volume inheritance, zero issuance). Renewal is automatic; the standing check is just "expiry comfortably in the future" ([10](10-operate-the-box.md) §certs).
 
 Two supporting ideas you'll meet:
 
-- **HSTS** (`Strict-Transport-Security` header): tells browsers "only ever speak HTTPS to this host" — sent by the landing site, deliberately *without* `includeSubDomains` so `play.` and `vault.` rule themselves.
+- **HSTS** (`Strict-Transport-Security` header): tells browsers "only ever speak HTTPS to this host" — sent by the landing site (the hub's apex since the split), deliberately *without* `includeSubDomains` so `play.` and `vault.` rule themselves.
 - **Self-signed certificates**: anyone can make a certificate for testing; browsers won't trust it, but tools can be told to. `localcheck.sh` runs the full production door locally on self-signed certs (`local_certs` in `Caddyfile.local`) — proving the shape without owning a name.
 
 ## WebSockets — when request/response isn't enough
@@ -125,7 +125,7 @@ Two practical facts: proxies must pass the Upgrade through (Caddy's `reverse_pro
 
 A **reverse proxy** is a server that accepts all public traffic and forwards each request to the right internal program. It exists because you want exactly one process doing TLS, one holding ports 80/443, one place for auth and headers — while any number of apps live privately behind it.
 
-*Here it is Caddy*, and its whole job is the routing table in [00](00-big-picture.md) §step 3. The per-friend snippet shows almost every proxy idea at once (`deploy/host/caddy/friends/<name>.caddy`, minted by `new-friend.sh`):
+*Here it is Caddy* — the hub's, since H1a — and its whole job is the routing table in [00](00-big-picture.md) §step 3. The per-friend snippet shows almost every proxy idea at once (`deploy/host/caddy/friends/<name>.caddy`, minted by `new-friend.sh` and served on the box from the hub's `sites/friends/` copy):
 
 ```caddyfile
 redir /f/<token> /f/<token>/ 308
@@ -167,4 +167,4 @@ The transferable habit: static sites get the strict header block (`Caddyfile`'s 
 
 ---
 
-**Where each idea lives in the repo:** DNS/domain rulings → R17 · TLS/site blocks → `deploy/host/caddy/Caddyfile` · WebSocket protocol → `deploy/image/appserver/server.js` · door snippet shape → `deploy/host/new-friend.sh` · firewall ranges → `deploy/host/firewall.sh` · headers → the Caddyfile + `server.js` (`PAGE_CSP`).
+**Where each idea lives in the repo:** DNS/domain rulings → R17 · the game's site blocks → `deploy/host/caddy/box-site.caddy` (TLS/ACME + the apex headers: the hub repo's ingress Caddyfile) · WebSocket protocol → `deploy/image/appserver/server.js` · door snippet shape → `deploy/host/new-friend.sh` · firewall ranges → `deploy/host/firewall.sh` · app headers → `server.js` (`PAGE_CSP`).

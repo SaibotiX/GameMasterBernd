@@ -1,21 +1,25 @@
 # 04 — The architecture of this deployment, piece by piece
 
-*Teaching layer — live ops truth: [`deploy/README.md`](../README.md) (the runbook). Synced: `9c66a35` (2026-08-20).*
+*Teaching layer — live ops truth: [`deploy/README.md`](../README.md) (the runbook). Synced: `0cbaf72` (2026-08-21).*
 
 [00](00-big-picture.md) walked the journey; [01](01-web-fundamentals.md)–[03](03-docker.md) taught the materials. This page assembles them: every running piece, what it does, how it talks to the others, and which ruling shaped it. After this page, `deploy/` should read like prose.
+
+## The tenancy (the shape since the H1a cutover, 2026-08-21)
+
+The box belongs to the **World Console hub**: ONE ingress Caddy — the hub repo's own compose project — owns 80/443 and every hostname, serves the apex pages (the game's public words moved home with the split), and routes each tenant by a *fragment*. This project is tenant #1: its blocks live here as `caddy/box-site.caddy`, the hub box serves a derived copy (`sites/gamemaster-bernd.caddy`), and its containers meet the hub caddy on the shared external `ingress` network. Landlord surfaces — front door, firewall singleton, box-level backup + pager — are the hub repo's; everything below is the game's own half.
 
 ## The service cast (what `docker compose ps` shows)
 
 | Service | Image | Network(s) | Public? | Job |
 |---|---|---|---|---|
-| `caddy` | caddy 2.10.2 | web, wake | **80/443** | TLS, the three sites, per-friend doors, prefix strip, basic auth |
-| `waker` | node 24 slim | wake | no | start sleeping seats over the docker socket; waking/closed pages |
+| *(the hub's caddy — its own compose project)* | caddy 2.10.2 | ingress | **80/443** | TLS, apex + fragments, per-friend doors, prefix strip, basic auth |
+| `waker` | node 24 slim | wake, ingress | no | start sleeping seats over the docker socket; waking/closed pages |
 | `gateway` | node 24 slim | web | no | hold the org key; virtual keys; spend ledger; caps; ntfy pings |
-| `wc-<name>` (one per friend) | world-console:latest | web | no | one friend's whole game: app server + pi + their volumes |
-| `wc-template` | world-console:latest | web | no | the parked hardened shape friends `extends` (scale 0 — never runs) |
+| `wc-<name>` (one per friend) | world-console:latest | web, ingress | no | one friend's whole game: app server + pi + their volumes |
+| `wc-template` | world-console:latest | web, ingress | no | the parked hardened shape friends `extends` (scale 0 — never runs) |
 | *local profile:* `caddy-local`, `stub`, `wc-test` | — | — | 127.0.0.1:8443 | `localcheck.sh`'s production-shaped test rig; never on the box |
 
-Supporting non-services: the systemd timers (§the night shift), `firewall.sh`'s DOCKER-USER rules, and the box-local state files (§the data model).
+Supporting non-services: the systemd timers (§the night shift), the hub's DOCKER-USER firewall rules (its singleton; this repo's `firewall.sh` is solo-deployment spare), and the box-local state files (§the data model).
 
 ## Inside a seat
 
@@ -57,12 +61,14 @@ All ops are four small shell scripts on systemd timers, root-run, journal-logged
 
 | Time (UTC) | Unit | Script | Does |
 |---|---|---|---|
-| every 5 min | `worldconsole-reaper` | `reaper.sh` | stop seats idle ≥30 min (the stop seals; then a targeted sweep makes it certain); per-volume disk watch (2 GiB warn / 5 GiB alarm, *alarm-only by ruling*); one `docker stats` line |
-| 04:17 | `worldconsole-store-sweep` | `store-sweep.sh` | sweep *stopped* seats' leftovers; verify every staged manifest hash; compact to `sessions/<player>/<sid>.tar.zst`; prune staged data (markers stay) |
-| 04:47 | `worldconsole-reconcile` | `reconcile.sh` | the two-meter comparison above; red + ping on structural drift |
-| 05:11 | `worldconsole-backup` | `backup.sh` | stage every volume as a tar; one encrypted borg archive (volumes + store + box-local state) to the Storage Box; `prune --keep-within 28d` + compact |
-| ~05:14 | `worldconsole-heartbeat@` | — | **OnSuccess of the backup only**: the one green ping that vouches for the whole night |
-| on any red | `worldconsole-alert@` | — | OnFailure of sweep/reconcile/backup: high-priority ntfy naming the failed unit |
+| every 5 min | `gamemaster-bernd-reaper` | `reaper.sh` | stop seats idle ≥30 min (the stop seals; then a targeted sweep makes it certain); per-volume disk watch (2 GiB warn / 5 GiB alarm, *alarm-only by ruling*); one `docker stats` line |
+| 04:17 | `gamemaster-bernd-store-sweep` | `store-sweep.sh` | sweep *stopped* seats' leftovers; verify every staged manifest hash; compact to `sessions/<player>/<sid>.tar.zst`; prune staged data (markers stay) |
+| 04:47 | `gamemaster-bernd-reconcile` | `reconcile.sh` | the two-meter comparison above; red + ping on structural drift |
+| 05:11 | `gamemaster-bernd-backup` | `backup.sh` | stage every volume as a tar; one encrypted borg archive (volumes + store + box-local state) to the Storage Box; `prune --keep-within 28d` + compact |
+| ~05:12 | `gamemaster-bernd-heartbeat@` | — | **OnSuccess of the backup only**: the one green ping that vouches for the whole night |
+| on any red | `gamemaster-bernd-alert@` | — | OnFailure of sweep/reconcile/backup: high-priority ntfy naming the failed unit |
+
+(The hub's landlord lane runs earlier and separately: its backup 03:47, its ~03:52 heartbeat on its own topic — its runbook owns that ladder.)
 
 Order is meaning: sweep before reconcile (settled sessions) before backup (the night's truth in one archive). `Persistent=true` on the nightly three means a rebooting box catches up its missed night.
 
@@ -72,8 +78,8 @@ Order is meaning: sweep before reconcile (settled sessions) before backup (the n
 |---|---|---|---|
 | worlds + chronicles | volume `data-<friend>` | player uid | ✔ (as tars) |
 | play transcripts | volume `sessions-<friend>` | player uid | ✔ |
-| TLS certs + ACME account | volumes `caddy-data`/`caddy-config` | caddy | ✔ |
-| session archive (research record) | `/srv/worldconsole/store` | **root, 700** | ✔ |
+| TLS certs + ACME account | the HUB's `caddy-data`/`caddy-config` volumes | hub caddy | **✘ — the hub re-issues by design (its runbook §Backups)** |
+| session archive (research record) | `/srv/gamemaster-bernd/store` | **root, 700** | ✔ |
 | staging slices | `store/staging/<friend>` (bind → `/ship`) | player uid, 700 | ✔ (via store) |
 | secrets: org key, ntfy topic, ACME email, address | `deploy/host/.env` | root, 600 | ✔ (recovery needs it) |
 | grants + ledger | `deploy/host/gateway-state/` | uid 1001, 700 | ✔ |
@@ -89,7 +95,7 @@ Full retrieval/removal recipes: [11-data-in-and-out.md](11-data-in-and-out.md).
 
 1. **Invite** — `deploy/friend-intro.md` part one; a plain yes to both questions (recording consent + 18+, R13/R20).
 2. **Record the yes** — one row in box-local `consents.md`. The mint *refuses* without it (the gate is code, not discipline).
-3. **Mint** — `new-friend.sh <name>`: door snippet + override entry + staging slice + virtual key; prints the door and pair **once**; then `up -d`, caddy reload. (Runbook §per-friend onboarding.)
+3. **Mint** — `new-friend.sh <name>`: door snippet + override entry + staging slice + virtual key; prints the door and pair **once** — then `up -d` here, and the door goes live via the hub: cp the snippet to its `sites/friends/`, in-container validate, reload (the mint prints the exact steps; runbook §per-friend onboarding).
 4. **Play** — everything above this line.
 5. **Sleep/wake** — reaper stops idle seats; the waker answers the next knock; `--continue` resumes the sitting.
 6. **Update** — `git pull → build.sh → up -d` (runbook §updates); volumes untouched, chronicles survive by construction; check `healthz` for a live player before rolling a seat mid-sitting.
@@ -101,7 +107,7 @@ Full retrieval/removal recipes: [11-data-in-and-out.md](11-data-in-and-out.md).
 | Machine | Runs |
 |---|---|
 | dev machine | the repo; `build.sh` + `verify.sh` + `localcheck.sh` (the pre-push gates); `pull-sessions.sh` (analysis) + `pull-backup.sh` (mirror); never caddy-with-real-certs, never friends |
-| the box | everything in the service cast; the timers; the store; the box-local state |
+| the box | everything in the service cast (the front door from the hub's clone, the rest from this repo's); the timers; the store; the box-local state |
 | Storage Box | one borg repo — dumb encrypted storage, no compute |
 | friend's browser | xterm.js + the panes — no game logic, no secrets beyond their own door |
 

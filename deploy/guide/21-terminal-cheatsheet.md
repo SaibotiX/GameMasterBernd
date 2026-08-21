@@ -1,6 +1,6 @@
 # 21 — Terminal cheatsheet
 
-*Reference. Every command used across this guide, grouped for lookup. Column "on" says where it runs; ⚠ marks commands that change state. Paste from the fenced blocks in [10](10-operate-the-box.md)/[11](11-data-in-and-out.md) when you need the full form with context. Synced: `9c66a35` (2026-08-20).*
+*Reference. Every command used across this guide, grouped for lookup. Column "on" says where it runs; ⚠ marks commands that change state. Paste from the fenced blocks in [10](10-operate-the-box.md)/[11](11-data-in-and-out.md) when you need the full form with context. Synced: `0cbaf72` (2026-08-21).*
 
 ## SSH & files across machines
 
@@ -30,7 +30,7 @@
 
 | Command | on | Tells/does |
 |---|---|---|
-| `systemctl list-timers 'worldconsole-*'` | box (root) | last + next run of every job |
+| `systemctl list-timers 'gamemaster-bernd-*'` | box (root) | last + next run of every job |
 | `systemctl status <unit>` | box (root) | state, last result, recent lines |
 | `systemctl --failed` | box (root) | anything red |
 | `systemctl start <service>` | box (root) | ⚠ run a scheduled job now |
@@ -53,16 +53,17 @@
 | `docker compose stop wc-<name>` | box (deploy) | ⚠ stop a seat (volumes stay; stop = seal) |
 | `docker compose exec <svc> sh` | box (deploy) | shell inside a running container |
 | `docker compose exec -T <svc> node -e '<js>'` | box (deploy) | run JS inside (healthz asks, admin edits) |
-| `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile` | box (deploy) | ⚠ apply caddy config without downtime |
+| `docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile` | box (deploy), the HUB's `deploy/host/` | prove a fragment before any reload (NEVER skip) |
+| `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile` | box (deploy), the HUB's `deploy/host/` | ⚠ apply door config without downtime (validate first) |
 | `docker compose config -q` | box/dev | validate the merged compose model |
 | `docker ps --format 'table {{.Names}}\t{{.Status}}'` | anywhere | running containers + health |
 | `docker stats --no-stream` | box (deploy) | cpu/mem/pids per container |
-| `docker volume ls | grep world-console` | box (deploy) | every named volume |
+| `docker volume ls | grep gamemaster-bernd` | box (deploy) | every named volume |
 | `docker volume inspect <vol>` | box (deploy) | metadata incl. on-disk mountpoint |
 | `docker run --rm --network none -v <vol>:/v:ro world-console:latest ls -R /v` | box (deploy) | browse a volume safely |
 | `docker image prune -f` | box (deploy) | ⚠ drop dangling old image layers (safe) |
 | `docker system df` | box (deploy) | disk by images/volumes/cache |
-| `docker start world-console-wc-<name>-1` | box (deploy) | ⚠ wake a seat by hand (the waker's move) |
+| `docker start gamemaster-bernd-wc-<name>-1` | box (deploy) | ⚠ wake a seat by hand (the waker's move) |
 
 Never casually: `docker compose down -v` · `docker volume rm` · `docker volume prune` — volume-destroying; §deletion only.
 
@@ -74,7 +75,7 @@ Never casually: `docker compose down -v` · `docker volume rm` · `docker volume
 | `deploy/image/verify.sh` | dev/box (deploy) | the image's 5-leg gate |
 | `deploy/host/localcheck.sh` | dev | the whole door, production-shaped, keyless |
 | `deploy/host/new-friend.sh <name>` | box (deploy) | ⚠ mint a door (consent-gated) |
-| `deploy/host/firewall.sh` | box (root) | ⚠ rebuild the DOCKER-USER chain |
+| `deploy/host/firewall.sh` | box (root) | ⚠ rebuild the DOCKER-USER chain (live box: the hub's copy — its singleton) |
 | `deploy/host/reaper.sh` | box (root) | one reaper pass by hand |
 | `deploy/host/store-sweep.sh` | box (root) | sweep + verify + compact the store |
 | `deploy/host/reconcile.sh [--day YYYY-MM-DD]` | box (root) | compare the two spend meters |
