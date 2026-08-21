@@ -2,20 +2,12 @@
 
 The buildable half of [02-friends-web-service.md](../research/roadmap/02-friends-web-service.md)'s checklist: the per-friend image (`image/`) and the host stack (`host/`). Law lives in the roadmap — 02 for architecture and auth, [08](../research/roadmap/08-stage1-web-ui.md) for the page, the R registry for every ruling; this file is the runbook: what to type, in which order, and what each step proves. Nothing in `deploy/` ever enters the image's game folder (the whitelist in `image/build.sh` is the whole list).
 
-**TREE AHEAD OF THE BOX (H1a step 2, 2026-08-21 — this banner falls at
-the cutover sitting):** `deploy/host/` now carries the TENANT shape — no
-box caddy (the hub's ingress becomes the front door), `box-site.caddy`
-as the doors' owning home, project/units/paths renamed
-`gamemaster-bernd` (R36's clone-path pass) — while **the live box still
-runs the pre-split shape from `/home/deploy/world-console` at
-`3bd323e`.** Until the H1a sitting (its recipe lands FIRST in the
-WorldConsole repo's `deploy/README.md` §The cutover): **no `git pull`
-on the box** — a pull followed by any caddy restart would leave the
-front door without a Caddyfile. An emergency live fix deploys from
-`3bd323e` (checkout, or a cherry-pick onto it), never from main. Every
-section below stays the LIVE box's truth until the sitting's state
-note; the prepared deltas live in the step-2 state note (§First
-deploy, 2026-08-21).
+Since the H1a cutover (2026-08-21) the box's front door, firewall and
+apex are the World Console hub's — landlord questions answer in ITS
+runbook (`~/Desktop/CurrPC/Programming/WorldConsole`,
+`deploy/README.md`); this book runs the game's own tenant lanes, and
+the cutover state note (§First deploy, 2026-08-21) carries the dated
+story.
 
 ## The local loop (this machine, no purchases needed)
 
@@ -25,9 +17,11 @@ deploy/image/verify.sh         # in-container: unit gate + three lenses live,
                                # pseudo-TTY probe, app-server probe (page,
                                # health, /ws/term stream), ttyd-fallback
                                # probe — all in the production read-only shape
-deploy/host/localcheck.sh      # the whole door, production-shaped: TLS,
+deploy/host/localcheck.sh      # the tenant rig, production-shaped: TLS,
                                # secret path, basic auth, proxied WebSocket,
-                               # hardened friend container
+                               # hardened friend container — plus the box
+                               # fragment validated in the hub's own layout
+                               # (the apex/landing legs live with the hub)
 ```
 
 Both verify scripts fail loudly; green means what the headers say and nothing more. What no script can prove: how the TUI's dress *looks* in a real browser — that is the first-deploy eyeball sitting below.
@@ -55,6 +49,33 @@ Prerequisites, all maintainer errands (rulings R17/R18 name them): **worldconsol
 *(State 2026-08-20, M0 — the split and the renames land on the box (R35/R36; execution owned by the hub repo's build plan §M0): **the game is GameMaster Bernd on every live surface.** Repo side first: the full history re-homed to `SaibotiX/GameMasterBernd` and `origin` re-pointed — dev machine and box both (the box's deploy key already opened the new repo; fetch verified from the box before the switch); the old remote stays untouched as the silent archive, named nowhere but its registry entry. The box then pulled 9ccb3d9 and rolled: image `9ccb3d9` built on the box; all four seats recreated onto it **while sleeping** (the reaper had them stopped — no live player held a console anywhere in the roll); caddy config validated then reloaded (the by-invitation 404 now speaks the new name); the waker force-recreated (single-file bind, the gateway's inode lesson). The landing/privacy/Impressum pages had flipped at the pull itself — caddy's directory mount serves them from disk — and were verified from OUTSIDE: apex 200 + HSTS, title/H1 `GAMEMASTER BERND`, Impressum ×6 / Datenschutz ×4 GameMaster Bernd, **zero** "World Console", **zero** "Hausregel" (retired to the icebox, R36 — localcheck now refuses it on the page); play's unmatched 404 answers "GameMaster Bernd — by invitation." In-image: the strip names GameMaster Bernd, the loader shim is `gamemaster-bernd.ts`, no old-name string survives. **The R16 first-use set re-cut:** `first-use/2026-08-20-gamemaster-bernd/` box-local beside the 2026-08-09 set — rendered pages + play-404 + NOTE + SHA256SUMS, captured from the live domain minutes after the roll; it rides tonight's borg archive. The register-index sweep ran BEFORE this deploy (roadmap 06 §2026-08-20: clean-with-notes; the TMview browser sitting — the named ⚠ before any H1 hub card — ran and closed the same day, sound: 06 carries the close). **Deliberately NOT renamed (R36 — held to the ingress cutover):** compose project/volumes/units (`world-console*`), `WC_`/`wc-` prefixes, `/home/deploy/world-console`, store paths, the on-disk `world-console.*` session types, gateway/reconcile ntfy titles and unit Description lines. **Seen-before-done** — the maintainer's eyeball on the live landing + a played turn (banner now the BERND mark, boot line "GameMaster Bernd: …", eighteen command voices renamed) closes this note. **Closed 2026-08-20, same day: "all seen and all sound" — the maintainer's own words** at the M0 gate-wrap, the register browser sitting closed sound in the same breath (roadmap 06 §2026-08-20: the hub-card gate is CLEAR); the M0 round closes whole.)*
 
 *(State 2026-08-21, H1a step 2 — tenant shape lands in the TREE, not on the box (the hub plan §H1a item 2, contract §A.1/§A.3; the banner at the top holds until the sitting): **the game repo is now shaped as tenant #1 of the World Console hub.** The compose sheds its box caddy — caddy-local stays the dev rig's own door — and `caddy/box-site.caddy` is born as the doors' OWNING home: play.'s friends import + by-invitation 404 and vault.'s reserved posture travel verbatim; on the hub box it lands as `sites/gamemaster-bernd.caddy`, its friends import resolving to the hub's `sites/friends/` — the box-local doors, cp'd from this repo's `caddy/friends/` authoring lane (new-friend.sh prints cp + in-container validate + reload, in that order, always). waker + the friend shape join `world-console_ingress` (external; wc-test stays off it — the dev rig self-contained), and the accepted residue is named in the compose: friends can now knock on the waker over the shared network — all a knock can ever do is start a wc-* container by validated name. The R36 clone-path pass rode as its own commit: project/units/paths/store speak `gamemaster-bernd` — the tree the box RE-CLONES at the sitting. The landing/privacy/Impressum pages left this repo whole: the hub serves them byte-identical since its own step 1 (sha256 receipts in its `records/log.md` §2026-08-20). Deliberate stays, each with its reason on file: the borg repo `…/borg/worldconsole` + `/root/worldconsole-borg.pass` (backup.sh header — the hub named its lane `hub` to read beside it), the image tag `world-console:latest` + `WC_`/`wc-` prefixes + the on-disk `world-console.*` session types (engine/data surface; a post-cutover round's question if ever), pull-backup's dev-machine paths, and the waker SERVICE name (bare `waker` — compose auto-aliases every service name onto ingress anyway, so a rename buys no namespace safety; the collision rule belongs to the hub's onboarding fit-check). **Prepared for the sitting — the game-side half of the recipe step 3 authors into the hub runbook:** fresh clone at `/home/deploy/gamemaster-bernd` + `.env` re-cut (ACME_EMAIL and WC_IMPRESSUM_ADDRESS leave — the hub's `.env` carries them now; the org key, gateway bounds and NTFY_TOPIC stay) · box-local state moves from the old clone: `consents.md`, `gateway-state/`, `caddy/friends/`, `compose.override.yaml` (its `/ship` binds sed to `/srv/gamemaster-bernd`), `first-use/` · friend volumes copied `world-console_*` → `gamemaster-bernd_*` before the first `up` · `mv /srv/worldconsole /srv/gamemaster-bernd` with the timers stopped · units reinstalled under the new names, the old `worldconsole-*` set disabled · friend snippets cp'd to the hub's `sites/friends/` UNCHANGED (they dial `wc-<name>`/`waker` — service names that resolve on ingress as-is; the sitting stays pure cp) · the old clone stays untouched as the one-command rollback until the byte-diff probes pass and a quiet day follows. Gates: localcheck green end to end TWICE on this machine, once per commit — the new fragment leg validates box-site.caddy in-container in the hub's own layout, and the waker leg proves the renamed container path wakes a sleeping seat; the unit gate untouched by construction (no `extension/` change; `node extension/test/unit.ts` green at the wrap is the receipt). One rider the first gate caught and fixed: the store-listing `grep -q` lost its pipefail SIGPIPE race to tar — plain grep to EOF now (new-friend.sh's urandom lesson, same trap).)*
+
+*(State 2026-08-21, the cutover — the box crosses to the split shape
+(H1a step 3, run from the hub repo's recipe: WC `deploy/README.md`
+§The cutover; its `records/log.md` §2026-08-21 carries the receipts):
+**the game is tenant #1 of the World Console hub.** The hub's caddy
+took 80/443 with the apex pages byte-identical from outside and TLS
+continuity by volume inheritance (cert serials unchanged — zero
+issuance); this repo was re-cloned at `/home/deploy/gamemaster-bernd`,
+its `.env` re-cut (`ACME_EMAIL` + `WC_IMPRESSUM_ADDRESS` left for the
+hub's — the org key, gateway bounds and `NTFY_TOPIC` stayed), box-local
+state moved whole (consents, `gateway-state/`, `caddy/friends/`, the
+override with its `/ship` binds re-pointed, both `first-use/` sets),
+friend volumes copied `world-console_*` → `gamemaster-bernd_*` before
+the first `up` (all four seats healthy), `/srv/worldconsole` →
+`/srv/gamemaster-bernd`, units live as `gamemaster-bernd-*` (reaper
+5-min · sweep 04:17 · reconcile 04:47 · backup 05:11 + heartbeat), the
+friend doors serving via the hub's `sites/friends/` copies unchanged.
+The firewall is the hub's singleton since the same sitting
+(`world-console-firewall.service`; contract §A.5). The quiet day
+passed 2026-08-21 and the hub-side cleanup ran: the pre-cutover clone,
+the old `worldconsole-*` units, the `web`/`wake` box networks and the
+eight `world-console_{data,sessions}-*` volumes are GONE — rollback
+retired. The borg lane kept its repo (`…/borg/worldconsole` — the
+deliberate stay, backup.sh's header) and its nights. Every section
+below speaks the live tenant shape from this note on; landlord
+questions — front door, apex pages, firewall, the box's own backup +
+pager — answer in the hub repo's runbook.)*
 
 *(State 2026-08-21, first night as tenant — reconcile learns the aborted
 turn: **the box's first unattended night under the hub ran the ladder
@@ -87,7 +108,13 @@ the step-2 re-cut and the cutover never got their sync; this round
 edited only 20's two reconcile rows, stamps unmoved; the full sync's
 natural sitting is hub step 4's truth flip.)*
 
-On the box (Debian stable assumed):
+On the box (Debian stable assumed) — *HISTORICAL since the 2026-08-21
+cutover: this list is the pre-split box birth (2026-08-08); steps 4–5's
+firewall and front door are the hub's now (contract §A.5 — tenants ship
+no firewall unit; this repo's `firewall.sh` stays for solo deployments
+only). A fresh box today starts with the hub repo's runbook, then this
+repo joins per the hub contract §B (clone → `.env` → image → fragment
+cp → up → outside probes).*
 
 1. Base: `apt install docker.io docker-compose-v2 git` (or Docker's own repo), a non-root deploy user in the `docker` group, SSH keys only.
 2. Clone the repo (read-only deploy key), `cd deploy/host`, write `.env` with `ACME_EMAIL=<a real mailbox>` (gitignored; the mail-on-domain ruling is still open — any working mailbox serves ACME).
@@ -107,26 +134,36 @@ The words came first (02 items 9+11, the words round) — what remains is the OR
 ```bash
 deploy/host/new-friend.sh alice        # refuses without alice's consent row
 docker compose up -d gateway wc-alice
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+# the door serves from the HUB's caddy (contract §B step 4) — the mint
+# prints exactly these steps:
+cp caddy/friends/alice.caddy /home/deploy/world-console/deploy/host/caddy/sites/friends/
+cd /home/deploy/world-console/deploy/host
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile   # NEVER skip
+docker compose exec caddy caddy reload   --config /etc/caddy/Caddyfile
 ```
 
 4. **Send part two** — the printed door + pair, out of band, once.
 
 *(The gate fell 2026-08-10: §Backups' restore test ran green against the REAL Storage Box repo — the backups-round state note carries the receipt. Nothing stands between the words and the first invite.)*
 
-Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend without erasing them (a pause, a broken door): `docker compose down wc-<name>`, delete the snippet and the override lines; volumes and store stay. Erasing them is §deletion below.
+Friend state is box-local and gitignored — `caddy/friends/<name>.caddy` (imported by the play site block) plus `compose.override.yaml` (auto-merged; each friend `extends` the tracked `wc-template`) — so the tracked tree never carries a friend and `git pull` never needs a stash dance. Removing a friend without erasing them (a pause, a broken door): `docker compose down wc-<name>`, delete the snippet and the override lines — plus the hub-side derived copy (`rm` the hub's `caddy/sites/friends/<name>.caddy`, then in-container validate + reload THERE); volumes and store stay. Erasing them is §deletion below.
 
 ## Updates (the path that cannot destroy a chronicle)
 
-**HELD until the H1a sitting (the banner at the top):** this recipe next
-runs on the re-cloned box at `/home/deploy/gamemaster-bernd`, after the
-cutover — pulling main into the OLD clone would break its front door.
+On the box at `/home/deploy/gamemaster-bernd` (the cutover clone; the
+hold on pulls expired at the sitting — the first pull rode the
+2026-08-21 deploy):
 
 ```bash
 git pull
 deploy/image/build.sh
 docker compose up -d               # recreates changed friend containers
 ```
+
+A door change (`box-site.caddy`, a friend snippet) additionally rides
+the hub lane: re-cp the derived copy to the hub's `sites/` (contract
+§B step 4), then in-container `caddy validate`, then reload — at the
+hub, never here (this compose has no box caddy).
 
 If the app server ever misbehaves, the bare-ttyd rung is one compose
 `command:` override away (the Dockerfile's CMD note carries the exact line —
@@ -136,7 +173,7 @@ Named volumes (`data-*`, `sessions-*`) are untouched by recreation; chronicles s
 
 ## The store (02 item 10, R13 — where sessions become research data)
 
-One private place on the box, root-only: `/srv/worldconsole/store/` (created at the shipper deploy: `install -d -m 700 -o root -g root /srv/worldconsole/store /srv/worldconsole/store/staging /srv/worldconsole/store/sessions`; the box needs `zstd` for compaction — `apt install zstd`).
+One private place on the box, root-only: `/srv/gamemaster-bernd/store/` (born `/srv/worldconsole` at the shipper deploy, re-homed by one `mv` at the cutover; created as `install -d -m 700 -o root -g root /srv/gamemaster-bernd/store /srv/gamemaster-bernd/store/staging /srv/gamemaster-bernd/store/sessions`; the box needs `zstd` for compaction — `apt install zstd`).
 
 ```
 store/staging/<player>/<sid>/     the friend's OWN slice, bind-mounted at
@@ -152,23 +189,23 @@ store/sessions/<player>/<sid>.tar.zst
                                   stay (they answer "shipped already")
 ```
 
-Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit, the stop signal — `appserver/shipper.js`); the store side is the host's (`store-sweep.sh`, daily timer: `cp deploy/host/systemd/worldconsole-store-sweep.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-store-sweep.timer`). The analysis machine pulls `sessions/` — never `staging/` — with the kit's puller (`research/analysis/tools/pull-sessions.sh`), landing straight in the `sessions-in` layout.
+Shipping is the image's job at its seams (boot, 10-minute checkpoints, pi's exit, the stop signal — `appserver/shipper.js`); the store side is the host's (`store-sweep.sh`, daily timer: `cp deploy/host/systemd/gamemaster-bernd-store-sweep.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now gamemaster-bernd-store-sweep.timer`). The analysis machine pulls `sessions/` — never `staging/` — with the kit's puller (`research/analysis/tools/pull-sessions.sh`), landing straight in the `sessions-in` layout.
 
 Ruled 2026-08-09 (closing the ⚠ DEVIATION, R13 / 02 §research data): **the plain 0700 root-only directory stands.** At-rest encryption with an on-box key guards nothing the live plaintext volumes don't already surrender — the honestly-encrypted copy is the borg backup (item 13, key off-box), and the store's real walls are file mode + the box's SSH door. 02 §research data carries the dated revision; a gocryptfs mount can still slot under the same path if the question ever re-opens (e.g. the store outgrowing the box).
 
 ## The reaper (02 item 12's host half — rode the shipper round per the 2026-08-09 ruling)
 
-`reaper.sh` every 5 minutes (`cp deploy/host/systemd/worldconsole-reaper.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-reaper.timer`): any friend 30 minutes without a WebSocket client is stopped — the stop grace lets the app server seal, then `store-sweep.sh --friend` makes the seal a certainty and the compact immediate. An idle container costs nothing extra: pi only spawns on attach, and the next connect resumes the sitting — worlds persist, and pi `--continue`s the conversation whenever a prior session exists (02 §sizing's promise; the shipper re-seals a resumed session by design). What does NOT survive a stop is `auth.json` — that is R11's tmpfs wipe working, not a bug; the house lane (item 8) is the designed cure for friends. The same pass watches per-volume disk (`du` warn at 2 GiB, alarm at 5 GiB — **alarm-only by ruling, 2026-08-09**: automatic pruning of `data/downloads/` deletes player-visible files on a machine's judgment and is declined — iced with its revival triggers, `research/icebox.md`) and prints one `docker stats` line per running friend into the journal.
+`reaper.sh` every 5 minutes (`cp deploy/host/systemd/gamemaster-bernd-reaper.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now gamemaster-bernd-reaper.timer`): any friend 30 minutes without a WebSocket client is stopped — the stop grace lets the app server seal, then `store-sweep.sh --friend` makes the seal a certainty and the compact immediate. An idle container costs nothing extra: pi only spawns on attach, and the next connect resumes the sitting — worlds persist, and pi `--continue`s the conversation whenever a prior session exists (02 §sizing's promise; the shipper re-seals a resumed session by design). What does NOT survive a stop is `auth.json` — that is R11's tmpfs wipe working, not a bug; the house lane (item 8) is the designed cure for friends. The same pass watches per-volume disk (`du` warn at 2 GiB, alarm at 5 GiB — **alarm-only by ruling, 2026-08-09**: automatic pruning of `data/downloads/` deletes player-visible files on a machine's judgment and is declined — iced with its revival triggers, `research/icebox.md`) and prints one `docker stats` line per running friend into the journal.
 
-**Start-on-connect is the waker** (`host/waker/`, a compose service — `docker compose up -d` carries it): every minted door lists it as the second upstream under `lb_policy first`, so a knock on a sleeping container serves an auto-refreshing "the console is waking" page while the container starts by name over the docker socket. The socket rides in a container on the `wake` network that caddy alone shares — friends on `web` cannot route to it, and the waker's whole vocabulary is "start `wc-<validated-name>`"; a removed friend's knock gets the "closed" page instead.
+**Start-on-connect is the waker** (`host/waker/`, a compose service — `docker compose up -d` carries it): every minted door lists it as the second upstream under `lb_policy first`, so a knock on a sleeping container serves an auto-refreshing "the console is waking" page while the container starts by name over the docker socket (`gamemaster-bernd-wc-<name>-1` since the clone-path pass). Since hub mode it sits on the hub's `ingress` network — the hub caddy, the doors' proxy, must dial it — which the friends share too: the accepted, NAMED residue (compose + waker.js comments) is that a friend's model can knock on it, and all a knock can ever do is START a `wc-*` container by validated name; stop, inspect, anything else never leaves the process. A removed friend's knock gets the "closed" page instead.
 
 ## Backups (02 item 13, R18 — the lane built 2026-08-10)
 
-Nightly at 05:11 (`worldconsole-backup.timer` → `backup.sh`, root, after the 04:17 store sweep has compacted the day's sessions): every `world-console_*` named volume is staged read-only as a plain tar (borg compresses; plain tars dedup across nights), then ONE borg archive carries the staged tars + `/srv/worldconsole/store` + the box-local gitignored state — `consents.md`, `.env`, `gateway-state/`, `caddy/friends/`, `compose.override.yaml`, `first-use/` — onto the **Hetzner Storage Box** (BX11 Falkenstein, cross-provider per R18; at-purchase facts 06 §2026-08-09) at `ssh://u648152@u648152.your-storagebox.de:23/./borg/worldconsole`. `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir (R11), never inside any volume, so no backup can contain it.
+Nightly at 05:11 (`gamemaster-bernd-backup.timer` → `backup.sh`, root, after the 04:17 store sweep has compacted the day's sessions): every `gamemaster-bernd_*` named volume is staged read-only as a plain tar (borg compresses; plain tars dedup across nights), then ONE borg archive carries the staged tars + `/srv/gamemaster-bernd/store` + the box-local gitignored state — `consents.md`, `.env`, `gateway-state/`, `caddy/friends/`, `compose.override.yaml`, `first-use/` — onto the **Hetzner Storage Box** (BX11 Falkenstein, cross-provider per R18; at-purchase facts 06 §2026-08-09) at `ssh://u648152@u648152.your-storagebox.de:23/./borg/worldconsole` — the pre-split repo name, kept on purpose (backup.sh's header owns the reason; the hub's landlord lane reads beside it as `…/borg/hub`). `auth.json` is excluded **by construction**: it lives on the tmpfs agent dir (R11), never inside any volume, so no backup can contain it.
 
 Custody: the box's dedicated backup key `/root/.ssh/storagebox_ed25519` opens the Storage Box — its pubkey was pasted at order, so the lane has been keys-only from the first minute; the Storage Box host keys are pinned in root's `known_hosts`, verified against Hetzner's published fingerprints (2026-08-10); the box password rests in the password manager, never typed into any terminal. The repo is `repokey-blake2`: the passphrase sits root-600 at `/root/worldconsole-borg.pass`, and its recovery copy lives OFF-box in the password manager — read it yourself, off-transcript: `ssh -i ~/.ssh/worldconsole root@152.53.51.13 cat /root/worldconsole-borg.pass`. Box + passphrase from the manager = full restore anywhere; the `.env` (org key) and `gateway-state/` ride inside the encrypted repo on purpose — disaster recovery needs them.
 
-**The month promise (§deletion's binding constraint):** `borg prune --keep-within 28d` + `borg compact` every night — an erased player ages out of every archive inside the month the privacy note promises, never by hand-editing archives; Storage-Box automated snapshots stay **OFF** (06 §2026-08-09) so no layer outlives the prune. Install on the box: `apt install borgbackup`, then `cp deploy/host/systemd/worldconsole-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now worldconsole-backup.timer`.
+**The month promise (§deletion's binding constraint):** `borg prune --keep-within 28d` + `borg compact` every night — an erased player ages out of every archive inside the month the privacy note promises, never by hand-editing archives; Storage-Box automated snapshots stay **OFF** (06 §2026-08-09) so no layer outlives the prune. Install on the box: `apt install borgbackup`, then `cp deploy/host/systemd/gamemaster-bernd-backup.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now gamemaster-bernd-backup.timer`.
 
 The restore test — extract the latest archive, tar a data volume back into a scratch volume, boot a scratch container against it, prove a chronicle actually reads — is the exit gate: proven once before the first friend, again per the stage-2 gates. Localcheck proves the whole cycle keyless against a throwaway file repo — stage, create, the 28-day prune eating a planted stale archive, and the restored chronicle reading — wherever borg is installed (borg 1.2.8 rides the dev machine since 2026-08-10 and the leg ran green there; the box's nightly run carries the standing proof).
 
@@ -176,15 +213,15 @@ The restore test — extract the latest archive, tar a data volume back into a s
 
 ## The pager (the holiday watch, 2026-08-10)
 
-The nightly units used to fail into the journal alone — silence nobody reads on an away week. Now `worldconsole-alert@.service` rings the maintainer's ntfy topic when store-sweep, reconcile or backup goes red (`OnFailure=`, the instance carrying the failed unit's name), and `worldconsole-heartbeat@.service` rides `OnSuccess=` on the backup alone — the night's last unit — so one ~05:14 ping vouches for the whole chain and a silent breakfast means look at the box. The reaper stays journal-only by choice: its 5-minute cadence would turn one wedged morning into a hundred pings, and a dead reaper costs little (friends still sleep-on-attach late and the daily sweep still seals). Pings speak ops only — unit names, never play — and the topic stays the box `.env`'s secret, sourced the same way reconcile.sh reads it. Install rides the usual path: `cp deploy/host/systemd/worldconsole-{alert@,heartbeat@}.service /etc/systemd/system/`, re-`cp` the three touched service files, `systemctl daemon-reload` — templates need no enable, `OnFailure=`/`OnSuccess=` start them by name. Proven 2026-08-10 with a transient red unit ringing the real topic.
+The nightly units used to fail into the journal alone — silence nobody reads on an away week. Now `gamemaster-bernd-alert@.service` rings the maintainer's ntfy topic when store-sweep, reconcile or backup goes red (`OnFailure=`, the instance carrying the failed unit's name), and `gamemaster-bernd-heartbeat@.service` rides `OnSuccess=` on the backup alone — the night's last unit — so one ~05:12 ping vouches for the whole chain and a silent breakfast means look at the box. (Since the cutover the box carries a second, landlord topic — the hub's own lanes ring it, ~03:52; its runbook §The pager. This one speaks only the game's units.) The reaper stays journal-only by choice: its 5-minute cadence would turn one wedged morning into a hundred pings, and a dead reaper costs little (friends still sleep-on-attach late and the daily sweep still seals). Pings speak ops only — unit names, never play — and the topic stays the box `.env`'s secret, sourced the same way reconcile.sh reads it. Install rides the usual path: `cp deploy/host/systemd/gamemaster-bernd-{alert@,heartbeat@}.service /etc/systemd/system/`, re-`cp` the three touched service files, `systemctl daemon-reload` — templates need no enable, `OnFailure=`/`OnSuccess=` start them by name. Proven 2026-08-10 with a transient red unit ringing the real topic.
 
 ## Deletion (02 item 9's tail, R13 — "we delete your sessions within a month")
 
 The request arrives by any channel (at invite scale the requester IS the friend); withdrawal of consent is the same path. Everything below is on the box unless said otherwise, `<n>` the friend's name. Dry-run once before the first friend — the receipt lives in the state note.
 
-1. **Close the door:** `docker compose down wc-<n>` · delete `caddy/friends/<n>.caddy` · remove the `wc-<n>:` service block AND the `data-<n>:`/`sessions-<n>:` volume lines from `compose.override.yaml` · `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`. Their knock now gets the by-invitation 404.
-2. **The play volumes:** `docker volume rm world-console_data-<n> world-console_sessions-<n>`.
-3. **The store:** `rm -rf /srv/worldconsole/store/staging/<n> /srv/worldconsole/store/sessions/<n>` (root).
+1. **Close the door:** `docker compose down wc-<n>` · delete `caddy/friends/<n>.caddy` · remove the `wc-<n>:` service block AND the `data-<n>:`/`sessions-<n>:` volume lines from `compose.override.yaml` · then the hub side: `rm /home/deploy/world-console/deploy/host/caddy/sites/friends/<n>.caddy`, in-container `caddy validate`, reload (the hub's compose — this one carries no box caddy). Their knock now gets the by-invitation 404.
+2. **The play volumes:** `docker volume rm gamemaster-bernd_data-<n> gamemaster-bernd_sessions-<n>`.
+3. **The store:** `rm -rf /srv/gamemaster-bernd/store/staging/<n> /srv/gamemaster-bernd/store/sessions/<n>` (root).
 4. **The lane:** remove their key from `gateway-state/keys.json`, then anonymize their ledger rows — the spend sums are the billing truth (R12) and stay, the handle goes:
 
 ```bash
