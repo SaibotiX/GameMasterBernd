@@ -14,6 +14,17 @@ Answer in writing before renting anything; every later step branches on these:
 
 Write the answers into the new project's own `README` — it becomes the runbook's seed. (The habit that made *this* project navigable: one owning doc per fact, decisions recorded dated, procedures written down as they're proven — start that on day one, not later.)
 
+## The fork: joining an existing box (hub mode)
+
+Phases 1–2 below assume the project rents its own box. Since the 2026-08-21 cutover there is a second lane: a box that already runs a **hub** — one ingress Caddy owning 80/443, every project behind it as a tenant. This game is itself tenant #1 behind the World Console hub; a new project joins for €0 additional fixed cost instead of ~€11/month, and the phase list re-cuts:
+
+- **Phase 1:** the DNS rows point at the *existing* box's addresses — hostnames usually subdomains of the box's domain, added in the box owner's registrar console.
+- **Phase 2 shrinks** to: get a clone path (`/home/deploy/<app>`) and the ingress network's name from the box owner. No renting, no hardening — and NO firewall unit: the box's DOCKER-USER chain has one owner, the hub.
+- **Phase 4 becomes:** fill `box-site.caddy` — the project's complete site blocks as a fragment the hub imports (the vocabulary table in the [README](README.md) teaches the word); secrets ride a box-local lane beside the derived copy, never git.
+- Everything else — the app, the backup lane, the pager, the verification rig — stays the project's own; backup timers stagger clear of the box's existing nightly ladder.
+
+The law homes (pointers, not a recipe — one truth, one home): the tenant contract and the ~1 h onboarding checklist are the hub repo's `hub/02-wiring-workflow.md` (§A what the repo must ship, §B the box sitting; `~/Desktop/CurrPC/Programming/WorldConsole`); the live roster and procedure are that repo's runbook §Tenants; and the Example template (header above) ships the whole shape ready to fill since 2026-08-21 — its README §Hub mode, the commented compose stanza, the `box-site.caddy` EDITME fragment, a localcheck leg proving the fragment on the dev machine. Built at the hub's H3, from the contract's first live run (Adsum's onboarding, the same day).
+
 ## Phase 1 — name and DNS (~15 min + propagation; ~€9/yr)
 
 Register the domain (INWX served well here — flat pricing, free anycast DNS; ruling R17). Create `A` (+ `AAAA` if the box has v6) records for the apex and each subdomain, pointed at the box's IP from phase 2, plain and unproxied. Subdomains are free — plan origins deliberately (one per trust level; [01](01-web-fundamentals.md) §DNS).
@@ -50,7 +61,7 @@ One `compose.yaml` from the start, even for two services — it is the architect
 
 ## Phase 4 — the front door: Caddy + TLS (an hour)
 
-Caddy, two lines of global config, one site block per hostname — automatic HTTPS is the entire reason ([01](01-web-fundamentals.md) §TLS). Crib the ingress Caddyfile now living in the hub repo (`WC deploy/host/caddy/Caddyfile` — the box's front door since H1a; the Example template ships its own solo twin): the header hardening block for static sites verbatim; the `handle_path` + `basic_auth` + `reverse_proxy` snippet shape from this repo's `caddy/friends/` mint for anything private; mount the config *directory* (the inode lesson). Prove the door **from outside** with `curl -sI` before building behind it — an in-container check cannot see an inbound break (first-deploy lesson). (Joining an EXISTING box instead of renting one is the hub contract's lane — its `hub/02-wiring-workflow.md`; the blueprint fork lands here at H3, the hub's plan.)
+Caddy, two lines of global config, one site block per hostname — automatic HTTPS is the entire reason ([01](01-web-fundamentals.md) §TLS). Crib the ingress Caddyfile now living in the hub repo (`WC deploy/host/caddy/Caddyfile` — the box's front door since H1a; the Example template ships its own solo twin): the header hardening block for static sites verbatim; the `handle_path` + `basic_auth` + `reverse_proxy` snippet shape from this repo's `caddy/friends/` mint for anything private; mount the config *directory* (the inode lesson). Prove the door **from outside** with `curl -sI` before building behind it — an in-container check cannot see an inbound break (first-deploy lesson). (Joining an EXISTING box instead: §The fork above — the Caddy work becomes filling `box-site.caddy`.)
 
 ## Phase 5 — the app itself (the actual project)
 

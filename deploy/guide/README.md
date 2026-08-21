@@ -32,7 +32,7 @@ The pages follow the [Diátaxis](https://diataxis.fr/) idea — the standard spl
 | [12-ntfy-push-notifications.md](12-ntfy-push-notifications.md) | The pager: how ntfy works, how this project uses it, how to wire alerts anywhere |
 | [20-deploy-files-reference.md](20-deploy-files-reference.md) | Every file in `deploy/`, one entry each: what, why, how to work with it |
 | [21-terminal-cheatsheet.md](21-terminal-cheatsheet.md) | The commands used across this guide, grouped, annotated, copy-pasteable |
-| [30-next-project-blueprint.md](30-next-project-blueprint.md) | From blank VPS to running service: the ordered, reusable recipe |
+| [30-next-project-blueprint.md](30-next-project-blueprint.md) | From blank VPS to running service: the ordered, reusable recipe — or the hub-mode fork to join an existing box |
 | [40-learning-resources.md](40-learning-resources.md) | Curated further reading, and the best practices this project distilled |
 
 **First full read:** 00 → 01 → 02 → 03 → 04, then skim 10–12 so you know what exists. **Returning with a task:** jump straight to the 1x page, or 21 for a command. **Starting a new project:** 30, which leans on everything else.
@@ -46,6 +46,7 @@ The project's records use a small in-house vocabulary. It is worth learning — 
 | **the box** | the production server — the netcup VPS in Vienna that runs everything |
 | **the hub** | the World Console project, the box's LANDLORD since the 2026-08-21 cutover: its own repo owns the front-door Caddy, the apex pages, the firewall singleton and the box-level backup/pager lanes; this game runs aboard as tenant #1 |
 | **the fragment** (`box-site.caddy`) | this repo's owning copy of the game's site blocks; the hub box serves a derived copy under its `sites/` (cp + in-container validate + reload, always that order) |
+| **hub mode** | a project joining an existing box as a tenant instead of renting its own — the blueprint's second lane (30 §The fork); the Example template ships the shape ready to fill |
 | **a seat / a friend container** | one friend's own game container, `wc-<name>` |
 | **a door** | one friend's private URL (secret path + username/password) through Caddy |
 | **minting** | creating a friend's door, container entry, and gateway key (`new-friend.sh`) |
