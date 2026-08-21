@@ -16,8 +16,9 @@
 # a ntfy ping when NTFY_TOPIC is set (box .env). The box has no host node
 # by design — the image's node does all the JSON work.
 #
-# Two days the meters cannot argue about (learned dry-running the first
-# timered night, 2026-08-10):
+# Three shapes the meters cannot argue about (the first two learned
+# dry-running the first timered night, 2026-08-10; the third live on the
+# first post-cutover night, 2026-08-21):
 #   · Days before LANE_EPOCH — the lane's first full day — are structurally
 #     un-reconcilable: the migration day carries real play (the maintainer's
 #     own pre-lane Opus sittings) that the ledger never metered, and no
@@ -27,6 +28,14 @@
 #     file beside the ledger) is §deletion's designed residue — the volume
 #     erased, the anonymized sums kept as billing truth — reported benignly.
 #     The same row with a LIVE key is still a leak and still pages.
+#   · An ABORTED turn — the player cut a streaming answer. Anthropic bills
+#     the streamed tokens and the gateway meters them, but pi records the
+#     aborted assistant message with cost.total 0: one witness blind by
+#     construction, the ledger right. A gateway-in-excess Δ is forgiven
+#     while the day's sessions carry unpriced stopReason:aborted assistant
+#     messages, bounded by <aborts> × the player's largest single row that
+#     day (no abort can outcost one call); beyond the bound it still
+#     pages, so a structural bug cannot hide behind an abort.
 set -euo pipefail
 
 LANE_EPOCH="2026-08-10"
@@ -72,12 +81,13 @@ GW_SUMS="$(docker run --rm -v "$LEDGER:/ledger:ro" -e DAY="$DAY" world-console:l
 		try {
 			const r = JSON.parse(line);
 			if (r.ts.slice(0, 10) === process.env.DAY) {
-				const t = (per[r.player] ??= { turn: 0, side: 0 });
+				const t = (per[r.player] ??= { turn: 0, side: 0, max: 0 });
 				t[r.side ? "side" : "turn"] += r.costMicro;
+				if (!r.side && r.costMicro > t.max) t.max = r.costMicro;
 			}
 		} catch {}
 	}
-	for (const [p, m] of Object.entries(per)) console.log(p, m.turn, m.side);')"
+	for (const [p, m] of Object.entries(per)) console.log(p, m.turn, m.side, m.max);')"
 
 [ -n "$GW_SUMS" ] || { echo "reconcile: $DAY — the ledger holds no spend; nothing to check"; exit 0; }
 
@@ -94,7 +104,7 @@ LIVE_PLAYERS=""
 
 MISMATCH=0
 REPORT=""
-while read -r PLAYER GW_MICRO SIDE_MICRO; do
+while read -r PLAYER GW_MICRO SIDE_MICRO MAX_ROW; do
 	VOL="gamemaster-bernd_sessions-$PLAYER"
 	if ! docker volume inspect "$VOL" >/dev/null 2>&1; then
 		if grep -qx "$PLAYER" <<<"$LIVE_PLAYERS"; then
@@ -106,10 +116,11 @@ while read -r PLAYER GW_MICRO SIDE_MICRO; do
 		continue
 	fi
 	# Phase 2: pi's side — sum usage.cost.total over the day's assistant
-	# messages, in micro-USD, from the player's own session files.
-	PI_MICRO="$(docker run --rm -v "$VOL:/s:ro" -e DAY="$DAY" world-console:latest node -e '
+	# messages, in micro-USD, from the player's own session files; count the
+	# day's UNPRICED aborted messages alongside (the third shape above).
+	PI_OUT="$(docker run --rm -v "$VOL:/s:ro" -e DAY="$DAY" world-console:latest node -e '
 		const fs = require("fs"), path = require("path");
-		let total = 0;
+		let total = 0, aborted = 0;
 		const walk = (d) => {
 			for (const e of fs.readdirSync(d, { withFileTypes: true })) {
 				const p = path.join(d, e.name);
@@ -120,20 +131,25 @@ while read -r PLAYER GW_MICRO SIDE_MICRO; do
 						try {
 							const j = JSON.parse(line);
 							if (j.type === "message" && j.message?.role === "assistant" &&
-								j.timestamp?.slice(0, 10) === process.env.DAY && j.message.usage?.cost?.total)
-								total += j.message.usage.cost.total;
+								j.timestamp?.slice(0, 10) === process.env.DAY) {
+								if (j.message.usage?.cost?.total) total += j.message.usage.cost.total;
+								else if (j.message.stopReason === "aborted") aborted++;
+							}
 						} catch {}
 					}
 			}
 		};
 		walk("/s");
-		console.log(Math.round(total * 1e6));')"
+		console.log(Math.round(total * 1e6), aborted);')"
+	read -r PI_MICRO PI_ABORTS <<<"$PI_OUT"
 	BIG=$(( GW_MICRO > PI_MICRO ? GW_MICRO : PI_MICRO ))
 	TOL=$(( BIG / 20 )); [ "$TOL" -lt 1000 ] && TOL=1000
 	DIFF=$(( GW_MICRO - PI_MICRO )); [ "$DIFF" -lt 0 ] && DIFF=$(( -DIFF ))
 	SIDE_NOTE=""; [ "$SIDE_MICRO" -gt 0 ] && SIDE_NOTE=" (+${SIDE_MICRO} side, subtracted)"
 	if [ "$DIFF" -le "$TOL" ]; then
 		REPORT+="$DAY $PLAYER: match — gateway ${GW_MICRO}${SIDE_NOTE} vs pi ${PI_MICRO} micro (Δ${DIFF} ≤ ${TOL})"$'\n'
+	elif [ "$GW_MICRO" -gt "$PI_MICRO" ] && [ "$PI_ABORTS" -gt 0 ] && [ "$DIFF" -le $(( PI_ABORTS * MAX_ROW )) ]; then
+		REPORT+="$DAY $PLAYER: aborted-turn drift — gateway ${GW_MICRO}${SIDE_NOTE} vs pi ${PI_MICRO} micro (Δ${DIFF} ≤ ${PI_ABORTS} aborted × ${MAX_ROW} max row); the ledger stands as the record"$'\n'
 	else
 		REPORT+="$DAY $PLAYER: MISMATCH — gateway ${GW_MICRO}${SIDE_NOTE} vs pi ${PI_MICRO} micro (Δ${DIFF} > ${TOL})"$'\n'
 		MISMATCH=1

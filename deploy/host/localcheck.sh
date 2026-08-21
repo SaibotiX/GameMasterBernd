@@ -430,6 +430,33 @@ RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATE
 grep -q "gone: removed" <<<"$RECON_OUT" \
 	|| { echo "FAIL: the removed player was not named benignly"; echo "$RECON_OUT"; exit 1; }
 
+# An ABORTED turn (the third shape, live 2026-08-21 on testuser's real
+# seat): the player cuts a streaming answer — the gateway meters the
+# billed tokens, pi records the aborted message with cost.total 0. The
+# unstamped row is forgiven while the day's sessions carry an unpriced
+# stopReason:aborted assistant message and the Δ stays under
+# <aborts> × the largest single row; the ledger stands as the record.
+echo '{"ts":"'"$RECON_DAY"'T10:06:00.000Z","key":"wc-local-good","player":"test","model":"claude-haiku-4-5","usage":{},"costMicro":3000}' >>"$GATEWAY_STATE/recon-ledger.jsonl"
+compose exec -T wc-test sh <<FIXTURE
+set -e
+SDIR=/home/player/.pi/agent/sessions/--home-player-game--
+printf '%s\n' '{"type":"message","id":"bbbb0002","parentId":"bbbb0001","timestamp":"${RECON_DAY}T10:06:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"cut mid-answer"}],"model":"claude-haiku-4-5","provider":"anthropic","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"aborted","timestamp":"${RECON_DAY}T10:06:02.000Z"}}' >>"\$SDIR/${RECON_DAY}T10-00-00_0198dddd-eeee-7fff-8aaa-bbbb22223333.jsonl"
+FIXTURE
+RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger.jsonl")" \
+	|| { echo "FAIL: an aborted turn's unstamped spend paged"; echo "$RECON_OUT"; exit 1; }
+grep "test: aborted-turn drift" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the abort was not named as the explanation"; echo "$RECON_OUT"; exit 1; }
+
+# The forgiveness is BOUNDED: drift beyond <aborts> × the largest row
+# cannot hide behind the abort — a throwaway ledger copy proves it pages.
+cp "$GATEWAY_STATE/recon-ledger.jsonl" "$GATEWAY_STATE/recon-ledger-overbound.jsonl"
+echo '{"ts":"'"$RECON_DAY"'T10:07:00.000Z","key":"wc-local-good","player":"test","model":"claude-haiku-4-5","usage":{},"costMicro":5000}' >>"$GATEWAY_STATE/recon-ledger-overbound.jsonl"
+if RECON_OUT="$(NTFY_TOPIC= "$HERE/reconcile.sh" --day "$RECON_DAY" --ledger "$GATEWAY_STATE/recon-ledger-overbound.jsonl" 2>&1)"; then
+	echo "FAIL: drift beyond the abort bound passed"; echo "$RECON_OUT"; exit 1
+fi
+grep -q "test: MISMATCH" <<<"$RECON_OUT" \
+	|| { echo "FAIL: the over-bound drift was not called out"; echo "$RECON_OUT"; exit 1; }
+
 # The SAME missing volume under a LIVE key is a leak and must still page:
 # mint the ghost a key, then expect red.
 docker run --rm --user 0 -v "$GATEWAY_STATE:/d" world-console:latest node -e '
