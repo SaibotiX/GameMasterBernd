@@ -56,6 +56,37 @@ Prerequisites, all maintainer errands (rulings R17/R18 name them): **worldconsol
 
 *(State 2026-08-21, H1a step 2 — tenant shape lands in the TREE, not on the box (the hub plan §H1a item 2, contract §A.1/§A.3; the banner at the top holds until the sitting): **the game repo is now shaped as tenant #1 of the World Console hub.** The compose sheds its box caddy — caddy-local stays the dev rig's own door — and `caddy/box-site.caddy` is born as the doors' OWNING home: play.'s friends import + by-invitation 404 and vault.'s reserved posture travel verbatim; on the hub box it lands as `sites/gamemaster-bernd.caddy`, its friends import resolving to the hub's `sites/friends/` — the box-local doors, cp'd from this repo's `caddy/friends/` authoring lane (new-friend.sh prints cp + in-container validate + reload, in that order, always). waker + the friend shape join `world-console_ingress` (external; wc-test stays off it — the dev rig self-contained), and the accepted residue is named in the compose: friends can now knock on the waker over the shared network — all a knock can ever do is start a wc-* container by validated name. The R36 clone-path pass rode as its own commit: project/units/paths/store speak `gamemaster-bernd` — the tree the box RE-CLONES at the sitting. The landing/privacy/Impressum pages left this repo whole: the hub serves them byte-identical since its own step 1 (sha256 receipts in its `records/log.md` §2026-08-20). Deliberate stays, each with its reason on file: the borg repo `…/borg/worldconsole` + `/root/worldconsole-borg.pass` (backup.sh header — the hub named its lane `hub` to read beside it), the image tag `world-console:latest` + `WC_`/`wc-` prefixes + the on-disk `world-console.*` session types (engine/data surface; a post-cutover round's question if ever), pull-backup's dev-machine paths, and the waker SERVICE name (bare `waker` — compose auto-aliases every service name onto ingress anyway, so a rename buys no namespace safety; the collision rule belongs to the hub's onboarding fit-check). **Prepared for the sitting — the game-side half of the recipe step 3 authors into the hub runbook:** fresh clone at `/home/deploy/gamemaster-bernd` + `.env` re-cut (ACME_EMAIL and WC_IMPRESSUM_ADDRESS leave — the hub's `.env` carries them now; the org key, gateway bounds and NTFY_TOPIC stay) · box-local state moves from the old clone: `consents.md`, `gateway-state/`, `caddy/friends/`, `compose.override.yaml` (its `/ship` binds sed to `/srv/gamemaster-bernd`), `first-use/` · friend volumes copied `world-console_*` → `gamemaster-bernd_*` before the first `up` · `mv /srv/worldconsole /srv/gamemaster-bernd` with the timers stopped · units reinstalled under the new names, the old `worldconsole-*` set disabled · friend snippets cp'd to the hub's `sites/friends/` UNCHANGED (they dial `wc-<name>`/`waker` — service names that resolve on ingress as-is; the sitting stays pure cp) · the old clone stays untouched as the one-command rollback until the byte-diff probes pass and a quiet day follows. Gates: localcheck green end to end TWICE on this machine, once per commit — the new fragment leg validates box-site.caddy in-container in the hub's own layout, and the waker leg proves the renamed container path wakes a sleeping seat; the unit gate untouched by construction (no `extension/` change; `node extension/test/unit.ts` green at the wrap is the receipt). One rider the first gate caught and fixed: the store-listing `grep -q` lost its pipefail SIGPIPE race to tar — plain grep to EOF now (new-friend.sh's urandom lesson, same trap).)*
 
+*(State 2026-08-21, first night as tenant — reconcile learns the aborted
+turn: **the box's first unattended night under the hub ran the ladder
+green and taught the meters their third shape.** The cutover ran
+2026-08-21 — recipe + receipts are the hub repo's (`deploy/README.md`
+§The cutover, `records/build.md` §H1a step 3; the full cutover state
+note and this runbook's top banner fall at hub step 4) — and the renamed
+timers fired as designed: sweep 04:17, reconcile 04:47, backup 05:11
+with the ~05:12 heartbeat on the game's topic; the hub's own 03:47 lane
+rang its first heartbeat the same night. The one red was real: reconcile
+paged on 2026-08-20 testuser — gateway 20247 vs pi 16006 micro (Δ4241).
+The trace, row by row on the box: the player cut a streaming answer at
+22:14 CEST — the continuation after a `toolUse` stop, aborted
+mid-stream; Anthropic billed the streamed tokens, the gateway metered
+them, pi recorded the aborted assistant message with `cost.total` 0 —
+the ledger right, one witness structurally blind. NOT cutover fallout:
+old and new sessions volumes sum byte-identical for the day (the
+sitting's copy proven whole; the same red fires under the old rig's own
+timer). Fixed the same morning (`8b60091`): a gateway-in-excess Δ is
+forgiven while the day's sessions carry unpriced `stopReason:aborted`
+assistant messages, bounded by aborts × the player's largest single row
+that day — beyond the bound it still pages; the script header owns the
+semantics, localcheck proves both faces. Live receipt: the paged day
+re-run by hand on the box answers "aborted-turn drift … the ledger
+stands as the record", exit 0; the unit's failed state reset. The
+deploy rode the first `git pull` into the new clone — the banner's
+no-pull clause expired by its own terms at the sitting. ⚠ R31 debt
+named, deferred: the guide's stamps stand at `9c66a35` (pre-step-2) —
+the step-2 re-cut and the cutover never got their sync; this round
+edited only 20's two reconcile rows, stamps unmoved; the full sync's
+natural sitting is hub step 4's truth flip.)*
+
 On the box (Debian stable assumed):
 
 1. Base: `apt install docker.io docker-compose-v2 git` (or Docker's own repo), a non-root deploy user in the `docker` group, SSH keys only.
